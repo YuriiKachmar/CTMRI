@@ -1,0 +1,53 @@
+rules_version = '2';
+
+// Правила Firestore для проєкту ctmri-1.
+// Вставити в Firebase Console → Firestore Database → Rules → Publish.
+//
+// СТАН: етап 1 (вхід + перший запуск). Правила для робочих колекцій
+// (visits, records, patients, ...) поки ПОМІРНО ВІДКРИТІ для активних працівників
+// і будуть звужені за ролями, коли з'явиться код цих розділів.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function myProfile() { return get(/databases/$(database)/documents/workers/$(request.auth.uid)).data; }
+    function hasProfile() { return signedIn() && exists(/databases/$(database)/documents/workers/$(request.auth.uid)); }
+    function isActive() { return hasProfile() && myProfile().status == 'active'; }
+    function isBoss() { return isActive() && myProfile().role == 'Керівник'; }
+    function isAdmin() { return isActive() && (myProfile().role == 'Керівник' || myProfile().role == 'Адміністратор'); }
+    function settingsExist() { return exists(/databases/$(database)/documents/settings/main); }
+
+    // Налаштування закладу.
+    // Читати можна без входу: назва закладу показується на екрані входу,
+    // а відсутність документа = «перший запуск».
+    match /settings/main {
+      allow get: if true;
+      // Створити можна лише раз — разом із першим Керівником (див. workers нижче).
+      allow create: if signedIn() && !settingsExist();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /workers/{uid} {
+      allow read: if isActive() || (signedIn() && request.auth.uid == uid);
+      // Перший користувач (settings/main ще немає) може створити СВІЙ профіль лише як Керівник.
+      allow create: if signedIn() && request.auth.uid == uid && !settingsExist()
+                    && request.resource.data.role == 'Керівник'
+                    && request.resource.data.status == 'active';
+      // Далі працівників створює і змінює лише Керівник/Адміністратор.
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Тимчасово: робочі колекції — для активних працівників. Звузимо за ролями пізніше.
+    // УВАГА: список явний, щоб правило не накладалось на settings і workers
+    // (у Firestore кілька правил, що збіглися, об'єднуються через «АБО»).
+    match /{col}/{docId} {
+      allow read, write: if isActive() && col in [
+        'patients', 'referring_doctors', 'services_catalog', 'extra_catalog', 'discounts',
+        'labels', 'visits', 'records', 'payments', 'counters', 'audit_log', 'auto_reports'
+      ];
+    }
+  }
+}

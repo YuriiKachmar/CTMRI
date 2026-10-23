@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Облік послуг КТ/МРТ</title>
+<style>
+  :root{
+    --ink:#1F3A34; --green:#1E6B4F; --btn-main:#5AA187; --soft:#D6EEDD; --red:#C0616B;
+    --err:#C0392B; --err-bg:#FBEAE8; --info:#2E6DA4; --info-bg:#E9F1F8; --warn:#8A5A12; --warn-bg:#FBF1DF;
+    --bg:#E8ECEF; --muted:#6B7B78; --line:#d0d7e0; --ph:#b3bdc9;
+    --dark:#a3b1c6; --lite:#ffffff;
+    --up:-3px -3px 8px #FFF, 4px 4px 10px rgba(163,177,180,.45);
+    --bump:-5px -5px 10px #FFF, 5px 5px 10px rgba(163,177,180,.5);
+    --in:inset 3px 3px 7px rgba(163,177,180,.5), inset -3px -3px 7px #FFF;
+    --in-on:inset 4px 4px 9px rgba(140,165,150,.5), inset -4px -4px 9px rgba(255,255,255,.85);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);font-family:-apple-system,'Segoe UI',Arial,sans-serif;color:var(--ink);min-height:100vh}
+  [hidden]{display:none!important}
+
+  /* ── Завантаження ── */
+  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:50}
+  .spin{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite}
+  .spin.dk{border-color:rgba(30,107,79,.25);border-top-color:var(--green);width:28px;height:28px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── Вхід (вікно з 4 режимами) ── */
+  #auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 18px}
+  .card{width:100%;max-width:340px;background:var(--bg);border-radius:22px;box-shadow:var(--up);padding:32px 26px 28px;text-align:center}
+  .card.fixed-h{min-height:514px;display:flex;flex-direction:column;justify-content:center}
+  .logo{width:64px;height:64px;border-radius:16px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted);letter-spacing:.5px}
+  .logo.lock{font-size:26px}
+  .fac{font-size:15px;font-weight:800;margin-bottom:3px}
+  .app{font-size:11px;color:var(--muted);margin-bottom:24px}
+  .t2{font-size:15px;font-weight:800;margin-bottom:8px}
+  .sub2{font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:18px}
+  .sub2 b{color:var(--ink)}
+  .in2{width:100%;padding:14px 16px;border:none;border-radius:12px;background:var(--bg);box-shadow:var(--in);font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:11px;text-align:center;font-family:inherit}
+  .in2:focus{outline:none;box-shadow:var(--in-on)}
+  .in2.fixed{color:var(--muted);font-weight:500}
+  .in2::placeholder{color:var(--ph);font-weight:500}
+  .btn2{width:100%;padding:15px;border:none;border-radius:13px;background:var(--btn-main);color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;margin-top:8px;letter-spacing:.3px;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark);font-family:inherit}
+  .btn2:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
+  .btn2.loading{cursor:not-allowed;display:flex;align-items:center;justify-content:center}
+  .btn2.ghost{background:var(--bg);color:var(--muted);box-shadow:var(--bump);margin-top:9px}
+  .btn2.ghost:active{box-shadow:var(--in)}
+  .link2{display:inline-block;margin-top:16px;font-size:11.5px;color:var(--muted);cursor:pointer}
+
+  /* ── Повідомлення .al (затверджений компонент) ── */
+  .al{display:flex;gap:9px;align-items:flex-start;padding:12px 14px;border-radius:12px;font-size:12px;background:var(--bg);box-shadow:var(--up);border:1.5px solid;text-align:left;margin-bottom:18px}
+  .al b{display:block;font-size:13.5px;font-weight:800;margin-bottom:1px;color:var(--ink)}
+  .al-icon{flex-shrink:0;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;margin-top:1px}
+  .al-ok{border-color:var(--green);background:#fff}.al-ok .al-icon{background:var(--green)}
+  .al-e{border-color:var(--err);background:var(--err-bg)}.al-e .al-icon{background:var(--err)}
+  .al-w{border-color:var(--warn);background:var(--warn-bg)}.al-w .al-icon{background:var(--warn)}
+  .al-i{border-color:var(--info);background:var(--info-bg)}.al-i .al-icon{background:var(--info)}
+  .al.flat{box-shadow:none;margin:12px 0 0}
+  .al.flat b{display:inline;font-size:inherit;margin:0}   /* у майстрі <b> стоїть усередині речення, а не як заголовок */
+
+  /* ── Майстер першого запуску ── */
+  #wizard{max-width:820px;margin:0 auto;padding:30px 18px 60px}
+  h1{font-size:19px;color:var(--green);margin:0 0 6px}
+  .lead{font-size:12.5px;color:var(--muted);line-height:1.6;margin:0 0 22px}
+  .wcard{background:var(--bg);border-radius:20px;box-shadow:var(--up);padding:22px 24px;margin-bottom:20px}
+  .steps-ind{display:flex;gap:8px;justify-content:center;margin-bottom:22px}
+  .dot-s{width:9px;height:9px;border-radius:50%;background:var(--dark);opacity:.4}
+  .dot-s.on{background:var(--green);opacity:1;width:22px;border-radius:5px}
+  .dot-s.done{background:var(--green);opacity:.6}
+  .step{display:flex;gap:16px}
+  .n{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:var(--bg);box-shadow:var(--bump);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--green)}
+  .st{flex:1;min-width:0}
+  .st>b{display:block;font-size:14px;margin-bottom:5px}
+  .st>p{font-size:12.5px;color:var(--muted);line-height:1.55;margin:0 0 14px}
+  .step-f{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:18px}
+  .b2{padding:14px 20px;border:none;border-radius:13px;background:var(--bg);box-shadow:var(--bump);font-size:13px;font-weight:800;color:var(--muted);cursor:pointer;font-family:inherit}
+  .b2:active{box-shadow:var(--in)}
+  .b2.pri{background:var(--btn-main);color:#fff;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark)}
+  .b2.pri:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
+  .b2.sm{padding:9px 14px;font-size:12px}
+  .fac-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .fac-logo{flex:0 0 auto;width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted)}
+  .fac-name{flex:1;min-width:0}
+  .fac-name input{width:100%;padding:13px 14px;border:none;border-radius:11px;background:var(--bg);box-shadow:var(--in);font-size:13.5px;font-weight:700;color:var(--ink);font-family:inherit}
+  .fac-line{display:flex;align-items:baseline;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
+  .fac-lbl{flex:0 0 82px;font-size:10.5px;color:var(--muted)}
+  .fac-val{flex:1;font-size:12.5px;font-weight:600;color:var(--ink);background:transparent;border:none;padding:0;font-family:inherit}
+  .fac-val:focus{outline:none;color:var(--green)}
+  .sub2-t{font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px}
+  .ph-row{display:flex;gap:8px;margin-bottom:8px}
+  .ph-num,.ph-name{padding:11px 12px;border:none;border-radius:10px;background:var(--bg);box-shadow:var(--in);font-size:12px;font-weight:600;color:var(--ink);min-width:0;font-family:inherit}
+  .ph-num{flex:1.4}.ph-name{flex:1}
+  .ph-x{flex:0 0 auto;width:36px;border-radius:9px;background:var(--bg);box-shadow:var(--bump);color:var(--red);font-weight:900;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .ph-add-btn{width:100%;padding:11px;border:1.5px dashed var(--dark);border-radius:10px;background:transparent;color:var(--green);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:6px;font-family:inherit}
+  .ph-add-btn:active{background:var(--soft)}
+  .week{display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
+  .wd{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .dn{font-size:10.5px;font-weight:800;color:var(--green)}
+  .wt{width:100%;padding:8px 3px;border:none;border-radius:9px;background:var(--bg);box-shadow:var(--bump);color:var(--ink);font-size:11px;font-weight:700;text-align:center;-webkit-appearance:none;min-width:0;font-family:inherit}
+  .off{width:100%;text-align:center;padding:7px 3px;border-radius:9px;background:var(--bg);box-shadow:var(--bump);font-size:9.5px;color:var(--muted);cursor:pointer}
+  .wd.closed .wt{box-shadow:none;background:transparent;pointer-events:none;color:var(--ph)}
+  .wd.closed .off{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .hint{font-size:11px;color:var(--muted);line-height:1.55;margin:0}
+  .hint b{color:var(--ink)}
+  .mode-box{border-radius:13px;background:var(--bg);box-shadow:var(--in);padding:13px 15px;margin:14px 0;font-size:12.5px}
+  .mode-opts{display:flex;flex-direction:column;gap:8px}
+  .mode-opt{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border-radius:12px;background:var(--bg);box-shadow:var(--bump);cursor:pointer}
+  .mode-opt.on{background:var(--soft);box-shadow:var(--in-on)}
+  .mode-radio{flex:0 0 auto;width:18px;height:18px;border-radius:50%;background:var(--bg);box-shadow:var(--in);margin-top:2px;position:relative}
+  .mode-opt.on .mode-radio::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--green)}
+  .mode-txt b{display:block;font-size:12.5px;margin-bottom:2px}
+  .mode-txt span{font-size:11px;color:var(--muted);line-height:1.5}
+  table.shifts{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0}
+  table.shifts th{text-align:left;padding:8px 10px;font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--line)}
+  table.shifts td{padding:9px 10px;border-bottom:1px solid var(--line)}
+  table.shifts tr:last-child td{border-bottom:none}
+  table.shifts td.dim{color:var(--muted);font-style:italic}
+  .win-in{border:none;border-radius:8px;background:var(--bg);box-shadow:var(--in);padding:6px 8px;font-size:12.5px;color:var(--ink);font-weight:600;-webkit-appearance:none;font-family:inherit}
+  .win-in:focus{outline:none;box-shadow:var(--in-on)}
+  .sh{display:inline-block;font-size:9px;font-weight:800;padding:3px 9px;border-radius:8px;min-width:34px;text-align:center;margin-right:6px}
+  .sh.sd{background:var(--soft);color:var(--green)}.sh.sn{background:#dbe3ec;color:#3b5878}.sh.s24{background:#f3e3c8;color:#8a6011}
+  .placeholder{border-radius:16px;background:var(--bg);box-shadow:var(--in);padding:22px;text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
+
+  /* ── Оболонка програми ── */
+  #app{min-height:100vh;display:flex;flex-direction:column}
+  .hdr{display:flex;align-items:center;gap:14px;padding:14px 20px;background:var(--bg);box-shadow:0 4px 10px rgba(163,177,180,.35);position:relative;z-index:5}
+  .hdr .logo{width:40px;height:40px;margin:0;border-radius:11px;font-size:7px;flex:0 0 auto}
+  .hdr-t{flex:1;min-width:0}
+  .hdr-t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hdr-t span{font-size:11px;color:var(--muted)}
+  .who{text-align:right;font-size:12px;line-height:1.35}
+  .who b{display:block;font-weight:800}
+  .who span{color:var(--muted);font-size:11px}
+  #netBanner{margin:12px 20px 0}
+  .main{flex:1;padding:24px 20px 60px;max-width:1100px;width:100%;margin:0 auto}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:360px;z-index:60}
+
+  @media (max-width:560px){
+    .week{gap:4px}.wt{font-size:10px;padding:7px 1px}
+    .step{gap:10px}.wcard{padding:18px 14px}
+  }
+</style>
+</head>
+<body>
+
+<div id="boot"><span class="spin dk"></span></div>
+<div id="auth" hidden></div>
+<div id="wizard" hidden></div>
+<div id="app" hidden>
+  <div class="hdr">
+    <div class="logo">ЛОГО</div>
+    <div class="hdr-t"><b id="hFac"></b><span>Облік послуг КТ/МРТ</span></div>
+    <div class="who"><b id="hWho"></b><span id="hRole"></span></div>
+    <button class="b2 sm" id="btnLogout">Вийти</button>
+  </div>
+  <div id="netBanner" hidden>
+    <div class="al al-w" style="margin-bottom:0"><span class="al-icon">!</span><div><b>Немає з'єднання</b>Дані зберігаються на пристрої й надішлються, щойно зв'язок повернеться.</div></div>
+  </div>
+  <div class="main" id="mainView"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmailAndPassword,
+         createUserWithEmailAndPassword, sendPasswordResetEmail, signOut,
+         reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc,
+         writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ═══ Firebase — проєкт ctmri-1 ═══ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDJGATp_nhlcxrHTqBvkrvmPr1mt37LtHA",
+  authDomain: "ctmri-1.firebaseapp.com",
+  projectId: "ctmri-1",
+  storageBucket: "ctmri-1.firebasestorage.app",
+  messagingSenderId: "778627196387",
+  appId: "1:778627196387:web:284f6d478e8d033ef66cd6"
+};
+const fbApp = initializeApp(firebaseConfig);
+/* сесія не зберігається між запусками (architecture_v1, розділ 4) */
+const auth = initializeAuth(fbApp, { persistence: inMemoryPersistence });
+/* офлайн-персистентність, кілька вкладок (architecture_v1, розділ 5) */
+const db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+
+/* ═══ Допоміжне ═══ */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ROLES = ['Керівник','Адміністратор','Користувач','Лаборант','Лікар'];
+const APP_NAME = 'Облік послуг КТ/МРТ';
+let settings = null;      // settings/main
+let firstRun = false;     // true лише коли settings/main достеменно відсутній (не при помилці читання)
+let profile = null;       // workers/{uid}
+let bootstrapping = false;
+let pendingErr = null;    // повідомлення для екрана входу; показується після перемальовування (signOut → onAuthStateChanged(null) → showLogin)
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+function show(id){
+  for (const x of ['boot','auth','wizard','app']) $(x).hidden = (x !== id);
+}
+function toast(kind, title, text){
+  const t = $('toast');
+  const ic = {ok:'✓',e:'✕',w:'!',i:'i'}[kind];
+  t.innerHTML = `<div class="al al-${kind}" style="margin:0"><span class="al-icon">${ic}</span><div><b>${esc(title)}</b>${esc(text||'')}</div></div>`;
+  t.hidden = false;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { t.hidden = true; }, 4500);
+}
+
+/* ═══ ВХІД — одне вікно, чотири режими (vkhid.html) ═══ */
+const fails = {}; // email → {n, until}. Лічильник у пам'яті: 10 помилок = 5 хв (architecture_v1, розділ 4)
+const LIMIT = 10, BLOCK_MS = 5 * 60 * 1000;
+
+function authErr(code){
+  switch (code){
+    case 'auth/invalid-credential': case 'auth/wrong-password': case 'auth/user-not-found': case 'auth/invalid-login-credentials':
+      return ['Помилка входу','Невірний email або пароль.'];
+    case 'auth/invalid-email': return ['Помилка входу','Невірний формат e-mail.'];
+    case 'auth/network-request-failed': return ['Помилка входу','Немає з\'єднання з мережею.'];
+    case 'auth/too-many-requests': return ['Забагато спроб','Вхід тимчасово заблоковано. Спробуйте за кілька хвилин.'];
+    case 'auth/weak-password': return ['Слабкий пароль','Пароль має містити щонайменше 6 символів.'];
+    case 'auth/email-already-in-use': return ['Помилка','Цей e-mail уже зареєстровано. Спробуйте увійти.'];
+    case 'permission-denied': return ['Немає прав','Правила бази не дозволяють створити Керівника. Перевірте правила Firestore.'];
+    default: return ['Помилка входу', 'Не вдалося виконати вхід (' + code + ').'];
+  }
+}
+function errBlock(title, text, visible){
+  return `<div class="al al-e" id="aErr" style="${visible ? '' : 'visibility:hidden'}"><span class="al-icon">✕</span><div><b id="aErrT">${esc(title)}</b><span id="aErrX">${esc(text)}</span></div></div>`;
+}
+function setErr(title, text){
+  const e = $('aErr'); if (!e) return;
+  $('aErrT').textContent = title; $('aErrX').textContent = text; e.style.visibility = 'visible';
+}
+function clearErr(){ const e = $('aErr'); if (e) e.style.visibility = 'hidden'; }
+function setBusy(busy, labelIdle){
+  for (const id of ['aEmail','aPass']) { const el = $(id); if (el && !el.classList.contains('fixed')) el.disabled = busy; }
+  const b = $('aBtn'); if (!b) return;
+  b.disabled = busy; b.classList.toggle('loading', busy);
+  b.innerHTML = busy ? '<span class="spin"></span>' : labelIdle;
+  const f = $('aForgot'); if (f) f.style.visibility = busy ? 'hidden' : 'visible';
+}
+
+function renderAuth(mode, opts = {}){
+  const facName = settings?.facilityName || '';
+  const first = firstRun;
+  let h = '';
+  if (mode === 'login'){
+    h = `<div class="logo">ЛОГО</div>${facName ? `<div class="fac">${esc(facName)}</div>` : ''}<div class="app">${APP_NAME}</div>
+      ${first ? '<div class="sub2"><b>Перший запуск.</b><br>Введіть e-mail і пароль — цей обліковий запис стане <b>Керівником</b>.</div>' : ''}
+      <input class="in2" id="aEmail" type="email" placeholder="E-mail" autocomplete="username" value="${esc(opts.email||'')}">
+      <input class="in2" id="aPass" type="password" placeholder="Пароль" autocomplete="${first?'new-password':'current-password'}">
+      ${errBlock('Помилка входу','Невірний email або пароль.', false)}
+      <button class="btn2" id="aBtn">${first ? 'Створити й увійти' : 'Увійти'}</button>
+      ${first ? '' : '<span class="link2" id="aForgot">Забули пароль?</span>'}`;
+  } else if (mode === 'reset'){
+    h = `<div class="logo lock">✉️</div><div class="t2">Відновлення пароля</div>
+      <div class="sub2">Введіть e-mail, з яким входите в систему.<br>Надішлемо лист із посиланням для скидання.</div>
+      <input class="in2" id="aEmail" type="email" placeholder="E-mail" value="${esc(opts.email||'')}">
+      ${errBlock('Помилка','', false)}
+      <button class="btn2" id="aBtn">Надіслати лист</button>
+      <button class="btn2 ghost" id="aCancel">Скасувати</button>`;
+  } else if (mode === 'sent'){
+    h = `<div class="al al-ok"><span class="al-icon">✓</span><div><b>Перевірте пошту</b>Лист надіслано на <strong>${esc(opts.email)}</strong>. Перейдіть за посиланням у листі, щоб встановити новий пароль.</div></div>
+      <button class="btn2 ghost" id="aCancel">Повернутись до входу</button>`;
+  } else if (mode === 'confirm'){
+    h = `<div class="logo lock">🔐</div><div class="t2">Підтвердіть пароль</div>
+      <div class="sub2">Ви входите в розділ <b>${esc(opts.section)}</b>.<br>Введіть свій пароль ще раз.</div>
+      <input class="in2 fixed" id="aEmail" type="email" value="${esc(opts.email)}" disabled>
+      <input class="in2" id="aPass" type="password" placeholder="Пароль" autocomplete="current-password">
+      ${errBlock('Невірний пароль','Спробуйте ще раз.', false)}
+      <button class="btn2" id="aBtn">Підтвердити</button>
+      <button class="btn2 ghost" id="aCancel">Скасувати</button>`;
+  }
+  $('auth').innerHTML = `<div class="card fixed-h">${h}</div>`;
+  show('auth');
+
+  const email = $('aEmail'), pass = $('aPass');
+  for (const el of [email, pass]) if (el) el.addEventListener('input', clearErr);
+  const submitOnEnter = (e) => { if (e.key === 'Enter') $('aBtn').click(); };
+  for (const el of [email, pass]) if (el) el.addEventListener('keydown', submitOnEnter);
+  if ($('aCancel')) $('aCancel').onclick = () => (opts.onCancel ? opts.onCancel() : renderAuth('login', { email: email?.value }));
+  if ($('aForgot')) $('aForgot').onclick = () => renderAuth('reset', { email: email.value });
+
+  if (mode === 'login') $('aBtn').onclick = () => doLogin(email.value.trim(), pass.value);
+  if (mode === 'reset') $('aBtn').onclick = () => doReset(email.value.trim());
+  if (mode === 'confirm') $('aBtn').onclick = () => opts.onSubmit(pass.value);
+  (pass || email)?.focus();
+}
+
+async function doLogin(email, pass){
+  if (!email || !pass) return setErr('Помилка входу', 'Введіть e-mail і пароль.');
+  const key = email.toLowerCase(), f = fails[key];
+  if (f && f.until > Date.now()){
+    const m = Math.ceil((f.until - Date.now()) / 60000);
+    return setErr('Забагато спроб', `Вхід заблоковано ще на ${m} хв.`);
+  }
+  setBusy(true, firstRun ? 'Створити й увійти' : 'Увійти');
+  try {
+    if (firstRun) await bootstrapFirstBoss(email, pass);
+    else await signInWithEmailAndPassword(auth, email, pass);
+    delete fails[key];
+    /* далі працює onAuthStateChanged / bootstrapFirstBoss */
+  } catch (e){
+    const rec = fails[key] || (fails[key] = { n: 0, until: 0 });
+    if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found'){
+      if (++rec.n >= LIMIT){ rec.until = Date.now() + BLOCK_MS; rec.n = 0; }
+    }
+    setBusy(false, firstRun ? 'Створити й увійти' : 'Увійти');
+    const [t, x] = authErr(e.code || ''); setErr(t, x);
+    console.warn('login:', e.code || e);
+  }
+}
+
+async function doReset(email){
+  if (!email) return setErr('Помилка', 'Введіть e-mail.');
+  setBusy(true, 'Надіслати лист');
+  try { await sendPasswordResetEmail(auth, email); } catch (e){ console.warn('reset:', e.code); }
+  /* Режим 4 показується завжди однаково — захист від email enumeration */
+  renderAuth('sent', { email });
+}
+
+/* Режим 2 «Підтвердження» — для чутливих розділів (Доступи). Повертає Promise<boolean>. */
+function confirmPassword(section){
+  return new Promise((resolve) => {
+    const prev = !$('app').hidden ? 'app' : null;
+    const user = auth.currentUser;
+    const done = (ok) => { show(prev || 'auth'); resolve(ok); };
+    renderAuth('confirm', {
+      section, email: user.email, onCancel: () => done(false),
+      onSubmit: async (pw) => {
+        if (!pw) return setErr('Невірний пароль', 'Введіть пароль.');
+        setBusy(true, 'Підтвердити');
+        try { await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, pw)); done(true); }
+        catch (e){ setBusy(false, 'Підтвердити'); setErr('Невірний пароль', 'Спробуйте ще раз.'); }
+      }
+    });
+  });
+}
+window.CTMRI = { confirmPassword, get profile(){ return profile; }, get settings(){ return settings; } };
+
+/* ═══ Перший запуск: перший користувач → Керівник ═══ */
+async function bootstrapFirstBoss(email, pass){
+  bootstrapping = true;
+  let cred = null;
+  try {
+    cred = await createUserWithEmailAndPassword(auth, email, pass);
+    const uid = cred.user.uid;
+    const wdoc = { lastName: email.split('@')[0], firstName: '', role: 'Керівник', status: 'active', email, createdAt: serverTimestamp() };
+    const sdoc = { facilityName: '', setupDone: false, createdAt: serverTimestamp() };
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'workers', uid), wdoc);
+    batch.set(doc(db, 'settings', 'main'), sdoc);
+    await batch.commit();
+    profile = { id: uid, ...wdoc };
+    settings = { ...sdoc };
+    firstRun = false;
+    bootstrapping = false;
+    enterApp();
+  } catch (e){
+    /* не лишаємо «осиротілий» акаунт без профілю; пауза поглинає події auth від видалення */
+    if (cred) await cred.user.delete().catch(() => {});
+    await sleep(150);
+    bootstrapping = false;
+    throw e;
+  }
+}
+
+/* ═══ Стан авторизації (architecture_v1, розділ 4) ═══ */
+onAuthStateChanged(auth, async (user) => {
+  if (bootstrapping) return;
+  if (!user){ profile = null; return showLogin(); }
+  try {
+    const snap = await getDoc(doc(db, 'workers', user.uid));
+    if (!snap.exists()){
+      pendingErr = ['Помилка входу', 'Профіль працівника не знайдено. Зверніться до керівника.'];
+      return await signOut(auth); // onAuthStateChanged(null) перемалює вхід і покаже pendingErr
+    }
+    profile = { id: user.uid, ...snap.data() };
+    if (profile.status === 'inactive'){
+      pendingErr = ['Доступ заблоковано', 'Зверніться до керівника.'];
+      return await signOut(auth);
+    }
+    await loadSettings();
+    enterApp();
+  } catch (e){
+    console.error('auth state:', e);
+    pendingErr = ['Помилка входу', 'Не вдалося завантажити профіль. Перевірте з\'єднання.'];
+    await signOut(auth).catch(() => {});
+    if (!auth.currentUser) await showLogin();
+  }
+});
+
+async function loadSettings(){
+  try { const s = await getDoc(doc(db, 'settings', 'main')); settings = s.exists() ? s.data() : null; firstRun = !s.exists(); }
+  catch (e){ firstRun = false; console.warn('settings:', e.code); }
+}
+async function showLogin(){
+  show('boot');
+  await loadSettings(); // публічне читання settings/main: назва закладу на екрані входу, ознака першого запуску
+  renderAuth('login');
+  if (pendingErr){ setErr(pendingErr[0], pendingErr[1]); pendingErr = null; }
+}
+$('btnLogout').onclick = async () => { await signOut(auth); };
+
+/* ═══ Вхід у програму ═══ */
+function enterApp(){
+  const canSetup = ['Керівник','Адміністратор'].includes(profile.role);
+  if (settings && settings.setupDone === false && canSetup) return renderWizard();
+  renderShell();
+}
+
+function renderShell(){
+  $('hFac').textContent = settings?.facilityName || APP_NAME;
+  $('hWho').textContent = ((profile.lastName || '') + ' ' + (profile.firstName || '')).trim() || profile.email;
+  $('hRole').textContent = profile.role;
+  $('mainView').innerHTML = `
+    <div class="wcard">
+      <div class="al al-i flat" style="margin:0"><span class="al-icon">i</span><div><b>Журнал — наступний крок розробки</b>Вхід, ролі й перший запуск працюють. Журнал, довідники та звіти підключаються далі.</div></div>
+    </div>`;
+  show('app');
+}
+window.addEventListener('online', () => { $('netBanner').hidden = true; });
+window.addEventListener('offline', () => { $('netBanner').hidden = false; });
+if (!navigator.onLine) $('netBanner').hidden = false;
+
+/* ═══ МАЙСТЕР ПЕРШОГО ЗАПУСКУ (pershyi_pusk_v2.html) ═══ */
+const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+const DEFAULT_WEEK = [['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['09:00','15:00',0],['09:00','15:00',1]];
+let wizStep = 1;
+let wiz = {};        // накопичені дані кроків
+let shiftMode = 'day';
+let dobaFrom = null; // початок доби, коли Денна введена як «від == до»
+const midOf = (f) => { const [h, m] = f.split(':'); return String((Number(h) + 12) % 24).padStart(2, '0') + ':' + m; };
+
+function renderWizard(){
+  wizStep = 1; wiz = {}; shiftMode = 'day'; dobaFrom = null;
+  const weekHtml = DAYS.map((d, i) => `
+    <div class="wd ${DEFAULT_WEEK[i][2] ? 'closed' : ''}" data-d="${i}"><span class="dn">${d}</span>
+      <input class="wt" type="time" value="${DEFAULT_WEEK[i][0]}" data-k="from">
+      <input class="wt" type="time" value="${DEFAULT_WEEK[i][1]}" data-k="to">
+      <span class="off">вихідний</span></div>`).join('');
+  $('wizard').innerHTML = `
+    <h1>Дії при першому пуску програми</h1>
+    <p class="lead">Що адміністратор має налаштувати перед початком роботи. <b>Кожен крок можна пропустити</b> — тоді застосовуються значення за замовчуванням.</p>
+    <div class="steps-ind" id="stepsInd">${[1,2,3,4].map(() => '<span class="dot-s"></span>').join('')}</div>
+
+    <div class="wcard" data-step="1"><div class="step"><div class="n">1</div><div class="st">
+      <b>Заклад</b><p>Основні дані — можна змінити будь-коли пізніше в Налаштуваннях.</p>
+      <div class="fac-row"><div class="fac-logo" title="Лого (додамо пізніше)">ЛОГО</div>
+        <div class="fac-name"><input id="wName" placeholder="Назва закладу"></div></div>
+      <div class="fac-line"><span class="fac-lbl">Адреса</span><input class="fac-val" id="wAddr" placeholder="м. Львів, вул. …"></div>
+      <div class="fac-line"><span class="fac-lbl">Email</span><input class="fac-val" id="wMail" type="email" placeholder="clinic@example.com"></div>
+      <div class="sub2-t">Телефони</div>
+      <div id="phoneList"></div>
+      <button type="button" class="ph-add-btn" id="phoneAddBtn">+ Додати телефон</button>
+    </div></div></div>
+
+    <div class="wcard" data-step="2"><div class="step"><div class="n">2</div><div class="st">
+      <b>Задати графік закладу</b><p>Коли заклад працює: 7 днів тижня, години роботи або вихідний.</p>
+      <div class="week" id="week">${weekHtml}</div>
+      <p class="hint">Ці вихідні позначаються в <b>календарі чергувань</b>. Вносити чергування в них однаково можна — деякі заклади працюють цілодобово.</p>
+    </div></div></div>
+
+    <div class="wcard" data-step="3"><div class="step"><div class="n">3</div><div class="st">
+      <b>Налаштування зміни</b><p>Цей параметр залежить від режиму роботи закладу (крок 2) і впливає на те, як рахуються зміни працівників у звітах.</p>
+      <div class="al al-i flat"><span class="al-icon">i</span><div>Понеділок (крок 2) підставляє <b>початкове</b> значення Денної зміни — воно одразу видиме й редаговане нижче.</div></div>
+      <div class="mode-box"><b>За вашим графіком:</b> <span id="modeBoxText"></span><br><span id="modeBoxConcl"></span></div>
+      <div class="mode-opts" id="modeOpts">
+        <div class="mode-opt on" data-mode="day"><span class="mode-radio"></span><span class="mode-txt"><b>Тільки Денна зміна</b><span>Усі працівники на єдиній денній зміні, що покриває робочі години закладу. Підходить для регулярного графіку.</span></span></div>
+        <div class="mode-opt" data-mode="daynight"><span class="mode-radio"></span><span class="mode-txt"><b>Денна + Нічна</b><span>Частина працівників чергує вночі, попри те що заклад офіційно зачинений (напр. екстрені випадки).</span></span></div>
+        <div class="mode-opt" data-mode="doba"><span class="mode-radio"></span><span class="mode-txt"><b>Цілодобово (Доба)</b><span>Заклад фактично працює або чергує цілодобово, незалежно від вказаного графіку.</span></span></div>
+      </div>
+      <p class="hint" style="margin-top:14px"><b>Вікна типів</b> — підказка взята з понеділка (крок 2), але тут їх видно й можна виправити напряму:</p>
+      <table class="shifts">
+        <tr><th>Тип</th><th>Вікно</th></tr>
+        <tr><td><span class="sh sd">Д</span>Денна</td><td><input type="time" id="winDayFrom" class="win-in"> – <input type="time" id="winDayTo" class="win-in"></td></tr>
+        <tr><td><span class="sh sn">Н</span>Нічна</td><td id="winNight" class="dim">не застосовується</td></tr>
+        <tr><td><span class="sh s24">Доба</span>Добова</td><td id="winDoba" class="dim">не застосовується</td></tr>
+      </table>
+      <div class="al al-w flat"><span class="al-icon">!</span><div>Обраний тут режим — лише <b>типовий шаблон</b>. Розрахунок кількості змін у звітах спирається на <b>особистий графік кожного працівника</b>, не напряму на цей вибір.</div></div>
+      <div class="al al-w flat"><span class="al-icon">!</span><div>Якщо графік закладу <b>відрізняється по днях</b>, обчислене вікно бере понеділок; розбіжності для окремих днів виправляються вручну в картці працівника.</div></div>
+    </div></div></div>
+
+    <div class="wcard" data-step="4"><div class="st">
+      <b>Інші кроки першого пуску</b>
+      <div class="placeholder">Тут накопичуватимуться решта дій першого запуску (працівники, послуги, пільги, установи) — у міру опрацювання.</div>
+    </div></div>
+
+    <div class="step-f" id="wizFoot"></div>
+    <div id="wizErr"></div>`;
+
+  /* телефони */
+  const addPhone = (num = '', name = '') => {
+    const row = document.createElement('div'); row.className = 'ph-row';
+    row.innerHTML = `<input class="ph-num" placeholder="+380 __ ___ __ __" value="${esc(num)}"><input class="ph-name" placeholder="Назва (напр. Реєстратура)" value="${esc(name)}"><span class="ph-x">✕</span>`;
+    row.querySelector('.ph-x').onclick = () => row.remove();
+    $('phoneList').appendChild(row);
+    return row;
+  };
+  $('phoneAddBtn').onclick = () => addPhone().querySelector('.ph-num').focus();
+  /* вихідні */
+  for (const wd of $('week').querySelectorAll('.wd'))
+    wd.querySelector('.off').onclick = () => { wd.classList.toggle('closed'); if (wizStep === 3) computeShifts(true); };
+  for (const inp of $('week').querySelectorAll('.wt'))
+    inp.onchange = () => { if (wizStep === 3 && inp.closest('.wd').dataset.d === '0') computeShifts(true); };
+  /* режим зміни */
+  for (const o of $('modeOpts').children) o.onclick = () => {
+    shiftMode = o.dataset.mode;
+    for (const x of $('modeOpts').children) x.classList.toggle('on', x === o);
+  };
+  $('winDayFrom').onchange = $('winDayTo').onchange = () => { $('winDayFrom').dataset.touched = '1'; windowEdited(); };
+  showStep(1);
+  show('wizard');
+}
+
+function showStep(n){
+  wizStep = n;
+  for (const c of $('wizard').querySelectorAll('.wcard')) c.hidden = (Number(c.dataset.step) !== n);
+  [...$('stepsInd').children].forEach((d, i) => {
+    d.className = 'dot-s' + (i + 1 < n ? ' done' : '') + (i + 1 === n ? ' on' : '');
+  });
+  $('wizFoot').innerHTML = n < 4
+    ? `<button class="b2" id="wSkip">Пропустити крок</button><button class="b2 pri" id="wNext">Зберегти й далі</button>`
+    : `<button class="b2 pri" id="wFinish">Завершити</button>`;
+  if ($('wSkip')) $('wSkip').onclick = () => { wiz['s' + n] = 'skipped'; showStep(n + 1); };
+  if ($('wNext')) $('wNext').onclick = () => { collectStep(n); showStep(n + 1); };
+  if ($('wFinish')) $('wFinish').onclick = finishWizard;
+  if (n === 3) computeShifts(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function collectStep(n){
+  if (n === 1){
+    wiz.facilityName = $('wName').value.trim();
+    wiz.facilityAddress = $('wAddr').value.trim();
+    wiz.facilityEmail = $('wMail').value.trim();
+    wiz.phones = [...$('phoneList').children].map(r => ({ number: r.querySelector('.ph-num').value.trim(), label: r.querySelector('.ph-name').value.trim() })).filter(p => p.number);
+  }
+  if (n === 2){
+    wiz.schedule = [...$('week').children].map(wd => ({ from: wd.querySelector('[data-k=from]').value, to: wd.querySelector('[data-k=to]').value, off: wd.classList.contains('closed') }));
+  }
+  if (n === 3){
+    wiz.shiftMode = shiftMode;
+    wiz.shiftWindows = { dayFrom: $('winDayFrom').value, dayTo: $('winDayTo').value, dobaActive: !!dobaFrom };
+  }
+  wiz['s' + n] = 'saved';
+}
+
+/* Поля Денної зміни: понеділок лише ПІДСТАВЛЯЄ початкове значення, далі — редаговані напряму */
+function computeShifts(fromWeek){
+  const mon = $('week').children[0];
+  const from = mon.querySelector('[data-k=from]').value, to = mon.querySelector('[data-k=to]').value;
+  $('modeBoxText').textContent = mon.classList.contains('closed') ? 'Пн — вихідний.' : `Пн ${from}–${to}.`;
+  if (!$('winDayFrom').dataset.touched){
+    $('winDayFrom').value = from; $('winDayTo').value = to;
+  }
+  windowEdited(true);
+}
+function windowEdited(){
+  const f = $('winDayFrom').value, t = $('winDayTo').value;
+  if (!f || !t) return;
+  if (f === t){ dobaFrom = f; $('winDayTo').value = midOf(f); }                     // «від == до» → доба навпіл
+  else if (!(dobaFrom && f === dobaFrom && t === midOf(f))) dobaFrom = null;       // інакше — звичайний графік
+  const to = $('winDayTo').value;
+  $('winNight').textContent = to + ' – ' + f; $('winNight').classList.remove('dim');
+  if (dobaFrom){
+    $('winDoba').textContent = f + ' – ' + f + ' (наступного дня)'; $('winDoba').classList.remove('dim');
+    $('modeBoxConcl').innerHTML = 'Це <b>цілодобовий графік</b> — усі три типи активні, доба поділена навпіл.';
+  } else {
+    $('winDoba').textContent = 'не застосовується'; $('winDoba').classList.add('dim');
+    $('modeBoxConcl').innerHTML = 'Це <b>регулярний графік</b> (не цілодобовий) — рекомендуємо модель вище.';
+  }
+}
+
+async function finishWizard(){
+  const btn = $('wFinish'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  /* пропущені кроки → значення за замовчуванням */
+  const data = {
+    facilityName: wiz.facilityName ?? '', facilityAddress: wiz.facilityAddress ?? '', facilityEmail: wiz.facilityEmail ?? '', phones: wiz.phones ?? [],
+    schedule: wiz.schedule ?? DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] })),
+    shiftMode: wiz.shiftMode ?? 'day',
+    shiftWindows: wiz.shiftWindows ?? { dayFrom: '08:00', dayTo: '20:00' },
+    setupDone: true, updatedAt: serverTimestamp()
+  };
+  try {
+    await setDoc(doc(db, 'settings', 'main'), data, { merge: true });
+    settings = { ...(settings || {}), ...data };
+    renderShell();
+  } catch (e){
+    console.error('wizard save:', e);
+    btn.disabled = false; btn.textContent = 'Завершити';
+    $('wizErr').innerHTML = `<div class="al al-e flat"><span class="al-icon">✕</span><div><b>Не вдалося зберегти</b>Перевірте з'єднання й правила Firestore (${esc(e.code || '')}).</div></div>`;
+  }
+}
+</script>
+</body>
+</html>
