@@ -146,7 +146,9 @@
   #netBanner b{font-size:11.5px}
   .folder{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:auto auto}
   .tab{padding:16px 12px;font-size:13px;font-weight:700;text-align:center;cursor:pointer;color:var(--muted);background:var(--bg);position:relative;white-space:nowrap}
-  .tab.on{color:var(--green);border-radius:16px 16px 0 0;z-index:2;box-shadow:-6px -6px 12px var(--lite),6px 0 10px -5px var(--dark)}
+  .tab.on{color:var(--green);border-radius:16px 16px 0 0;z-index:2;box-shadow:-6px -6px 12px var(--lite),6px 0 10px -5px var(--dark);clip-path:inset(-40px -40px 0 -40px)}
+  /* останній язичок активний: він і лист — одне ціле → та сама права тінь, що й у листа, без шва внизу */
+  .tab.on:nth-child(5){box-shadow:-6px -6px 12px var(--lite),6px 6px 12px var(--dark);clip-path:polygon(-40px -40px,calc(100% + 60px) -40px,calc(100% + 60px) calc(100% + 60px),100% calc(100% + 60px),100% 100%,-40px 100%)}
   .tab:not(.on){border-radius:16px 16px 0 0;margin:0 5px;background:var(--tab-off);box-shadow:-4px -4px 8px var(--lite),4px 4px 8px var(--dark),0 5px 8px -4px var(--lite)}
   .tab:not(.on):active{box-shadow:inset 3px 3px 6px var(--dark),inset -3px -3px 6px var(--lite)}
   /* крайній праворуч язичок закінчується там, де починається вигин кута листа (16px) — без обриву підсвітки й тіні */
