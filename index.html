@@ -264,6 +264,27 @@
   .b.dang{background:var(--red);color:#fff;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark)}
   @media (max-width:560px){.per-line{grid-template-columns:1fr 14px 1fr}.per-line>*:nth-child(n+4){grid-column:1 / -1;justify-self:start}}
 
+  /* ── Працівники: графік закладу, рядки, змінний графік ── */
+  .week.locked .off{cursor:default}
+  .sh.sx{background:#eee;color:var(--muted)}
+  .rowc .wsh{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px}
+  .rowc .wt2{font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .stexp{font-size:11.5px;color:var(--muted);font-style:italic;margin-top:8px;line-height:1.45}
+  .stexp b{color:var(--ink);font-style:normal}
+  .sh-item{border-bottom:1px solid var(--line);padding:10px 2px}
+  .sh-item:last-child{border-bottom:none}
+  .sh-line{display:grid;grid-template-columns:44px 58px 1fr 14px 1fr auto auto;align-items:center;gap:9px}
+  .sh-time2{display:flex;flex-direction:column;gap:2px;align-items:center}
+  .sh-time2 .tm{width:58px;padding:4px 3px;font-size:10.5px;border:none;border-radius:7px;background:var(--bg);box-shadow:var(--in);color:var(--ink);font-weight:600;font-family:inherit;text-align:center}
+  .sh-line .dt{width:100%;min-width:0;padding:10px 8px;font-size:12px}
+  .sh-badge{font-size:9px;font-weight:800;padding:4px 8px;border-radius:8px;min-width:38px;text-align:center}
+  .sh-badge.sd{background:var(--soft);color:var(--green)}.sh-badge.sn{background:#dbe3ec;color:#3b5878}.sh-badge.s24{background:#f3e3c8;color:#8a6011}.sh-badge.sx{background:#eee;color:var(--muted)}
+  .sh-item.excluded .sh-line>*{opacity:.45}
+  .sh-item.excluded input{text-decoration:line-through}
+  .sh-item.excluded .per-seg,.sh-item.excluded .per-tag-done{visibility:hidden}
+  .sh-item.excluded .per-del{pointer-events:none;box-shadow:none;cursor:default}
+  @media (max-width:560px){.sh-line{grid-template-columns:44px 58px 1fr 14px 1fr}.sh-line>*:nth-child(n+6){grid-column:1 / -1;justify-self:start}}
+
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:360px;z-index:60}
 
   @media (max-width:560px){
@@ -304,7 +325,7 @@
 <div class="toast" id="toast" hidden></div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmailAndPassword,
          createUserWithEmailAndPassword, sendPasswordResetEmail, signOut,
          reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -574,6 +595,7 @@ function pickTab(i){
   $('sheet').classList.toggle('tr-flat', i === TABS.length - 1);
   $('sheet').innerHTML = `<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Розділ «${esc(TABS[i])}» — наступний крок розробки</b>Зараз працюють довідники: Послуги, Пільги, Розподіл і розділ «Скерування».</div></div>`;
   if (TABS[i] === 'Скерування') renderRef();
+  if (TABS[i] === 'Працівники') renderStaff();
 }
 const shortName = (p) => {
   const ini = [p.firstName, p.middleName].filter(Boolean).map(x => x[0].toUpperCase() + '.').join('');
@@ -581,8 +603,8 @@ const shortName = (p) => {
 };
 
 /* ═══ ДОВІДНИКИ: дані (завантажуються один раз, кешуються; architecture_v1 розд. 5) ═══ */
-const COL = { services: 'services_catalog', extras: 'extra_catalog', discounts: 'discounts', labels: 'labels', institutions: 'institutions', itypes: 'institution_types', doctors: 'referring_doctors' };
-const dir = { services: [], extras: [], discounts: [], labels: [], institutions: [], itypes: [], doctors: [] };
+const COL = { services: 'services_catalog', extras: 'extra_catalog', discounts: 'discounts', labels: 'labels', institutions: 'institutions', itypes: 'institution_types', doctors: 'referring_doctors', workers: 'workers' };
+const dir = { services: [], extras: [], discounts: [], labels: [], institutions: [], itypes: [], doctors: [], workers: [] };
 /* тимчасово: редагувати довідники може Керівник/Адміністратор; далі — з матриці «Доступи» */
 const canEditDirs = () => ['Керівник', 'Адміністратор'].includes(profile?.role);
 
@@ -645,7 +667,7 @@ function openWin(html, width){
   winStack.push(ov);
   return ov;
 }
-function closeWin(ov){ ov.remove(); const i = winStack.indexOf(ov); if (i >= 0) winStack.splice(i, 1); }
+function closeWin(ov){ ov.remove(); const i = winStack.indexOf(ov); if (i >= 0) winStack.splice(i, 1); if (ov._onClose) ov._onClose(); }
 function rerenderWins(){ for (const o of winStack) if (o._render) o._render(); if (sheetRerender) sheetRerender(); }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && winStack.length) closeWin(winStack[winStack.length - 1]); });
 
@@ -669,8 +691,13 @@ function formWin(title, body, onSave, width, saveLabel){
   const ov = openWin(`<div class="win-h"><h4>${esc(title)}</h4><button class="win-x" data-x>✕</button></div>
     <div class="win-b">${body}<div class="al al-e" data-err style="display:none;margin:4px 0 8px"><span class="al-icon">✕</span><div><b data-et></b><span data-ex></span></div></div></div>
     <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" data-save>${esc(saveLabel || 'Зберегти')}</button></div>`, width);
-  const save = () => {
-    const r = onSave(ov);
+  const saveBtn = ov.querySelector('[data-save]');
+  const save = async () => {
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
+    let r;
+    try { r = await onSave(ov); } catch (e){ console.error(e); r = ['Не вдалося зберегти', e.code || e.message || '']; }
+    saveBtn.disabled = false;
     if (!r) return closeWin(ov);
     ov.querySelector('[data-et]').textContent = r[0];
     ov.querySelector('[data-ex]').textContent = r[1] ? ' ' + r[1] : '';
@@ -681,7 +708,7 @@ function formWin(title, body, onSave, width, saveLabel){
     if (s) s.parentElement.querySelectorAll('span').forEach(x => x.classList.toggle('on', x === s));
   });
   ov.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') save(); });
-  ov.querySelector('[data-save]').onclick = save;
+  saveBtn.onclick = save;
   ov.querySelector('input')?.focus();
   return ov;
 }
@@ -869,11 +896,12 @@ function renderRef(){
 }
 
 /* спільні дрібні вікна */
-function confirmWin({ type, title, details, action, onOk }){
+function confirmWin({ type, title, details, action, onOk, onCancel }){
   const e = type === 'e';
   const ov = openWin(`<div class="win-b" style="padding:20px 20px 4px"><div class="al ${e ? 'al-e' : 'al-w'}" style="margin:0"><span class="al-icon">${e ? '✕' : '<span>!</span>'}</span><div><b>${esc(title)}</b>${esc(details || '')}</div></div></div>
     <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b ${e ? 'dang' : ''}" data-ok>${esc(action)}</button></div>`, 400);
-  ov.querySelector('[data-ok]').onclick = () => { closeWin(ov); onOk(); };
+  ov._onClose = onCancel;
+  ov.querySelector('[data-ok]').onclick = () => { ov._onClose = null; closeWin(ov); onOk(); };
 }
 function pickWin(title, items, emptyText, onPick){
   const body = items.length
@@ -1027,6 +1055,215 @@ function openDocForm(id){
       pickWin('Додати установу', dir.institutions.filter(i => i.status !== 'inactive' && !ids.includes(i.id)).sort(byName).map(i => ({ id: i.id, label: i.name, meta: typeNameById(i.typeId) })),
         'Усі установи вже додані або жодної ще не створено — створіть її у вкладці «Установи».',
         (iid) => { ids.push(iid); renderChips(); });
+  });
+}
+
+/* ═══ ПРАЦІВНИКИ (pratsivnyky.html): Графік закладу + Лаборанти/Лікарі + картка ═══ */
+const toMin = (s) => { const [h, m] = String(s).split(':'); return (+h) * 60 + (+m); };
+const fmtDur = (min) => Math.floor(min / 60) + ' год' + (min % 60 ? ' ' + (min % 60) + ' хв' : '');
+/* Тип зміни обчислюється з годин; еталон — shiftWindows з налаштувань (окремо від щоденного графіку закладу), допуск ±60 хв */
+function classifyShift(f, t){
+  const w = settings?.shiftWindows || {}, dFrom = w.dayFrom || '08:00', dTo = w.dayTo || '20:00', TOL = 60;
+  if (f === t) return { cls: 's24', label: 'Доба' };
+  const from = toMin(f), dur = (toMin(t) - from + 1440) % 1440;
+  const dS = Math.abs(from - toMin(dFrom)), dE = Math.abs(from - toMin(dTo)), dD = Math.abs(dur - 720);
+  if (dS <= TOL && dD <= TOL) return { cls: 'sd', label: 'Д' };
+  if (dE <= TOL && dD <= TOL) return { cls: 'sn', label: 'Н' };
+  const near = dS <= dE ? { ref: `денної (${dFrom})`, diff: dS } : { ref: `нічної (${dTo})`, diff: dE };
+  return { cls: 'sx', label: 'Нетиповий', note: `Тривалість ${fmtDur(dur)}. Найближче до ${near.ref} зміни, але початок відхиляється на ${near.diff} хв (допуск — 60 хв)` + (dD > TOL ? `, і тривалість теж поза допуском (${dD} хв від еталонних 12 год)` : '') + '. Позначено «Нетиповий» — перевірте години або залиште як є.' };
+}
+const currentShift = (w) => { const t = todayISO(); return [...(w.shifts || [])].reverse().find(p => !p.excluded && p.start <= t && (!p.end || p.end >= t)) || null; };
+const ST_TEXT = {
+  active: 'Працівник працює на роботі та має право входу у програму, переглядати журнал та вносити в нього зміни, переглядати звіти.',
+  inactive: 'Працівник не працює. Вхід у програму заблоковано. Записи, які він вніс раніше, зберігаються у звітах.'
+};
+const sortWorkers = (a, b) => ((a.status === 'inactive') - (b.status === 'inactive')) || String(a.lastName).localeCompare(String(b.lastName), 'uk') || String(a.firstName).localeCompare(String(b.firstName), 'uk');
+const fullName = (w) => [w.lastName, w.firstName, w.middleName].filter(Boolean).join(' ');
+
+let staffTab = 'lab';
+function renderStaff(){
+  sheetRerender = renderStaff;
+  const sh = $('sheet'), isBoss = profile?.role === 'Керівник', edit = canEditDirs();
+  const sched = settings?.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
+  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : ''}"><span class="dn">${DAYS[i]}</span><input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}><span class="off" ${isBoss ? 'data-off' : ''}>вихідний</span></div>`).join('');
+  const role = staffTab === 'lab' ? 'Лаборант' : 'Лікар';
+  const list = dir.workers.filter(w => w.role === role).sort(sortWorkers);
+  const rows = list.map(w => {
+    const c = currentShift(w), r = c ? classifyShift(c.from, c.to) : null;
+    const shift = c ? `<span class="sh ${r.cls}">${esc(r.label)}</span><span class="wt2">${esc(c.from)}–${esc(c.to)}</span>` : '<span class="wt2">—</span>';
+    return `<div class="rowc ${w.status === 'inactive' ? 'inact' : ''}"><span class="pen" data-ew="${w.id}" ${edit ? '' : 'style="visibility:hidden"'}>✎</span><span class="nm">${esc(shortName(w))}</span><span class="wsh">${shift}</span><span class="slot">${pill2(w.status)}</span></div>`;
+  }).join('');
+  sh.innerHTML = `
+    <div class="sect" style="margin-top:12px"><div class="sect-h"><div class="sect-t">Графік закладу</div></div>
+      <div class="week ${isBoss ? '' : 'locked'}">${week}</div>
+      <div class="al al-i" style="margin:6px 0 0"><span class="al-icon">i</span><div>Змінювати години й позначати вихідні може лише <strong>Керівник</strong> — без винятків, навіть для Адміністратора. Решта бачать графік у режимі перегляду.</div></div></div>
+    <div class="sect"><div class="sect-h"><div class="sect-t">Працівники</div></div>
+      <div class="tabs2"><span class="tab2 ${staffTab === 'lab' ? 'on' : ''}" data-wt="lab">Лаборанти</span><span class="tab2 ${staffTab === 'doc' ? 'on' : ''}" data-wt="doc">Лікарі</span></div>
+      <div class="box-t">${staffTab === 'lab' ? 'Список лаборантів' : 'Список лікарів'}</div>
+      ${rows || emptyBox(staffTab === 'lab' ? 'Жодного лаборанта ще не додано. Додайте першого — він з\'явиться тут.' : 'Жодного лікаря ще не додано. Додайте першого — він з\'явиться тут.')}
+      ${edit ? `<div style="display:flex;justify-content:flex-end"><button class="grp-add-full" data-aw><span class="plus">+</span>${staffTab === 'lab' ? 'Додати лаборанта' : 'Додати лікаря'}</button></div>` : ''}</div>`;
+  sh.onclick = (e) => {
+    const t = e.target.closest('[data-wt]'), ew = e.target.closest('[data-ew]'), off = e.target.closest('[data-off]');
+    if (t){ staffTab = t.dataset.wt; renderStaff(); }
+    else if (ew) openWorkerForm(ew.dataset.ew, null);
+    else if (e.target.closest('[data-aw]')) openWorkerForm(null, role);
+    else if (off){ off.parentElement.classList.toggle('closed'); weekChanged(); }
+  };
+  sh.onchange = (e) => { if (e.target.closest('.week')) weekChanged(); };
+}
+const pill2 = (st) => st === 'inactive' ? '<span class="pill gray">не активний</span>' : '<span class="pill">активний</span>';
+
+/* Графік закладу: зберігається одразу при зміні (settings/main.schedule), лише Керівник */
+function weekChanged(){
+  const wk = [...$('sheet').querySelectorAll('.week .wd')].map(wd => { const [a, b] = wd.querySelectorAll('.wt'); return { from: a.value, to: b.value, off: wd.classList.contains('closed') }; });
+  if (wk.some(d => !d.off && (!d.from || !d.to))){ toast('e', 'Некоректний час', 'Вкажіть години для кожного робочого дня.'); return renderStaff(); }
+  if (wk.every(d => d.off)){
+    confirmWin({ type: 'w', title: 'Усі 7 днів позначено вихідними.', details: 'Заклад не працюватиме взагалі — усі записи в журналі потраплятимуть поза вікном.', action: 'Зберегти все одно', onOk: () => saveWeek(wk), onCancel: renderStaff });
+    return;
+  }
+  saveWeek(wk);
+}
+async function saveWeek(wk){
+  const before = settings?.schedule || null;
+  try {
+    await setDoc(doc(db, 'settings', 'main'), { schedule: wk, updatedAt: serverTimestamp() }, { merge: true });
+    settings = { ...(settings || {}), schedule: wk };
+    audit('update', 'settings', 'main', { schedule: before }, { schedule: wk });
+  } catch (e){ toast('e', 'Не вдалося зберегти графік закладу', e.code || ''); renderStaff(); }
+}
+
+/* ─── Картка працівника ─── */
+function openWorkerForm(id, newRole){
+  const rec = id ? dir.workers.find(x => x.id === id) : null;
+  const orig = (rec?.shifts || []).map(p => ({ ...p }));
+  let periods = orig.map(p => ({ ...p, note: null, cls: null }));
+  const today = todayISO();
+  const stat = rec?.status === 'inactive' ? 'inactive' : 'active';
+  const role = rec?.role || newRole || 'Лаборант';
+  const shRow = (p, i) => {
+    const r = classifyShift(p.from, p.to), open = !p.end, ro = p.excluded || !open ? 'disabled' : '';
+    return `<div class="sh-item${p.excluded ? ' excluded' : ''}" data-row="${i}"><div class="sh-line">
+      <span class="sh-badge ${r.cls}" data-bd>${esc(r.label)}</span>
+      <div class="sh-time2"><input class="tm" type="time" data-pi="${i}" data-pf="from" value="${esc(p.from)}" ${ro}><input class="tm" type="time" data-pi="${i}" data-pf="to" value="${esc(p.to)}" ${ro}></div>
+      <input class="in dt" type="date" data-pi="${i}" data-pf="start" value="${esc(p.start)}" ${ro}><span class="per-dash">—</span>
+      <input class="in dt" type="date" data-pi="${i}" data-pf="end" value="${esc(p.end || '')}" ${p.excluded ? 'disabled' : ''} ${open ? '' : 'disabled'}>
+      ${stCtl(p, i)}
+      <span class="per-del" ${p.excluded ? '' : `data-pdel="${i}"`}>${p.excluded ? 'Видалено з обліку' : '✕ видалити з обліку'}</span>
+    </div><div data-nt>${noteHtml(p, r)}</div></div>`;
+  };
+  const stCtl = (p, i) => !p.end ? `<div class="per-seg" data-stc><span class="on">Дійсне</span><span ${p.excluded ? '' : `data-pend="${i}"`}>Завершене</span></div>` : '<span class="per-tag-done" data-stc>Завершене</span>';
+  const noteHtml = (p, r) => { const n = p.note || (r.note ? { t: 'w', x: r.note } : null); return n ? `<div class="per-note ${n.t}"><span>${n.t === 'w' ? '⚠' : 'ℹ'}</span><span>${esc(n.x)}</span></div>` : ''; };
+
+  const ov = formWin(rec ? fullName(rec) : (newRole === 'Лікар' ? 'Додати лікаря' : 'Додати лаборанта'), `
+    <div class="sect"><div class="sect-h"><div class="sect-t">Дані працівника</div><span class="sect-sub">редагує лише адмін</span></div>
+      <div class="row"><div class="f full"><label>Прізвище, ім'я, по батькові</label><input class="in" data-f="fio" value="${esc(rec ? fullName(rec) : '')}"></div></div>
+      <div class="row"><div class="f"><label>Посада</label><select class="in" data-f="role"><option ${role === 'Лаборант' ? 'selected' : ''}>Лаборант</option><option ${role === 'Лікар' ? 'selected' : ''}>Лікар</option></select></div>
+        <div class="f"><label>Телефон</label><input class="in" type="tel" data-f="phone" placeholder="+380…" value="${esc(rec?.phone || '')}"></div></div>
+      ${rec ? `<div class="row"><div class="f"><label>E-mail (логін)</label><input class="in" data-f="email" value="${esc(rec.email || '')}" readonly></div>
+          <div class="f" style="align-self:flex-end"><span class="chip-add" data-reset>✉ Надіслати лист для скидання пароля</span></div></div>
+        <div class="stexp">Пароль працівнику змінюється лише листом для скидання — пряма зміна чужого пароля в безкоштовному режимі недоступна.</div>`
+      : `<div class="row"><div class="f"><label>E-mail (логін для входу)</label><input class="in" type="email" data-f="email" autocomplete="off"></div>
+          <div class="f"><label>Пароль (не менше 6 символів)</label><input class="in" type="password" data-f="pass" autocomplete="new-password"></div></div>`}
+      <div class="row"><div class="f full"><label>Статус</label>${seg(stat)}<div class="stexp" data-stexp>${ST_TEXT[stat]}</div></div></div></div>
+    <div class="sect" data-sched><div class="sect-h"><div class="sect-t">Змінний графік (персональний)</div></div>
+      <div data-per></div>
+      <button type="button" class="per-add" data-padd>+ Додати новий робочий час</button>
+      <div class="stexp">Тип (Д/Н/Доба) обчислюється <b>автоматично</b> з введених годин — не обирається. Еталонні межі (<b>${esc(settings?.shiftWindows?.dayFrom || '08:00')} / ${esc(settings?.shiftWindows?.dayTo || '20:00')}</b>) — окреме налаштування типів змін, <b>не пов'язане</b> з щоденним розкладом закладу. Редагування доступне лише адміністратору.</div></div>
+    <div class="al al-i" style="margin:14px 0 0"><span class="al-icon">i</span><div>Права доступу працівника (розділ «Доступ») з'являться на наступному етапі — разом із розділом «Доступи».</div></div>`,
+  async (o) => {
+    const fio = val(o, 'fio').split(/\s+/).filter(Boolean);
+    if (fio.length < 2) return ['Вкажіть прізвище та ім\'я', 'Бажано й по батькові.'];
+    const data = { lastName: fio[0], firstName: fio[1], middleName: fio.slice(2).join(' '), role: val(o, 'role'),
+      phone: val(o, 'phone'), status: o.querySelector('.seg .on').dataset.v };
+    // змінний графік
+    const out = [];
+    for (const [k, p] of periods.entries()){
+      if (!p.from || !p.to) return [`Період ${k + 1}: вкажіть години`, ''];
+      if (!p.start) return [`Період ${k + 1}: вкажіть дату початку`, ''];
+      if (p.end && p.end < p.start) return [`Період ${k + 1}: «по» раніше за «з»`, 'Виправте дати.'];
+      out.push({ from: p.from, to: p.to, start: p.start, end: p.end || null, excluded: !!p.excluded });
+    }
+    const act = out.filter(p => !p.excluded);
+    if (act.filter(p => !p.end).length > 1) return ['Два відкриті періоди одночасно', 'Спершу закрийте попередній (поставте «по» або «Завершене»).'];
+    const sorted = [...act].sort((a, b) => a.start.localeCompare(b.start));
+    for (let i = 1; i < sorted.length; i++) if (!sorted[i - 1].end || sorted[i].start <= sorted[i - 1].end) return ['Періоди змінного графіку перетинаються', 'Початок нового періоду має бути пізніше за закриття попереднього.'];
+    if (data.role === 'Лаборант' || data.role === 'Лікар') data.shifts = out;
+    // попередження про зміни «заднім числом»
+    const retro = periods.some((p, i) => orig[i] ? (p.start !== orig[i].start || p.from !== orig[i].from || p.to !== orig[i].to || (orig[i].end && p.end !== orig[i].end)) && !p.excluded : p.start < today && !p.excluded);
+    if (retro && !o._retroOk){
+      const go = await new Promise((res) => confirmWin({ type: 'w', title: 'Зміни в минулому.', details: 'Ви змінюєте дати або години періоду, що вже почався. Це може вплинути на сформовані звіти (місячні можуть перестати сходитись із квартальним).', action: 'Зберегти все одно', onOk: () => res(true), onCancel: () => res(false) }));
+      if (!go) return ['Збереження скасовано', 'Перевірте дати змінного графіку.'];
+    }
+    if (rec){ saveEntry('workers', id, data); return null; }
+    // новий працівник: створюємо обліковий запис через окремий екземпляр Firebase, щоб не розлогінити адміна
+    const email = val(o, 'email').toLowerCase(), pass = o.querySelector('[data-f="pass"]').value;
+    if (!/^\S+@\S+\.\S+$/.test(email)) return ['Некоректний e-mail', 'Він буде логіном для входу.'];
+    if (pass.length < 6) return ['Занадто короткий пароль', 'Не менше 6 символів.'];
+    if (dir.workers.some(w => String(w.email).toLowerCase() === email)) return ['Такий e-mail уже є', 'Працівника з цим e-mail уже додано.'];
+    const secApp = initializeApp(firebaseConfig, 'sec' + Date.now());
+    let cred = null;
+    try {
+      const secAuth = initializeAuth(secApp, { persistence: inMemoryPersistence });
+      cred = await createUserWithEmailAndPassword(secAuth, email, pass);
+      const wdoc = { ...data, email, createdBy: profile.id };
+      await setDoc(doc(db, 'workers', cred.user.uid), { ...wdoc, createdAt: serverTimestamp() });
+      dir.workers.push({ id: cred.user.uid, ...wdoc });
+      audit('create', 'workers', cred.user.uid, null, { id: cred.user.uid, ...wdoc });
+      await signOut(secAuth).catch(() => {});
+      rerenderWins();
+      return null;
+    } catch (e){
+      if (cred) await cred.user.delete().catch(() => {});   // не лишаємо акаунт без профілю
+      if (e.code === 'auth/email-already-in-use') return ['Такий e-mail уже зареєстровано', 'Використайте інший e-mail.'];
+      if (e.code === 'auth/invalid-email') return ['Некоректний e-mail', ''];
+      if (e.code === 'auth/weak-password') return ['Занадто слабкий пароль', 'Оберіть складніший.'];
+      return ['Не вдалося створити працівника', e.code || e.message || ''];
+    } finally { deleteApp(secApp).catch(() => {}); }
+  }, 680);
+
+  const per = ov.querySelector('[data-per]');
+  const draw = () => { per.innerHTML = periods.length ? periods.map(shRow).join('') : '<div class="al al-i" style="margin:0 0 8px"><span class="al-icon">i</span><div><b>Робочого часу ще не задано</b>Додайте перший період — і працівник з\'явиться в зміні.</div></div>'; };
+  draw();
+  const syncRole = () => { ov.querySelector('[data-sched]').hidden = !['Лаборант', 'Лікар'].includes(val(ov, 'role')); };
+  ov.querySelector('[data-f="role"]').onchange = syncRole; syncRole();
+  ov.addEventListener('click', (e) => { const sg = e.target.closest('.seg span'); if (sg) ov.querySelector('[data-stexp]').textContent = ST_TEXT[sg.dataset.v] || ''; });
+  ov.querySelector('[data-reset]')?.addEventListener('click', async () => {
+    try { await sendPasswordResetEmail(auth, rec.email); toast('ok', 'Лист надіслано', 'Працівник отримає посилання для нового пароля на ' + rec.email); }
+    catch (e){ toast('e', 'Не вдалося надіслати лист', e.code || ''); }
+  });
+  per.addEventListener('input', (e) => { const i = e.target.dataset.pi; if (i != null) periods[i][e.target.dataset.pf] = e.target.value; });
+  per.addEventListener('change', (e) => {
+    const i = e.target.dataset.pi; if (i == null) return;
+    const row = per.querySelector(`[data-row="${i}"]`), p = periods[i], f = e.target.dataset.pf, tpl = document.createElement('div');
+    if (f === 'from' || f === 'to'){
+      const r = classifyShift(p.from, p.to), bd = row.querySelector('[data-bd]');
+      bd.className = 'sh-badge ' + r.cls; bd.textContent = r.label;
+      row.querySelector('[data-nt]').innerHTML = noteHtml({ ...p, note: null }, r);
+    }
+    if (f === 'end'){ tpl.innerHTML = stCtl(p, i); row.querySelector('[data-stc]').replaceWith(tpl.firstElementChild); }
+  });
+  per.addEventListener('click', (e) => {
+    const end = e.target.closest('[data-pend]'), del = e.target.closest('[data-pdel]');
+    if (end){
+      const p = periods[end.dataset.pend];
+      if (!p.end) p.end = todayISO();
+      p.note = { t: 'i', x: 'Робочий час позначено завершеним із сьогоднішньою датою «по».' }; draw();
+    }
+    if (del){
+      const p = periods[del.dataset.pdel], n = visitsInPeriod(p);
+      confirmWin({ type: n > 0 ? 'e' : 'w', title: 'Ви виключаєте цей робочий час з обліку.',
+        details: `${isoToUa(p.start)} – ${p.end ? isoToUa(p.end) : 'донині'}. ` + (n > 0 ? `На нього спирається ${n} записів у журналі.` : 'Записів на цьому періоді немає.'),
+        action: 'Видалити з обліку',
+        onOk: () => { p.excluded = true; p.note = n > 0 ? { t: 'w', x: `Виключено з обліку — ${n} записів більше не враховуються в розрахунку зміни.` } : { t: 'i', x: 'Виключено з обліку — записів на цьому періоді не було.' }; draw(); } });
+    }
+  });
+  ov.querySelector('[data-padd]').addEventListener('click', () => {
+    const last = periods[periods.length - 1];
+    if (last && !last.excluded){
+      if (!last.end){ last.end = today; last.note = { t: 'i', x: 'Автоматично позначено завершеним при додаванні нового робочого часу.' }; }
+      else if (today <= last.end){ last.note = { t: 'w', x: 'Новий період не може починатися раніше за закриття попереднього — він завершується не раніше сьогодні. Перевірте дати.' }; draw(); return; }
+    }
+    periods.push({ from: '08:00', to: '20:00', start: today, end: '', excluded: false, note: null }); draw();
   });
 }
 
