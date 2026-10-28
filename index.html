@@ -1197,7 +1197,10 @@ function openWorkerForm(id, newRole){
     if (rec){ saveEntry('workers', id, data); return null; }
     // новий працівник: створюємо обліковий запис через окремий екземпляр Firebase, щоб не розлогінити адміна
     const email = val(o, 'email').toLowerCase(), pass = o.querySelector('[data-f="pass"]').value;
-    if (!/^\S+@\S+\.\S+$/.test(email)) return ['Некоректний e-mail', 'Він буде логіном для входу.'];
+    const whom = data.role === 'Лікар' ? 'цього лікаря' : 'цього лаборанта';
+    if (!email) return ['Введіть e-mail', `Введіть e-mail, щоб додати (зберегти) ${whom} до бази даних. Він буде логіном для входу.`];
+    if (!/^\S+@\S+\.\S+$/.test(email)) return ['Некоректний e-mail', 'Перевірте адресу — вона буде логіном для входу.'];
+    if (!pass) return ['Введіть пароль', `Без пароля неможливо створити вхід для ${whom}. Не менше 6 символів.`];
     if (pass.length < 6) return ['Занадто короткий пароль', 'Не менше 6 символів.'];
     if (dir.workers.some(w => String(w.email).toLowerCase() === email)) return ['Такий e-mail уже є', 'Працівника з цим e-mail уже додано.'];
     const secApp = initializeApp(firebaseConfig, 'sec' + Date.now());
