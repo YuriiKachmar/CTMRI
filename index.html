@@ -150,8 +150,9 @@
   .tab:not(.on){border-radius:16px 16px 0 0;margin:0 5px;background:var(--tab-off);box-shadow:-4px -4px 8px var(--lite),4px 4px 8px var(--dark),0 5px 8px -4px var(--lite)}
   .tab:not(.on):active{box-shadow:inset 3px 3px 6px var(--dark),inset -3px -3px 6px var(--lite)}
   .tab:nth-child(5){margin-right:0}   /* крайній язичок упритул до краю листа (останній дочірній — це сам лист) */
-  .sheet{grid-column:1 / 6;padding:12px 24px 24px;min-height:520px;background:var(--bg);border-radius:0 0 16px 16px;position:relative;z-index:1;box-shadow:-6px -6px 12px var(--lite),6px 6px 12px var(--dark)}
-  .sheet.tl-round{border-top-left-radius:16px}
+  .sheet{grid-column:1 / 6;padding:12px 24px 24px;min-height:520px;background:var(--bg);border-radius:0 16px 16px 16px;position:relative;z-index:1;box-shadow:-6px -6px 12px var(--lite),6px 6px 12px var(--dark)}
+  .sheet.tl-round{border-top-left-radius:16px}   /* перший язичок неактивний → лівий кут заокруглений */
+  .sheet.tr-flat{border-top-right-radius:0}      /* останній язичок активний → правий кут прямий, лист продовжує язичок */
   @media (max-width:700px){.tab{padding:12px 3px;font-size:10.5px}.tab:not(.on){margin:0 2px}.top .logo{width:64px;height:64px}.sheet{padding:12px 12px 20px}}
 
   /* ── Модальні вікна довідників ── */
@@ -517,6 +518,7 @@ const TABS = ['Журнал', 'Пацієнти', 'Скерування', 'Пр�
 function pickTab(i){
   [...$('folder').querySelectorAll('.tab')].forEach((t, k) => t.classList.toggle('on', k === i));
   $('sheet').classList.toggle('tl-round', i !== 0);
+  $('sheet').classList.toggle('tr-flat', i === TABS.length - 1);
   $('sheet').innerHTML = `<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Розділ «${esc(TABS[i])}» — наступний крок розробки</b>Зараз працюють довідники: Послуги, Пільги, Розподіл.</div></div>`;
 }
 const shortName = (p) => {
