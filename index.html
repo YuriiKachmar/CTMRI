@@ -54,7 +54,10 @@
   .al-icon{flex-shrink:0;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;margin-top:1px}
   .al-ok{border-color:var(--green);background:#fff}.al-ok .al-icon{background:var(--green)}
   .al-e{border-color:var(--err);background:var(--err-bg)}.al-e .al-icon{background:var(--err)}
-  .al-w{border-color:var(--warn);background:var(--warn-bg)}.al-w .al-icon{background:var(--warn)}
+  .al-w{border-color:var(--warn);background:var(--warn-bg)}
+  .al-w .al-icon{width:19px;height:17px;border-radius:0;background:none;position:relative;margin-top:0}
+  .al-w .al-icon::before{content:'';position:absolute;inset:0;background:var(--warn);clip-path:polygon(50% 4%, 4% 96%, 96% 96%);border-radius:3px}
+  .al-w .al-icon span{position:relative;z-index:1;margin-top:3px;font-size:9px}
   .al-i{border-color:var(--info);background:var(--info-bg)}.al-i .al-icon{background:var(--info)}
   .al.flat{box-shadow:none;margin:12px 0 0}
   .al.flat b{display:inline;font-size:inherit;margin:0}   /* у майстрі <b> стоїть усередині речення, а не як заголовок */
@@ -122,18 +125,93 @@
   .sh.sd{background:var(--soft);color:var(--green)}.sh.sn{background:#dbe3ec;color:#3b5878}.sh.s24{background:#f3e3c8;color:#8a6011}
   .placeholder{border-radius:16px;background:var(--bg);box-shadow:var(--in);padding:22px;text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
 
-  /* ── Оболонка програми ── */
-  #app{min-height:100vh;display:flex;flex-direction:column}
-  .hdr{display:flex;align-items:center;gap:14px;padding:14px 20px;background:var(--bg);box-shadow:0 4px 10px rgba(163,177,180,.35);position:relative;z-index:5}
-  .hdr .logo{width:40px;height:40px;margin:0;border-radius:11px;font-size:7px;flex:0 0 auto}
-  .hdr-t{flex:1;min-width:0}
-  .hdr-t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .hdr-t span{font-size:11px;color:var(--muted)}
-  .who{text-align:right;font-size:12px;line-height:1.35}
-  .who b{display:block;font-weight:800}
-  .who span{color:var(--muted);font-size:11px}
-  #netBanner{margin:12px 20px 0}
-  .main{flex:1;padding:24px 20px 60px;max-width:1100px;width:100%;margin:0 auto}
+  /* ── Головний екран (main.html): верхній блок + тека ── */
+  :root{--tab-off:#E0E5E8;--line:#d0d7e0}
+  #app{min-height:100vh;background:var(--bg);padding:20px 18px 40px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .top{display:flex;align-items:center;gap:16px;margin-bottom:14px;padding:4px 6px}
+  .top .logo{flex:0 0 auto;width:104px;height:104px;margin:0;align-self:center;border-radius:16px;background:var(--bg);box-shadow:-6px -6px 12px var(--lite),6px 6px 12px var(--dark);font-size:11px;cursor:default}
+  .topcol{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:12px}
+  .head{display:flex;align-items:center;gap:14px}
+  .head .fac{font-size:16px;font-weight:800;color:var(--green);margin:0}
+  .me{margin-left:auto;font-size:12px;color:var(--muted);text-align:right;line-height:1.35}
+  .me b{color:var(--ink)}
+  .mrow{display:flex;justify-content:flex-start;gap:10px;flex-wrap:wrap;align-items:center}
+  .mbtn{width:80px;padding:12px 0;border:none;border-radius:12px;background:var(--bg);box-shadow:-4px -4px 8px var(--lite),4px 4px 8px var(--dark);font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;text-align:center;font-family:inherit}
+  .mbtn:active{box-shadow:inset 3px 3px 6px var(--dark),inset -3px -3px 6px var(--lite)}
+  .mbtn.ico{width:46px;height:46px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:19px}
+  .head-cal{margin-left:auto;padding:11px 18px;border:none;border-radius:12px;background:var(--bg);box-shadow:-4px -4px 8px var(--lite),4px 4px 8px var(--dark);display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer;font-family:inherit}
+  .head-cal:active{box-shadow:inset 3px 3px 6px var(--dark),inset -3px -3px 6px var(--lite)}
+  #netBanner{flex:1;margin:0 8px;padding:6px 12px;font-size:11px}
+  #netBanner b{font-size:11.5px}
+  .folder{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:auto auto}
+  .tab{padding:16px 12px;font-size:13px;font-weight:700;text-align:center;cursor:pointer;color:var(--muted);background:var(--bg);position:relative;white-space:nowrap}
+  .tab.on{color:var(--green);border-radius:16px 16px 0 0;z-index:2;box-shadow:-6px -6px 12px var(--lite),6px 0 10px -5px var(--dark)}
+  .tab:not(.on){border-radius:16px 16px 0 0;margin:0 5px;background:var(--tab-off);box-shadow:-4px -4px 8px var(--lite),4px 4px 8px var(--dark),0 5px 8px -4px var(--lite)}
+  .tab:not(.on):active{box-shadow:inset 3px 3px 6px var(--dark),inset -3px -3px 6px var(--lite)}
+  .tab:last-child{margin-right:0}
+  .sheet{grid-column:1 / 6;padding:12px 24px 24px;min-height:520px;background:var(--bg);border-radius:0 16px 16px 16px;position:relative;z-index:1;box-shadow:-6px -6px 12px var(--lite),6px 6px 12px var(--dark)}
+  .sheet.tl-round{border-top-left-radius:16px}
+  @media (max-width:700px){.tab{padding:12px 3px;font-size:10.5px}.tab:not(.on){margin:0 2px}.top .logo{width:64px;height:64px}.sheet{padding:12px 12px 20px}}
+
+  /* ── Модальні вікна довідників ── */
+  .ov{position:fixed;inset:0;z-index:40;background:rgba(31,58,52,.38);display:flex;align-items:center;justify-content:center;padding:18px}
+  .win{width:100%;background:var(--bg);border-radius:20px;box-shadow:var(--up);overflow:hidden;display:flex;flex-direction:column;max-height:92vh}
+  .win-h{display:flex;align-items:center;gap:12px;padding:16px 20px 14px;position:relative;flex:0 0 auto}
+  .win-h h4{margin:0;font-size:14px;font-weight:800;color:var(--green);line-height:1.2}
+  .win-x{position:absolute;right:16px;top:13px;width:28px;height:28px;border:none;border-radius:9px;background:var(--bg);box-shadow:var(--bump);color:var(--muted);font-size:13px;cursor:pointer}
+  .win-x:active{box-shadow:var(--in)}
+  .win-b{padding:0 20px 10px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0}
+  .win-f{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;padding:12px 20px 20px;flex:0 0 auto}
+  .b{padding:14px 20px;border:none;border-radius:13px;background:var(--bg);box-shadow:var(--bump);font-size:13px;font-weight:800;color:var(--muted);cursor:pointer;font-family:inherit}
+  .b:active{box-shadow:var(--in)}
+  .b.pri{background:var(--btn-main);color:#fff;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark)}
+  .b.pri:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
+  .b .plus{font-size:20px;font-weight:900;line-height:1;margin-right:6px}
+  .grp-h{display:flex;align-items:center;gap:10px;margin:18px 0 10px}
+  .grp-h:first-child{margin-top:0}
+  .grp-t{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px}
+  .grp-add-full{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 18px;border:none;border-radius:12px;background:var(--btn-main);box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;margin:8px 0 0 auto;font-family:inherit}
+  .grp-add-full:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
+  .grp-add-full .plus{font-size:17px;font-weight:900;line-height:1}
+  .lst{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px;table-layout:fixed}
+  .lst th{background:var(--green);color:#fff;padding:9px 10px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;text-align:center}
+  .lst td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:center;vertical-align:top;overflow-wrap:anywhere}
+  .lst .l{text-align:left}
+  .lst td.nm{text-align:left;font-weight:700}
+  .lst td.ds{text-align:left;font-weight:400;color:var(--muted);font-size:11.5px;line-height:1.5}
+  .lst tr:last-child td{border-bottom:none}
+  .lst tr.inact td{opacity:.45}
+  .lst .nw{white-space:nowrap}
+  .price{font-variant-numeric:tabular-nums;font-weight:700}
+  .pen{display:inline-flex;align-items:center;justify-content:center;width:30px;height:28px;border-radius:8px;background:var(--bg);box-shadow:var(--bump);color:var(--green);cursor:pointer;font-size:12px}
+  .pen:active{box-shadow:var(--in)}
+  .pill{display:inline-block;font-size:9.5px;font-weight:800;padding:4px 11px;border-radius:9px;background:var(--soft);color:var(--green);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+  .pill.gray{background:#E4E9EA;color:var(--muted)}
+  .free{font-size:11.5px;color:var(--muted);font-style:italic}
+  .dot{width:22px;height:22px;border-radius:50%;display:inline-block}
+  .row{display:flex;gap:11px;flex-wrap:wrap}
+  .f{flex:1 1 190px;min-width:0;margin-bottom:11px}
+  .f.sm{flex:0 0 150px}
+  .f.full{flex:1 1 100%}
+  .f label,.pal-t{display:block;font-size:10.5px;color:var(--muted);margin-bottom:5px;padding-left:3px}
+  .in{width:100%;padding:12px 14px;border:none;border-radius:11px;background:var(--bg);box-shadow:var(--in);font-size:13px;font-weight:600;color:var(--ink);font-family:inherit;resize:vertical;-webkit-appearance:none;appearance:none}
+  .in:focus{outline:none;box-shadow:var(--in-on)}
+  .in::placeholder{color:var(--ph);font-weight:500}
+  .seg{display:flex;gap:5px;padding:4px;border-radius:12px;background:var(--bg);box-shadow:var(--in)}
+  .seg span{flex:1;text-align:center;padding:9px 6px;border-radius:9px;font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer}
+  .seg span.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:10px;margin-bottom:8px}
+  .sw{position:relative;width:44px;height:44px;border-radius:50%;cursor:pointer;box-shadow:var(--bump)}
+  .sw::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;opacity:0;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+  .sw.sel{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--green)}
+  .sw.sel::after{opacity:1}
+  .sw.taken{cursor:not-allowed;opacity:.35}
+  .sw.taken::after{content:'✕';opacity:1;color:var(--ink);text-shadow:none;font-size:13px}
+  .pal-leg{display:flex;gap:16px;font-size:10.5px;color:var(--muted);margin:2px 0 12px}
+  .pal-leg span{display:flex;align-items:center;gap:6px}
+  .pal-leg i{width:12px;height:12px;border-radius:50%;display:inline-block}
+
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:360px;z-index:60}
 
   @media (max-width:560px){
@@ -148,17 +226,29 @@
 <div id="auth" hidden></div>
 <div id="wizard" hidden></div>
 <div id="app" hidden>
-  <div class="hdr">
-    <div class="logo">ЛОГО</div>
-    <div class="hdr-t"><b id="hFac"></b><span>Облік послуг КТ/МРТ</span></div>
-    <div class="who"><b id="hWho"></b><span id="hRole"></span></div>
-    <button class="b2 sm" id="btnLogout">Вийти</button>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo">ЛОГО</div>
+      <div class="topcol">
+        <div class="head">
+          <div class="fac" id="hFac"></div>
+          <div class="me"><b id="hWho"></b><br><span id="hRole"></span></div>
+          <button class="mbtn" id="btnLogout" style="width:auto;padding:12px 16px">Вийти</button>
+        </div>
+        <div class="mrow">
+          <button class="mbtn" id="mbServ">Послуги</button>
+          <button class="mbtn" id="mbDisc">Пільги</button>
+          <button class="mbtn" id="mbLab">Розподіл</button>
+          <div class="al al-w" id="netBanner" hidden><span class="al-icon"><span>!</span></span><div><b>Немає з'єднання</b>Зміни зберігаються локально, синхронізуються автоматично.</div></div>
+          <button class="head-cal" id="mbCal">📅 Календар</button>
+          <button class="mbtn ico" id="mbSet" title="Налаштування">⚙️</button>
+        </div>
+      </div>
+    </div>
+    <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
   </div>
-  <div id="netBanner" hidden>
-    <div class="al al-w" style="margin-bottom:0"><span class="al-icon">!</span><div><b>Немає з'єднання</b>Дані зберігаються на пристрої й надішлються, щойно зв'язок повернеться.</div></div>
-  </div>
-  <div class="main" id="mainView"></div>
 </div>
+<div id="modals"></div>
 <div class="toast" id="toast" hidden></div>
 
 <script type="module">
@@ -167,7 +257,7 @@ import { initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmai
          createUserWithEmailAndPassword, sendPasswordResetEmail, signOut,
          reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc,
-         writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+         writeBatch, serverTimestamp, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ═══ Firebase — проєкт ctmri-1 ═══ */
 const firebaseConfig = {
@@ -201,7 +291,7 @@ function show(id){
 }
 function toast(kind, title, text){
   const t = $('toast');
-  const ic = {ok:'✓',e:'✕',w:'!',i:'i'}[kind];
+  const ic = {ok:'✓',e:'✕',w:'<span>!</span>',i:'i'}[kind];
   t.innerHTML = `<div class="al al-${kind}" style="margin:0"><span class="al-icon">${ic}</span><div><b>${esc(title)}</b>${esc(text||'')}</div></div>`;
   t.hidden = false;
   clearTimeout(toast._t);
@@ -410,19 +500,263 @@ function enterApp(){
   renderShell();
 }
 
-function renderShell(){
+async function renderShell(){
   $('hFac').textContent = settings?.facilityName || APP_NAME;
-  $('hWho').textContent = ((profile.lastName || '') + ' ' + (profile.firstName || '')).trim() || profile.email;
-  $('hRole').textContent = profile.role;
-  $('mainView').innerHTML = `
-    <div class="wcard">
-      <div class="al al-i flat" style="margin:0"><span class="al-icon">i</span><div><b>Журнал — наступний крок розробки</b>Вхід, ролі й перший запуск працюють. Журнал, довідники та звіти підключаються далі.</div></div>
-    </div>`;
+  $('hWho').textContent = shortName(profile);
+  $('hRole').textContent = String(profile.role || '').toLowerCase();
   show('app');
+  pickTab(0);
+  try { await loadDirs(); } catch (e){ console.warn('dirs:', e.code); toast('w', 'Довідники не завантажено', 'Перевірте з\'єднання.'); }
 }
 window.addEventListener('online', () => { $('netBanner').hidden = true; });
 window.addEventListener('offline', () => { $('netBanner').hidden = false; });
 if (!navigator.onLine) $('netBanner').hidden = false;
+
+/* ═══ ГОЛОВНИЙ ЕКРАН: язички ═══ */
+const TABS = ['Журнал', 'Пацієнти', 'Скерування', 'Працівники', 'Звіти'];
+function pickTab(i){
+  [...$('folder').querySelectorAll('.tab')].forEach((t, k) => t.classList.toggle('on', k === i));
+  $('sheet').classList.toggle('tl-round', i !== 0);
+  $('sheet').innerHTML = `<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Розділ «${esc(TABS[i])}» — наступний крок розробки</b>Зараз працюють довідники: Послуги, Пільги, Розподіл.</div></div>`;
+}
+const shortName = (p) => {
+  const ini = [p.firstName, p.middleName].filter(Boolean).map(x => x[0].toUpperCase() + '.').join('');
+  return ((p.lastName || '') + ' ' + ini).trim() || p.email || '';
+};
+
+/* ═══ ДОВІДНИКИ: дані (завантажуються один раз, кешуються; architecture_v1 розд. 5) ═══ */
+const COL = { services: 'services_catalog', extras: 'extra_catalog', discounts: 'discounts', labels: 'labels' };
+const dir = { services: [], extras: [], discounts: [], labels: [] };
+/* тимчасово: редагувати довідники може Керівник/Адміністратор; далі — з матриці «Доступи» */
+const canEditDirs = () => ['Керівник', 'Адміністратор'].includes(profile?.role);
+
+async function loadDirs(){
+  await Promise.all(Object.keys(COL).map(async (k) => {
+    const snap = await getDocs(collection(db, COL[k]));
+    dir[k] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }));
+}
+
+/* Журнал змін (audit_log): знімок «до/після» без службових полів часу */
+const plain = (o) => {
+  if (!o) return null;
+  const r = {};
+  for (const [k, v] of Object.entries(o)) if (!['id', 'createdAt', 'updatedAt', 'createdBy'].includes(k)) r[k] = v ?? null;
+  return r;
+};
+function audit(action, collectionName, documentId, before, after){
+  const me = profile || {};
+  setDoc(doc(collection(db, 'audit_log')), {
+    timestamp: serverTimestamp(), userId: me.id || null,
+    userSnapshot: { lastName: me.lastName || '', firstName: me.firstName || '', role: me.role || '' },
+    action, collection: collectionName, documentId, before: plain(before), after: plain(after)
+  }).catch(e => console.warn('audit:', e.code));
+}
+
+/* Збереження: кеш оновлюється одразу (офлайн-запис не чекає сервера), помилку сервера повертаємо через перезавантаження */
+function saveEntry(key, id, data){
+  const col = COL[key];
+  const ref = id ? doc(db, col, id) : doc(collection(db, col));
+  const i = dir[key].findIndex(x => x.id === ref.id);
+  const before = i >= 0 ? { ...dir[key][i] } : null;
+  const local = { ...(before || {}), ...data, id: ref.id };
+  if (i >= 0) dir[key][i] = local; else dir[key].push(local);
+  const payload = { ...data, updatedAt: serverTimestamp(), ...(before ? {} : { createdAt: serverTimestamp(), createdBy: profile.id }) };
+  setDoc(ref, payload, { merge: true })
+    .then(() => audit(before ? 'update' : 'create', col, ref.id, before, local))
+    .catch(async (e) => {
+      toast('e', 'Не вдалося зберегти', e.code || '');
+      try { await loadDirs(); } catch (_) {}
+      rerenderWins();
+    });
+  rerenderWins();
+}
+
+/* ═══ Модальні вікна (стек: список → форма) ═══ */
+const winStack = [];
+function openWin(html, width){
+  const ov = document.createElement('div');
+  ov.className = 'ov';
+  ov.innerHTML = `<div class="win" style="max-width:${width || 560}px">${html}</div>`;
+  ov.addEventListener('mousedown', (e) => { if (e.target === ov) closeWin(ov); });
+  ov.addEventListener('click', (e) => { if (e.target.closest('[data-x]')) closeWin(ov); });
+  $('modals').appendChild(ov);
+  winStack.push(ov);
+  return ov;
+}
+function closeWin(ov){ ov.remove(); const i = winStack.indexOf(ov); if (i >= 0) winStack.splice(i, 1); }
+function rerenderWins(){ for (const o of winStack) if (o._render) o._render(); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && winStack.length) closeWin(winStack[winStack.length - 1]); });
+
+const fmtMoney = (n) => Number(n).toLocaleString('uk-UA') + ' грн';
+const parseMoney = (s) => { const n = Number(String(s).replace(/[\s ]/g, '').replace(',', '.')); return Number.isFinite(n) && n >= 0 && String(s).trim() !== '' ? n : null; };
+/* за алфавітом, активні зверху, неактивні під ними */
+const byName = (a, b) => ((a.status === 'inactive') - (b.status === 'inactive')) || String(a.name).localeCompare(String(b.name), 'uk');
+const pill = (st) => st === 'inactive' ? '<span class="pill gray">не активна</span>' : '<span class="pill">активна</span>';
+const seg = (st) => `<div class="seg"><span data-v="active" class="${st === 'inactive' ? '' : 'on'}">Активна</span><span data-v="inactive" class="${st === 'inactive' ? 'on' : ''}">Не активна</span></div>`;
+const penCell = (attr) => `<td>${canEditDirs() ? `<span class="pen" ${attr}>✎</span>` : ''}</td>`;
+/* порожній стан (design_system): заголовки лишаються, у рядку — повідомлення .al-i */
+const emptyRow = (cols, text) => `<tr><td colspan="${cols}" style="padding:16px 10px"><div class="al al-i" style="display:inline-flex;text-align:left;max-width:300px;margin:0"><span class="al-icon">i</span><div><b>Тут поки нічого немає</b>${esc(text)}</div></div></td></tr>`;
+
+function listWin(title, footerHtml, renderBody, width){
+  const ov = openWin(`<div class="win-h"><h4>${esc(title)}</h4><button class="win-x" data-x>✕</button></div><div class="win-b" data-body></div><div class="win-f">${footerHtml}</div>`, width);
+  ov._render = () => { ov.querySelector('[data-body]').innerHTML = renderBody(); };
+  ov._render();
+  return ov;
+}
+function formWin(title, body, onSave, width){
+  const ov = openWin(`<div class="win-h"><h4>${esc(title)}</h4><button class="win-x" data-x>✕</button></div>
+    <div class="win-b">${body}<div class="al al-e" data-err style="display:none;margin:4px 0 8px"><span class="al-icon">✕</span><div><b data-et></b><span data-ex></span></div></div></div>
+    <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" data-save>Зберегти</button></div>`, width);
+  const save = () => {
+    const r = onSave(ov);
+    if (!r) return closeWin(ov);
+    ov.querySelector('[data-et]').textContent = r[0];
+    ov.querySelector('[data-ex]').textContent = r[1] ? ' ' + r[1] : '';
+    ov.querySelector('[data-err]').style.display = 'flex';
+  };
+  ov.addEventListener('click', (e) => {
+    const s = e.target.closest('.seg span');
+    if (s) s.parentElement.querySelectorAll('span').forEach(x => x.classList.toggle('on', x === s));
+  });
+  ov.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') save(); });
+  ov.querySelector('[data-save]').onclick = save;
+  ov.querySelector('input')?.focus();
+  return ov;
+}
+const val = (ov, f) => ov.querySelector(`[data-f="${f}"]`).value.trim();
+const dupName = (key, name, selfId) => dir[key].some(x => x.id !== selfId && String(x.name).trim().toLowerCase() === name.toLowerCase());
+
+/* ─── Послуги ─── */
+function openServicesWin(){
+  const ov = listWin('Послуги', '<button class="b" data-x>Закрити</button>', () => {
+    const sv = [...dir.services].sort(byName), ex = [...dir.extras].sort(byName), edit = canEditDirs();
+    const svRows = sv.length ? sv.map(s => `<tr class="${s.status === 'inactive' ? 'inact' : ''}">${penCell(`data-edit="services:${s.id}"`)}<td class="nm">${esc(s.name)}</td><td class="ds">${esc(s.description || '—')}</td><td class="price nw">${fmtMoney(s.price)}</td><td>${pill(s.status)}</td></tr>`).join('') : emptyRow(5, 'Жодної основної послуги ще не додано. Додайте першу — вона з\'явиться тут.');
+    const exRows = ex.length ? ex.map(s => `<tr class="${s.status === 'inactive' ? 'inact' : ''}">${penCell(`data-edit="extras:${s.id}"`)}<td class="nm">${esc(s.name)}</td><td class="price nw">${fmtMoney(s.price)}</td><td>${pill(s.status)}</td></tr>`).join('') : emptyRow(4, 'Жодної додаткової послуги ще не додано. Додайте першу — вона з\'явиться тут.');
+    return `<div class="grp-h"><div class="grp-t">Основні послуги</div></div>
+      <table class="lst"><colgroup><col style="width:54px"><col style="width:200px"><col><col style="width:110px"><col style="width:110px"></colgroup>
+        <tr><th></th><th class="l">Назва</th><th class="l">Опис</th><th>Вартість</th><th>Статус</th></tr>${svRows}</table>
+      ${edit ? '<button class="grp-add-full" data-add="services"><span class="plus">+</span>Додати основну послугу</button>' : ''}
+      <div class="grp-h" style="margin-top:22px"><div class="grp-t">Додаткові послуги</div></div>
+      <table class="lst"><colgroup><col style="width:54px"><col><col style="width:110px"><col style="width:110px"></colgroup>
+        <tr><th></th><th class="l">Назва</th><th>Вартість</th><th>Статус</th></tr>${exRows}</table>
+      ${edit ? '<button class="grp-add-full" data-add="extras"><span class="plus">+</span>Додати додаткову послугу</button>' : ''}`;
+  }, 780);
+  ov.addEventListener('click', (e) => {
+    const ed = e.target.closest('[data-edit]'), ad = e.target.closest('[data-add]');
+    if (ed){ const [k, id] = ed.dataset.edit.split(':'); openServiceForm(k, id); }
+    if (ad) openServiceForm(ad.dataset.add, null);
+  });
+}
+function openServiceForm(key, id){
+  const rec = id ? dir[key].find(x => x.id === id) : null, main = key === 'services';
+  formWin('Послуга', `
+    <div class="row"><div class="f full"><label>Назва</label><input class="in" data-f="name" value="${esc(rec?.name || '')}"></div></div>
+    ${main ? `<div class="row"><div class="f full"><label>Опис</label><textarea class="in" rows="3" data-f="description">${esc(rec?.description || '')}</textarea></div></div>` : ''}
+    <div class="row"><div class="f sm"><label>Вартість, грн</label><input class="in" inputmode="decimal" data-f="price" value="${rec ? esc(rec.price) : ''}"></div>
+      <div class="f"><label>Статус</label>${seg(rec?.status)}</div></div>`,
+  (ov) => {
+    const name = val(ov, 'name'), price = parseMoney(val(ov, 'price'));
+    if (!name) return ['Введіть назву', ''];
+    if (dupName(key, name, id)) return ['Така назва вже є', 'Оберіть іншу або змініть наявну.'];
+    if (price === null) return ['Некоректна вартість', 'Вкажіть число, наприклад 1200.'];
+    const data = { name, price, status: ov.querySelector('.seg .on').dataset.v };
+    if (main) data.description = val(ov, 'description');
+    saveEntry(key, id, data);
+  });
+}
+
+/* ─── Пільги ─── */
+function openDiscountsWin(){
+  const ov = listWin('Пільги', `<button class="b" data-x>Закрити</button>${canEditDirs() ? '<button class="b pri" data-add><span class="plus">+</span>Додати нову пільгу</button>' : ''}`, () => {
+    const list = [...dir.discounts].sort(byName);
+    const rows = list.length ? list.map(d => `<tr class="${d.status === 'inactive' ? 'inact' : ''}">${penCell(`data-edit="${d.id}"`)}<td class="nm">${esc(d.name)}</td><td class="nw">${d.percent == null ? '<span class="free">довільно</span>' : d.percent + '%'}</td><td>${d.percent == null ? 'вручну + коментар' : 'фіксована'}</td><td>${pill(d.status)}</td></tr>`).join('') : emptyRow(5, 'Жодної пільги ще не додано. Додайте першу — вона з\'явиться тут.');
+    return `<table class="lst"><colgroup><col style="width:54px"><col><col style="width:100px"><col style="width:150px"><col style="width:110px"></colgroup>
+      <tr><th></th><th class="l">Назва пільги</th><th>Знижка</th><th>Тип</th><th>Статус</th></tr>${rows}</table>`;
+  }, 720);
+  ov.addEventListener('click', (e) => {
+    const ed = e.target.closest('[data-edit]');
+    if (ed) openDiscountForm(ed.dataset.edit);
+    if (e.target.closest('[data-add]')) openDiscountForm(null);
+  });
+}
+const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function openDiscountForm(id){
+  const rec = id ? dir.discounts.find(x => x.id === id) : null;
+  formWin('Пільга', `
+    <div class="row"><div class="f"><label>Назва пільги</label><input class="in" data-f="name" value="${esc(rec?.name || '')}"></div>
+      <div class="f sm"><label>Знижка, %</label><input class="in" inputmode="decimal" data-f="percent" placeholder="довільно" value="${rec && rec.percent != null ? esc(rec.percent) : ''}"></div></div>
+    <div class="row"><div class="f"><label>Статус</label>${seg(rec?.status)}</div>
+      <div class="f sm"><label>Діє з</label><input class="in" type="date" data-f="from" value="${esc(rec?.effectiveFrom || todayISO())}"></div></div>
+    <div class="al al-i" style="margin:4px 0 8px"><span class="al-icon">i</span><div>Порожня <strong>«Знижка, %»</strong> — відсоток вкаже користувач сам при внесенні візиту.</div></div>`,
+  (ov) => {
+    const name = val(ov, 'name'), raw = val(ov, 'percent');
+    if (!name) return ['Введіть назву', ''];
+    if (dupName('discounts', name, id)) return ['Така назва вже є', 'Оберіть іншу або змініть наявну.'];
+    let percent = null;
+    if (raw !== ''){
+      percent = Number(raw.replace(',', '.'));
+      if (!Number.isFinite(percent) || percent < 0 || percent > 100) return ['Некоректна знижка', 'Вкажіть число від 0 до 100 або залиште порожнім.'];
+    }
+    saveEntry('discounts', id, { name, percent, isCustom: percent === null, status: ov.querySelector('.seg .on').dataset.v, effectiveFrom: val(ov, 'from') || todayISO() });
+  });
+}
+
+/* ─── Розподіл (позначки) ─── */
+const PALETTE = ['#EC9D95', '#F0C199', '#F5E28C', '#A9DFBF', '#AED2ED', '#C7D0D1', '#D2B4DE', '#A3E4D7', '#F1948A', '#7FB3D5', '#F5B7B1', '#D7BDE2'];
+function hueOf(hex){
+  const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (d < 0.08) return 1000;                       // сірі — в кінець
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h *= 60; return h < 0 ? h + 360 : h;
+}
+function openLabelsWin(){
+  const ov = listWin('Розподіл', `<button class="b" data-x>Закрити</button>${canEditDirs() ? '<button class="b pri" data-add><span class="plus">+</span>Додати новий розподіл</button>' : ''}`, () => {
+    const list = [...dir.labels].sort((a, b) => hueOf(a.color) - hueOf(b.color));   // за спектром кольорів, не за алфавітом
+    const rows = list.length ? list.map(l => `<tr>${penCell(`data-edit="${l.id}"`)}<td><span class="dot" style="background:${esc(l.color)}"></span></td><td class="nm">${esc(l.name)}</td></tr>`).join('') : emptyRow(3, 'Жодного розподілу ще не додано. Додайте перший — він з\'явиться тут.');
+    return `<table class="lst"><colgroup><col style="width:54px"><col style="width:80px"><col></colgroup>
+      <tr><th></th><th>Колір</th><th class="l">Назва</th></tr>${rows}</table>`;
+  }, 620);
+  ov.addEventListener('click', (e) => {
+    const ed = e.target.closest('[data-edit]');
+    if (ed) openLabelForm(ed.dataset.edit);
+    if (e.target.closest('[data-add]')) openLabelForm(null);
+  });
+}
+function openLabelForm(id){
+  const rec = id ? dir.labels.find(x => x.id === id) : null;
+  const taken = new Map(dir.labels.filter(l => l.id !== id).map(l => [l.color.toLowerCase(), l.name]));
+  const sw = PALETTE.map(c => {
+    const t = taken.get(c.toLowerCase());
+    const cls = t ? 'sw taken' : (rec && rec.color.toLowerCase() === c.toLowerCase() ? 'sw sel' : 'sw');
+    return `<span class="${cls}" data-c="${c}" style="background:${c}" title="${t ? 'зайнятий — ' + esc(t) : 'вільний'}"></span>`;
+  }).join('');
+  const ov = formWin('Розподіл', `
+    <div class="row"><div class="f full"><label>Назва</label><input class="in" data-f="name" value="${esc(rec?.name || '')}"></div></div>
+    <div class="pal-t">Колір</div><div class="pal" data-pal>${sw}</div>
+    <div class="pal-leg"><span><i style="background:#95A5A6;opacity:.4"></i>зайнятий іншим розподілом</span><span><i style="background:#1ABC9C"></i>вільний</span></div>
+    <div class="al al-i" style="margin:4px 0 8px"><span class="al-icon">i</span><div>Один колір — один розподіл. Обраний тут колір малює <strong>градієнт у журналі</strong> й кружечок у звіті «За розподілом».</div></div>`,
+  (o) => {
+    const name = val(o, 'name'), sel = o.querySelector('.sw.sel');
+    if (!name) return ['Введіть назву', ''];
+    if (dupName('labels', name, id)) return ['Така назва вже є', 'Оберіть іншу або змініть наявну.'];
+    if (!sel) return ['Оберіть колір', 'Вільний колір позначено без ✕.'];
+    saveEntry('labels', id, { name, color: sel.dataset.c });
+  }, 520);
+  ov.querySelector('[data-pal]').addEventListener('click', (e) => {
+    const s = e.target.closest('.sw');
+    if (!s || s.classList.contains('taken')) return;
+    ov.querySelectorAll('.sw').forEach(x => x.classList.toggle('sel', x === s));
+  });
+}
+
+$('mbServ').onclick = openServicesWin;
+$('mbDisc').onclick = openDiscountsWin;
+$('mbLab').onclick = openLabelsWin;
+$('mbCal').onclick = () => toast('i', 'Календар чергувань', 'Розділ ще в розробці.');
+$('mbSet').onclick = () => toast('i', 'Налаштування', 'Розділ ще в розробці.');
+TABS.forEach((t, i) => { const el = document.createElement('div'); el.className = 'tab' + (i === 0 ? ' on' : ''); el.textContent = t; el.onclick = () => pickTab(i); $('folder').insertBefore(el, $('sheet')); });
 
 /* ═══ МАЙСТЕР ПЕРШОГО ЗАПУСКУ (pershyi_pusk_v2.html) ═══ */
 const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
@@ -478,8 +812,8 @@ function renderWizard(){
         <tr><td><span class="sh sn">Н</span>Нічна</td><td id="winNight" class="dim">не застосовується</td></tr>
         <tr><td><span class="sh s24">Доба</span>Добова</td><td id="winDoba" class="dim">не застосовується</td></tr>
       </table>
-      <div class="al al-w flat"><span class="al-icon">!</span><div>Обраний тут режим — лише <b>типовий шаблон</b>. Розрахунок кількості змін у звітах спирається на <b>особистий графік кожного працівника</b>, не напряму на цей вибір.</div></div>
-      <div class="al al-w flat"><span class="al-icon">!</span><div>Якщо графік закладу <b>відрізняється по днях</b>, обчислене вікно бере понеділок; розбіжності для окремих днів виправляються вручну в картці працівника.</div></div>
+      <div class="al al-w flat"><span class="al-icon"><span>!</span></span><div>Обраний тут режим — лише <b>типовий шаблон</b>. Розрахунок кількості змін у звітах спирається на <b>особистий графік кожного працівника</b>, не напряму на цей вибір.</div></div>
+      <div class="al al-w flat"><span class="al-icon"><span>!</span></span><div>Якщо графік закладу <b>відрізняється по днях</b>, обчислене вікно бере понеділок; розбіжності для окремих днів виправляються вручну в картці працівника.</div></div>
     </div></div></div>
 
     <div class="wcard" data-step="4"><div class="st">
