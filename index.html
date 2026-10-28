@@ -149,6 +149,8 @@
   .tab.on{color:var(--green);border-radius:16px 16px 0 0;z-index:2;box-shadow:-6px -6px 12px var(--lite),6px 0 10px -5px var(--dark)}
   .tab:not(.on){border-radius:16px 16px 0 0;margin:0 5px;background:var(--tab-off);box-shadow:-4px -4px 8px var(--lite),4px 4px 8px var(--dark),0 5px 8px -4px var(--lite)}
   .tab:not(.on):active{box-shadow:inset 3px 3px 6px var(--dark),inset -3px -3px 6px var(--lite)}
+  /* крайній праворуч язичок закінчується там, де починається вигин кута листа (16px) — без обриву підсвітки й тіні */
+  .tab:nth-child(5):not(.on){margin-right:16px}
   .sheet{grid-column:1 / 6;padding:12px 24px 24px;min-height:520px;background:var(--bg);border-radius:0 16px 16px 16px;position:relative;z-index:1;box-shadow:-6px -6px 12px var(--lite),6px 6px 12px var(--dark)}
   .sheet.tl-round{border-top-left-radius:16px}   /* перший язичок неактивний → лівий кут заокруглений */
   .sheet.tr-flat{border-top-right-radius:0}      /* останній язичок активний → правий кут прямий, лист продовжує язичок */
