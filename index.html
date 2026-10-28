@@ -558,7 +558,7 @@ async function renderShell(){
   $('hRole').textContent = String(profile.role || '').toLowerCase();
   show('app');
   pickTab(0);
-  try { await loadDirs(); rerenderWins(); } catch (e){ console.warn('dirs:', e.code); toast('w', 'Довідники не завантажено', 'Перевірте з\'єднання.'); }
+  try { await loadDirs(); rerenderWins(); } catch (e){ console.warn('dirs:', e.failed || e.code); rerenderWins(); toast('w', 'Довідники не завантажено', e.failed ? 'Не вдалося прочитати: ' + e.failed.join(', ') : 'Перевірте з\'єднання.'); }
 }
 window.addEventListener('online', () => { $('netBanner').hidden = true; });
 window.addEventListener('offline', () => { $('netBanner').hidden = false; });
@@ -587,10 +587,14 @@ const dir = { services: [], extras: [], discounts: [], labels: [], institutions:
 const canEditDirs = () => ['Керівник', 'Адміністратор'].includes(profile?.role);
 
 async function loadDirs(){
+  const failed = [];
   await Promise.all(Object.keys(COL).map(async (k) => {
-    const snap = await getDocs(collection(db, COL[k]));
-    dir[k] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    try {
+      const snap = await getDocs(collection(db, COL[k]));
+      dir[k] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e){ console.warn('dir', COL[k], e.code); failed.push(COL[k] + (e.code ? ' (' + e.code + ')' : '')); }
   }));
+  if (failed.length){ const err = new Error('dirs'); err.failed = failed; throw err; }
 }
 
 /* Журнал змін (audit_log): знімок «до/після» без службових полів часу */
