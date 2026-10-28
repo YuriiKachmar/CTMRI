@@ -216,6 +216,54 @@
   .pal-leg span{display:flex;align-items:center;gap:6px}
   .pal-leg i{width:12px;height:12px;border-radius:50%;display:inline-block}
 
+  /* ── Скерування: вкладки, рядки списку, секції картки, партнерство ── */
+  .tabs2{display:flex;padding:6px;border-radius:16px;background:var(--bg);box-shadow:var(--in);margin:12px 0 16px}
+  .tab2{flex:1;text-align:center;padding:13px 8px;border-radius:12px;font-size:13.5px;color:var(--muted);cursor:pointer}
+  .tab2.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
+  .box-t{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:10px}
+  .rowc{display:flex;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid var(--line)}
+  .rowc:last-of-type{border-bottom:none}
+  .rowc .nm{flex:1 1 auto;font-weight:800;color:var(--ink);font-size:12.5px;min-width:0;overflow-wrap:anywhere}
+  .rowc .meta{font-size:11px;color:var(--muted);flex:0 1 auto;text-align:right}
+  .rowc .slot{flex:0 0 96px;text-align:center}
+  .rowc .cnt2{font-size:12px;font-weight:700;color:var(--green);flex:0 0 auto;min-width:48px;text-align:center}
+  .rowc .cnt2.hdr{font-size:9.5px;font-weight:400;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+  .rowc.inact .nm,.rowc.inact .meta,.rowc.inact .cnt2{opacity:.45}
+  .rowc-h{border-bottom:1px solid var(--line)}
+  .pickrow{cursor:pointer}.pickrow:hover{background:var(--soft)}
+  .sect{border-radius:16px;background:var(--bg);box-shadow:var(--up);padding:15px 16px;margin-top:14px}
+  .sect-h{display:flex;align-items:baseline;gap:8px;margin-bottom:11px;flex-wrap:wrap}
+  .sect-t{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px}
+  .sect-sub{font-size:10.5px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
+  select.in{padding-right:30px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 17px) 52%,calc(100% - 12px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+  .chip-add{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:10px;background:var(--bg);box-shadow:var(--bump);font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .chip-add:active{box-shadow:var(--in)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .chip{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:10px;background:var(--soft);box-shadow:var(--in-on);font-size:11.5px;font-weight:700;color:var(--green)}
+  .chip .x{color:var(--red);cursor:pointer;font-weight:900}
+  .type-row{display:flex;gap:11px;flex-wrap:wrap;align-items:flex-end}
+  .per-item{border-bottom:1px solid var(--line);padding:10px 2px}
+  .per-item:last-child{border-bottom:none}
+  .per-line{display:grid;grid-template-columns:1fr 14px 1fr auto auto;align-items:center;gap:9px}
+  .per-dash{color:var(--muted);font-size:12px;text-align:center}
+  .per-seg{display:flex;gap:3px;padding:3px;border-radius:9px;background:var(--bg);box-shadow:var(--in)}
+  .per-seg span{padding:7px 11px;border-radius:7px;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .per-seg span.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on);cursor:default}
+  .per-tag-done{padding:7px 11px;border-radius:7px;font-size:10.5px;font-weight:700;color:var(--muted);white-space:nowrap;background:#E4E9EA}
+  .per-del{padding:8px 13px;border-radius:8px;background:var(--bg);box-shadow:var(--bump);font-size:10.5px;font-weight:800;color:var(--red);cursor:pointer;white-space:nowrap}
+  .per-del:active{box-shadow:var(--in)}
+  .per-item.excluded .per-line{opacity:.45}
+  .per-item.excluded input{text-decoration:line-through}
+  .per-item.excluded .per-seg,.per-item.excluded .per-tag-done{visibility:hidden}
+  .per-item.excluded .per-del{pointer-events:none;box-shadow:none;cursor:default}
+  .per-note{display:flex;gap:7px;align-items:flex-start;padding:8px 11px;border-radius:0 9px 9px 0;font-size:11px;border-left:3px solid;margin-top:7px}
+  .per-note.i{border-color:var(--info);color:var(--info)}
+  .per-note.w{border-color:var(--warn);color:var(--warn)}
+  .per-add{width:100%;padding:13px;border:none;border-radius:12px;background:var(--bg);box-shadow:var(--bump);color:var(--green);font-size:12.5px;font-weight:800;cursor:pointer;margin-top:8px;font-family:inherit}
+  .per-add:active{box-shadow:var(--in)}
+  .b.dang{background:var(--red);color:#fff;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark)}
+  @media (max-width:560px){.per-line{grid-template-columns:1fr 14px 1fr}.per-line>*:nth-child(n+4){grid-column:1 / -1;justify-self:start}}
+
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:360px;z-index:60}
 
   @media (max-width:560px){
@@ -510,7 +558,7 @@ async function renderShell(){
   $('hRole').textContent = String(profile.role || '').toLowerCase();
   show('app');
   pickTab(0);
-  try { await loadDirs(); } catch (e){ console.warn('dirs:', e.code); toast('w', 'Довідники не завантажено', 'Перевірте з\'єднання.'); }
+  try { await loadDirs(); rerenderWins(); } catch (e){ console.warn('dirs:', e.code); toast('w', 'Довідники не завантажено', 'Перевірте з\'єднання.'); }
 }
 window.addEventListener('online', () => { $('netBanner').hidden = true; });
 window.addEventListener('offline', () => { $('netBanner').hidden = false; });
@@ -518,11 +566,14 @@ if (!navigator.onLine) $('netBanner').hidden = false;
 
 /* ═══ ГОЛОВНИЙ ЕКРАН: язички ═══ */
 const TABS = ['Журнал', 'Пацієнти', 'Скерування', 'Працівники', 'Звіти'];
+let sheetRerender = null;
 function pickTab(i){
+  sheetRerender = null; $('sheet').onclick = null;
   [...$('folder').querySelectorAll('.tab')].forEach((t, k) => t.classList.toggle('on', k === i));
   $('sheet').classList.toggle('tl-round', i !== 0);
   $('sheet').classList.toggle('tr-flat', i === TABS.length - 1);
-  $('sheet').innerHTML = `<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Розділ «${esc(TABS[i])}» — наступний крок розробки</b>Зараз працюють довідники: Послуги, Пільги, Розподіл.</div></div>`;
+  $('sheet').innerHTML = `<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Розділ «${esc(TABS[i])}» — наступний крок розробки</b>Зараз працюють довідники: Послуги, Пільги, Розподіл і розділ «Скерування».</div></div>`;
+  if (TABS[i] === 'Скерування') renderRef();
 }
 const shortName = (p) => {
   const ini = [p.firstName, p.middleName].filter(Boolean).map(x => x[0].toUpperCase() + '.').join('');
@@ -530,8 +581,8 @@ const shortName = (p) => {
 };
 
 /* ═══ ДОВІДНИКИ: дані (завантажуються один раз, кешуються; architecture_v1 розд. 5) ═══ */
-const COL = { services: 'services_catalog', extras: 'extra_catalog', discounts: 'discounts', labels: 'labels' };
-const dir = { services: [], extras: [], discounts: [], labels: [] };
+const COL = { services: 'services_catalog', extras: 'extra_catalog', discounts: 'discounts', labels: 'labels', institutions: 'institutions', itypes: 'institution_types', doctors: 'referring_doctors' };
+const dir = { services: [], extras: [], discounts: [], labels: [], institutions: [], itypes: [], doctors: [] };
 /* тимчасово: редагувати довідники може Керівник/Адміністратор; далі — з матриці «Доступи» */
 const canEditDirs = () => ['Керівник', 'Адміністратор'].includes(profile?.role);
 
@@ -575,6 +626,7 @@ function saveEntry(key, id, data){
       rerenderWins();
     });
   rerenderWins();
+  return ref.id;
 }
 
 /* ═══ Модальні вікна (стек: список → форма) ═══ */
@@ -590,7 +642,7 @@ function openWin(html, width){
   return ov;
 }
 function closeWin(ov){ ov.remove(); const i = winStack.indexOf(ov); if (i >= 0) winStack.splice(i, 1); }
-function rerenderWins(){ for (const o of winStack) if (o._render) o._render(); }
+function rerenderWins(){ for (const o of winStack) if (o._render) o._render(); if (sheetRerender) sheetRerender(); }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && winStack.length) closeWin(winStack[winStack.length - 1]); });
 
 const fmtMoney = (n) => Number(n).toLocaleString('uk-UA') + ' грн';
@@ -609,10 +661,10 @@ function listWin(title, footerHtml, renderBody, width){
   ov._render();
   return ov;
 }
-function formWin(title, body, onSave, width){
+function formWin(title, body, onSave, width, saveLabel){
   const ov = openWin(`<div class="win-h"><h4>${esc(title)}</h4><button class="win-x" data-x>✕</button></div>
     <div class="win-b">${body}<div class="al al-e" data-err style="display:none;margin:4px 0 8px"><span class="al-icon">✕</span><div><b data-et></b><span data-ex></span></div></div></div>
-    <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" data-save>Зберегти</button></div>`, width);
+    <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" data-save>${esc(saveLabel || 'Зберегти')}</button></div>`, width);
   const save = () => {
     const r = onSave(ov);
     if (!r) return closeWin(ov);
@@ -753,6 +805,224 @@ function openLabelForm(id){
     const s = e.target.closest('.sw');
     if (!s || s.classList.contains('taken')) return;
     ov.querySelectorAll('.sw').forEach(x => x.classList.toggle('sel', x === s));
+  });
+}
+
+/* ═══ СКЕРУВАННЯ (skeruvannia.html): Установи + Лікуючі лікарі ═══ */
+const isoToUa = (s) => s ? String(s).split('-').reverse().join('.') : '';
+const uaToIso = (s) => {
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(String(s).trim());
+  if (!m) return null;
+  const d = +m[1], mo = +m[2], y = +m[3], dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+};
+const isPartnerNow = (inst) => { const t = todayISO(); return (inst.partnerships || []).some(p => !p.excluded && p.from <= t && (!p.to || p.to >= t)); };
+/* тимчасово: партнерство редагує Керівник; Адміністратор — коли з'явиться дозвіл у матриці «Доступи» */
+const canEditPartnership = () => profile?.role === 'Керівник';
+/* TODO журнал: кількість записів, що спираються на період партнерства (поки візитів немає) */
+const visitsInPeriod = () => 0;
+const docsOf = (instId) => dir.doctors.filter(d => (d.institutionIds || []).includes(instId));
+const instNameById = (id) => dir.institutions.find(x => x.id === id)?.name || '(установу видалено)';
+const typeNameById = (id) => dir.itypes.find(x => x.id === id)?.name || '';
+const emptyBox = (text) => `<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Тут поки нічого немає</b>${esc(text)}</div></div>`;
+
+let refTab = 'inst';
+function renderRef(){
+  sheetRerender = renderRef;
+  const edit = canEditDirs(), sh = $('sheet');
+  let body;
+  if (refTab === 'inst'){
+    const list = [...dir.institutions].sort(byName);
+    const rows = list.map(i => {
+      const slot = i.status === 'inactive' ? '<span class="pill gray">не активна</span>' : isPartnerNow(i) ? '<span class="pill">✓ партнер</span>' : '';
+      return `<div class="rowc ${i.status === 'inactive' ? 'inact' : ''}"><span class="pen" data-ei="${i.id}" ${edit ? '' : 'style="visibility:hidden"'}>✎</span><span class="nm">${esc(i.name)}</span><span class="meta">${esc(typeNameById(i.typeId))}</span><span class="slot">${slot}</span><span class="cnt2">${docsOf(i.id).length}</span></div>`;
+    }).join('');
+    body = `<div class="box-t">Список установ</div>
+      <div class="rowc rowc-h"><span class="pen" style="visibility:hidden">✎</span><span class="nm"></span><span class="meta"></span><span class="slot"></span><span class="cnt2 hdr">Лікарів</span></div>
+      ${rows || emptyBox('Жодної установи ще не додано. Додайте першу — вона з\'явиться тут.')}
+      <div class="al al-i" style="margin:14px 0 0"><span class="al-icon">i</span><div><strong>Самоскерування</strong> тут не показано — це не установа, а <strong>відсутність</strong> скерування: пацієнт звернувся самостійно, без лікаря й установи. У формі візиту це окремий вибір «Самоскерування», не запис із цього довідника.</div></div>
+      ${edit ? '<div style="display:flex;justify-content:flex-end"><button class="grp-add-full" data-ai><span class="plus">+</span>Додати установу</button></div>' : ''}`;
+  } else {
+    const list = [...dir.doctors].sort(byName);
+    const rows = list.map(d => {
+      const names = (d.institutionIds || []).map(instNameById).join(' · ') || '— (від себе)';
+      return `<div class="rowc ${d.status === 'inactive' ? 'inact' : ''}"><span class="pen" data-ed="${d.id}" ${edit ? '' : 'style="visibility:hidden"'}>✎</span><span class="nm">${esc(d.name)}</span><span class="meta">${esc(names)}</span><span class="slot">${d.status === 'inactive' ? '<span class="pill gray">не активний</span>' : ''}</span></div>`;
+    }).join('');
+    body = `<div class="box-t">Список лікарів</div>
+      ${rows || emptyBox('Жодного лікуючого лікаря ще не додано. Додайте першого — він з\'явиться тут.')}
+      ${edit ? '<div style="display:flex;justify-content:flex-end"><button class="grp-add-full" data-ad><span class="plus">+</span>Додати лікаря</button></div>' : ''}`;
+  }
+  sh.innerHTML = `<div class="tabs2"><span class="tab2 ${refTab === 'inst' ? 'on' : ''}" data-rt="inst">Установи</span><span class="tab2 ${refTab === 'doc' ? 'on' : ''}" data-rt="doc">Лікуючі лікарі</span></div>${body}`;
+  sh.onclick = (e) => {
+    const t = e.target.closest('[data-rt]'), ei = e.target.closest('[data-ei]'), ed = e.target.closest('[data-ed]');
+    if (t){ refTab = t.dataset.rt; renderRef(); }
+    else if (ei) openInstForm(ei.dataset.ei);
+    else if (ed) openDocForm(ed.dataset.ed);
+    else if (e.target.closest('[data-ai]')) openInstForm(null);
+    else if (e.target.closest('[data-ad]')) openDocForm(null);
+  };
+}
+
+/* спільні дрібні вікна */
+function confirmWin({ type, title, details, action, onOk }){
+  const e = type === 'e';
+  const ov = openWin(`<div class="win-b" style="padding:20px 20px 4px"><div class="al ${e ? 'al-e' : 'al-w'}" style="margin:0"><span class="al-icon">${e ? '✕' : '<span>!</span>'}</span><div><b>${esc(title)}</b>${esc(details || '')}</div></div></div>
+    <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b ${e ? 'dang' : ''}" data-ok>${esc(action)}</button></div>`, 400);
+  ov.querySelector('[data-ok]').onclick = () => { closeWin(ov); onOk(); };
+}
+function pickWin(title, items, emptyText, onPick){
+  const body = items.length
+    ? items.map(i => `<div class="rowc pickrow" data-pick="${i.id}"><span class="nm">${esc(i.label)}</span><span class="meta">${esc(i.meta || '')}</span></div>`).join('')
+    : `<div class="al al-i" style="margin:0 0 8px"><span class="al-icon">i</span><div><b>Тут поки нічого немає</b>${esc(emptyText)}</div></div>`;
+  const ov = openWin(`<div class="win-h"><h4>${esc(title)}</h4><button class="win-x" data-x>✕</button></div><div class="win-b">${body}</div><div class="win-f"><button class="b" data-x>Закрити</button></div>`, 420);
+  ov.addEventListener('click', (e) => { const p = e.target.closest('[data-pick]'); if (p){ closeWin(ov); onPick(p.dataset.pick); } });
+}
+function openTypeForm(onAdded){
+  formWin('Новий тип установи', `<div class="row"><div class="f full"><label>Назва типу</label><input class="in" data-f="name" placeholder="напр. Військова частина"></div></div>`, (ov) => {
+    const name = val(ov, 'name');
+    if (!name) return ['Введіть назву', ''];
+    if (dupName('itypes', name, null)) return ['Такий тип уже є', 'Оберіть його у списку.'];
+    onAdded(saveEntry('itypes', null, { name }));
+  }, 380, 'Додати тип');
+}
+const contactsHtml = (rec) => `<div class="sect"><div class="sect-h"><div class="sect-t">Контакти</div><span class="sect-sub">(необов'язково)</span></div>
+  <div class="row"><div class="f"><label>Телефон</label><input class="in" data-f="phone" placeholder="+380…" value="${esc(rec?.phone || '')}"></div>
+  <div class="f"><label>Адреса</label><input class="in" data-f="address" value="${esc(rec?.address || '')}"></div>
+  <div class="f"><label>Email</label><input class="in" data-f="email" value="${esc(rec?.email || '')}"></div></div></div>`;
+
+/* ─── Картка установи ─── */
+function openInstForm(id){
+  const rec = id ? dir.institutions.find(x => x.id === id) : null;
+  const canP = canEditPartnership();
+  let periods = (rec?.partnerships || []).map(p => ({ from: isoToUa(p.from), to: isoToUa(p.to), excluded: !!p.excluded, note: null }));
+  const typeOpts = (sel) => '<option value="">— оберіть тип —</option>' + [...dir.itypes].sort(byName).map(t => `<option value="${t.id}" ${t.id === sel ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
+  const perRow = (p, i) => {
+    const open = !p.to, ro = !canP || p.excluded ? 'readonly' : '';
+    return `<div class="per-item${p.excluded ? ' excluded' : ''}" data-row="${i}"><div class="per-line">
+      <input class="in" data-pi="${i}" data-pf="from" value="${esc(p.from)}" placeholder="дд.мм.рррр" ${ro}><span class="per-dash">—</span>
+      <input class="in" data-pi="${i}" data-pf="to" value="${esc(p.to)}" placeholder="донині" ${ro}>
+      ${statusCtl(p, i)}
+      ${canP ? `<span class="per-del" ${p.excluded ? '' : `data-pdel="${i}"`}>${p.excluded ? 'Видалено з обліку' : '✕ видалити з обліку'}</span>` : '<span></span>'}
+    </div>${p.note ? `<div class="per-note ${p.note.t}"><span>${p.note.t === 'w' ? '⚠' : 'ℹ'}</span><span>${esc(p.note.x)}</span></div>` : ''}</div>`;
+  };
+  const statusCtl = (p, i) => !p.to ? `<div class="per-seg" data-st><span class="on">Дійсне</span><span ${canP && !p.excluded ? `data-pend="${i}"` : ''}>Завершене</span></div>` : '<span class="per-tag-done" data-st>Завершене</span>';
+
+  const ov = formWin(rec ? rec.name : 'Нова установа', `
+    <div class="row"><div class="f"><label>Назва установи</label><input class="in" data-f="name" value="${esc(rec?.name || '')}"></div>
+      <div class="f sm" style="flex-basis:220px"><label>Статус</label>${seg(rec?.status)}</div></div>
+    <div class="sect"><div class="sect-t" style="margin-bottom:11px">Тип</div>
+      <div class="type-row"><div class="f" style="margin-bottom:0"><label>Оберіть тип установи</label><select class="in" data-f="type">${typeOpts(rec?.typeId)}</select></div>
+      <span class="chip-add" data-addtype>+ Додати новий тип…</span></div></div>
+    <div class="sect"><div class="sect-h"><div class="sect-t">Партнерство</div><span class="sect-sub">історія періодів · редагує лише Керівник або Адміністратор із дозволом</span></div>
+      <div data-per></div>
+      ${canP ? '<button type="button" class="per-add" data-padd>+ Додати період партнерства</button>' : '<div class="al al-i" style="margin:8px 0 0"><span class="al-icon">i</span><div>Періоди партнерства змінює Керівник.</div></div>'}
+      <div class="al al-i" style="margin:10px 0 0"><span class="al-icon">i</span><div>Порожня дата «по» = партнерство триває донині. Візит партнерський, якщо його дата у межах «з–по» (або ≥ «з» для діючого періоду).</div></div></div>
+    ${contactsHtml(rec)}
+    <div class="sect"><div class="sect-h"><div class="sect-t">Прив'язані лікуючі лікарі</div><span class="sect-sub">(необов'язково)</span></div>
+      <div class="chips" data-chips></div>
+      <div class="al al-i" style="margin:10px 0 0"><span class="al-icon">i</span><div>Зв'язок керується <strong>з картки лікаря</strong> (поле «Установи»). Тут можна лише <strong>додати</strong> — це одразу впише цю установу лікарю. Прибрати зв'язок можна <strong>тільки в картці лікаря</strong>.</div></div></div>`,
+  (o) => {
+    const name = val(o, 'name');
+    if (!name) return ['Введіть назву', ''];
+    if (dupName('institutions', name, id)) return ['Така назва вже є', 'Оберіть іншу або змініть наявну.'];
+    const data = { name, status: o.querySelector('.seg .on').dataset.v, typeId: val(o, 'type') || null,
+      phone: val(o, 'phone'), address: val(o, 'address'), email: val(o, 'email') };
+    if (canP){
+      const out = [];
+      for (const [k, p] of periods.entries()){
+        const f = uaToIso(p.from), t = p.to.trim() ? uaToIso(p.to) : null;
+        if (!f) return [`Період ${k + 1}: некоректна дата «з»`, 'Формат: дд.мм.рррр.'];
+        if (p.to.trim() && !t) return [`Період ${k + 1}: некоректна дата «по»`, 'Формат дд.мм.рррр або залиште порожнім (триває донині).'];
+        if (t && t < f) return [`Період ${k + 1}: «по» раніше за «з»`, 'Виправте дати.'];
+        out.push({ from: f, to: t, excluded: p.excluded });
+      }
+      data.partnerships = out;
+    }
+    saveEntry('institutions', id, data);
+  }, 640);
+
+  const per = ov.querySelector('[data-per]');
+  const draw = () => { per.innerHTML = periods.length ? periods.map(perRow).join('') : '<div class="al al-i" style="margin:0 0 8px"><span class="al-icon">i</span><div><b>Періодів партнерства ще немає</b>Установа вважається не партнером, доки не додано період.</div></div>'; };
+  draw();
+  per.addEventListener('input', (e) => { const i = e.target.dataset.pi; if (i != null) periods[i][e.target.dataset.pf] = e.target.value; });
+  per.addEventListener('change', (e) => {   // змінився «по» → оновлюємо лише позначку статусу цього рядка (рядок не перемальовуємо, щоб не губити клік)
+    const i = e.target.dataset.pi; if (i == null || e.target.dataset.pf !== 'to') return;
+    const row = per.querySelector(`[data-row="${i}"]`), tpl = document.createElement('div');
+    tpl.innerHTML = statusCtl(periods[i], i); row.querySelector('[data-st]').replaceWith(tpl.firstElementChild);
+  });
+  per.addEventListener('click', (e) => {
+    const end = e.target.closest('[data-pend]'), del = e.target.closest('[data-pdel]');
+    if (end){
+      const p = periods[end.dataset.pend];
+      if (!p.to.trim()) p.to = isoToUa(todayISO());
+      p.note = { t: 'i', x: 'Період позначено завершеним із сьогоднішньою датою «по».' }; draw();
+    }
+    if (del){
+      const p = periods[del.dataset.pdel], n = visitsInPeriod(p);
+      confirmWin({ type: n > 0 ? 'e' : 'w', title: 'Ви виключаєте період партнерства з обліку.',
+        details: `Період ${p.from} – ${p.to || 'донині'}. ` + (n > 0 ? `На нього спирається ${n} записів у журналі.` : 'Записів на цьому періоді немає.'),
+        action: 'Видалити з обліку',
+        onOk: () => { p.excluded = true; p.note = n > 0 ? { t: 'w', x: `Виключено з обліку — ${n} записів більше не враховуються як партнерські.` } : { t: 'i', x: 'Виключено з обліку — записів на цьому періоді не було.' }; draw(); } });
+    }
+  });
+  ov.querySelector('[data-padd]')?.addEventListener('click', () => {
+    const today = isoToUa(todayISO()), last = periods[periods.length - 1];
+    if (last && !last.excluded){
+      if (!last.to.trim()){ last.to = today; last.note = { t: 'i', x: 'Автоматично позначено завершеним при додаванні нового періоду.' }; }
+      else {
+        const lc = uaToIso(last.to);
+        if (lc && todayISO() < lc){ last.note = { t: 'w', x: 'Новий період накладається на цей — він завершується пізніше за сьогодні. Перевірте дати.' }; draw(); return; }
+      }
+    }
+    periods.push({ from: today, to: '', excluded: false, note: null }); draw();
+  });
+
+  const sel = ov.querySelector('[data-f="type"]');
+  ov.querySelector('[data-addtype]').onclick = () => openTypeForm((tid) => { sel.innerHTML = typeOpts(tid); });
+
+  const chipsEl = ov.querySelector('[data-chips]');
+  const renderChips = () => {
+    if (!id){ chipsEl.innerHTML = '<span class="sect-sub">Лікарів можна додати після збереження установи.</span>'; return; }
+    chipsEl.innerHTML = docsOf(id).map(d => `<span class="chip">${esc(d.name)}</span>`).join('') + '<span class="chip-add" data-adddoc>+ додати лікаря</span>';
+  };
+  ov._render = renderChips; renderChips();
+  chipsEl.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-adddoc]')) return;
+    pickWin('Додати лікаря до установи', dir.doctors.filter(d => d.status !== 'inactive' && !(d.institutionIds || []).includes(id)).sort(byName).map(d => ({ id: d.id, label: d.name, meta: d.specialty || '' })),
+      'Усі лікарі вже додані або жодного ще не створено — створіть його у вкладці «Лікуючі лікарі».',
+      (did) => { const d = dir.doctors.find(x => x.id === did); saveEntry('doctors', did, { institutionIds: [...(d.institutionIds || []), id] }); });
+  });
+}
+
+/* ─── Картка лікуючого лікаря ─── */
+function openDocForm(id){
+  const rec = id ? dir.doctors.find(x => x.id === id) : null;
+  let ids = [...(rec?.institutionIds || [])];
+  const ov = formWin(rec ? rec.name : 'Новий лікуючий лікар', `
+    <div class="row"><div class="f"><label>ПІБ</label><input class="in" data-f="name" value="${esc(rec?.name || '')}"></div>
+      <div class="f sm" style="flex-basis:220px"><label>Статус</label>${seg(rec?.status)}</div></div>
+    <div class="row"><div class="f full"><label>Спеціальність <span style="float:right;color:var(--ph)">необов'язково</span></label><input class="in" data-f="specialty" placeholder="напр. невролог" value="${esc(rec?.specialty || '')}"></div></div>
+    ${contactsHtml(rec)}
+    <div class="sect"><div class="sect-h"><div class="sect-t">Установи</div><span class="sect-sub">(необов'язково, можна кілька)</span></div>
+      <div class="chips" data-chips></div>
+      <div class="al al-i" style="margin:10px 0 0"><span class="al-icon">i</span><div><strong>Тут зв'язок редагується напряму</strong> — і додавання, і зняття (✕). Зміна одразу відображається чіпом у картці відповідної установи.</div></div></div>`,
+  (o) => {
+    const name = val(o, 'name');
+    if (!name) return ['Введіть ПІБ', ''];
+    saveEntry('doctors', id, { name, status: o.querySelector('.seg .on').dataset.v, specialty: val(o, 'specialty'),
+      phone: val(o, 'phone'), address: val(o, 'address'), email: val(o, 'email'), institutionIds: ids });
+  }, 600);
+  const chipsEl = ov.querySelector('[data-chips]');
+  const renderChips = () => { chipsEl.innerHTML = ids.map(i => `<span class="chip">${esc(instNameById(i))}<span class="x" data-rm="${i}">✕</span></span>`).join('') + '<span class="chip-add" data-addinst>+ додати установу</span>'; };
+  renderChips();
+  chipsEl.addEventListener('click', (e) => {
+    const rm = e.target.closest('[data-rm]');
+    if (rm){ ids = ids.filter(x => x !== rm.dataset.rm); renderChips(); }
+    if (e.target.closest('[data-addinst]'))
+      pickWin('Додати установу', dir.institutions.filter(i => i.status !== 'inactive' && !ids.includes(i.id)).sort(byName).map(i => ({ id: i.id, label: i.name, meta: typeNameById(i.typeId) })),
+        'Усі установи вже додані або жодної ще не створено — створіть її у вкладці «Установи».',
+        (iid) => { ids.push(iid); renderChips(); });
   });
 }
 

@@ -45,7 +45,7 @@ service cloud.firestore {
     // (у Firestore кілька правил, що збіглися, об'єднуються через «АБО»).
     match /{col}/{docId} {
       allow read, write: if isActive() && col in [
-        'patients', 'referring_doctors', 'services_catalog', 'extra_catalog', 'discounts',
+        'patients', 'referring_doctors', 'institutions', 'institution_types', 'services_catalog', 'extra_catalog', 'discounts',
         'labels', 'visits', 'records', 'payments', 'counters', 'audit_log', 'auto_reports'
       ];
     }
