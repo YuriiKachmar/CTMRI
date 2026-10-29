@@ -1140,7 +1140,7 @@ function openWorkerForm(id, newRole){
   const today = todayISO();
   const stat = rec?.status === 'inactive' ? 'inactive' : 'active';
   const role = rec?.role || newRole || 'Лаборант';
-  const hasAcc = !!rec?.email;
+  const hasAcc = rec ? (rec.hasAccount ?? !!rec.email) : false;   // чи є в працівника обліковий запис для входу
   const allowInit = rec ? (hasAcc && rec.loginAllowed !== false) : role === 'Лаборант';
   const shRow = (p, i) => {
     const r = classifyShift(p.from, p.to), open = !p.end, ro = p.excluded || !open ? 'disabled' : '';
@@ -1161,6 +1161,7 @@ function openWorkerForm(id, newRole){
       <div class="row"><div class="f full"><label>Прізвище, ім'я, по батькові</label><input class="in" data-f="fio" value="${esc(rec ? fullName(rec) : '')}"></div></div>
       <div class="row"><div class="f"><label>Посада</label><select class="in" data-f="role"><option ${role === 'Лаборант' ? 'selected' : ''}>Лаборант</option><option ${role === 'Лікар' ? 'selected' : ''}>Лікар</option></select></div>
         <div class="f"><label>Телефон</label><input class="in" type="tel" data-f="phone" placeholder="+380…" value="${esc(rec?.phone || '')}"></div></div>
+      <div class="row"><div class="f full"><label>E-mail ${hasAcc ? '(логін для входу — не змінюється)' : '(необов\'язково, якщо немає входу в програму)'}</label><input class="in" type="email" data-f="email" autocomplete="off" value="${esc(rec?.email || '')}" ${hasAcc ? 'readonly' : ''}></div></div>
       <div class="row"><div class="f full"><label>Статус</label>${seg(stat)}<div class="stexp" data-stexp>${ST_TEXT[stat]}</div></div></div></div>
     <div class="sect" data-sched><div class="sect-h"><div class="sect-t">Змінний графік (персональний)</div></div>
       <div data-per></div>
@@ -1169,12 +1170,11 @@ function openWorkerForm(id, newRole){
     <div class="sect"><div class="sect-h"><div class="sect-t">Доступ</div></div>
       <div class="row"><div class="f full"><label>Дозволити користуватись програмою</label>
         <div class="seg" data-allow><span data-v="1" class="${allowInit ? 'on' : ''}">Дозволено</span><span data-v="0" class="${allowInit ? '' : 'on'}">Не дозволено</span></div></div></div>
-      <div data-login-fields>${hasAcc
-        ? `<div class="row"><div class="f"><label>E-mail (логін)</label><input class="in" data-f="email" value="${esc(rec.email || '')}" readonly></div>
-            <div class="f" style="align-self:flex-end"><span class="chip-add" data-reset>✉ Надіслати лист для скидання пароля</span></div></div>
-           <div class="stexp">Пароль працівнику змінюється лише листом для скидання — пряма зміна чужого пароля в безкоштовному режимі недоступна.</div>`
-        : `<div class="row"><div class="f"><label>E-mail (логін для входу)</label><input class="in" type="email" data-f="email" autocomplete="off"></div>
-            <div class="f"><label>Пароль (не менше 6 символів)</label><input class="in" type="password" data-f="pass" autocomplete="new-password"></div></div>`}</div>
+      <div data-login-fields>
+        <div class="row"><div class="f"><label>E-mail (логін для входу)${hasAcc ? '' : ' — той самий, що в «Даних працівника»'}</label><input class="in" type="email" data-f="email2" autocomplete="off" value="${esc(rec?.email || '')}" ${hasAcc ? 'readonly' : ''}></div>
+          ${hasAcc ? '<div class="f" style="align-self:flex-end"><span class="chip-add" data-reset>✉ Надіслати лист для скидання пароля</span></div>'
+                   : '<div class="f"><label>Пароль (не менше 6 символів)</label><input class="in" type="password" data-f="pass" autocomplete="new-password"></div>'}</div>
+        ${hasAcc ? '<div class="stexp">Пароль працівнику змінюється лише листом для скидання — пряма зміна чужого пароля в безкоштовному режимі недоступна.</div>' : ''}</div>
       <div class="al al-i" style="margin:6px 0 0"><span class="al-icon">i</span><div><strong>Дозволено</strong> — працівник входить у програму за e-mail і паролем (права доступу — окремо, у розділі «Доступи»). <strong>Не дозволено</strong> — вхід заблоковано, але працівник лишається у списках, змінах і звітах; для цього e-mail і пароль не потрібні. Керівник чи адміністратор може будь-коли заблокувати вхід цим перемикачем, а потім знову дозволити — пароль не втрачається. Для лікарів за замовчуванням вхід не дозволено.</div></div></div>`,
   async (o) => {
     const fio = val(o, 'fio').split(/\s+/).filter(Boolean);
@@ -1201,8 +1201,10 @@ function openWorkerForm(id, newRole){
       if (!go) return ['Збереження скасовано', 'Перевірте дати змінного графіку.'];
     }
     const allow = o.querySelector('[data-allow] .on').dataset.v === '1';
-    if (rec && (hasAcc || !allow)){ saveEntry('workers', id, { ...data, loginAllowed: hasAcc ? allow : false }); return null; }
-    if (!allow){ saveEntry('workers', null, { ...data, loginAllowed: false, email: '' }); return null; }   // працівник без входу в програму
+    const emailIn = val(o, 'email').toLowerCase();
+    if (!hasAcc && emailIn && !/^\S+@\S+\.\S+$/.test(emailIn)) return ['Некоректний e-mail', 'Перевірте адресу або залиште поле порожнім.'];
+    if (rec && (hasAcc || !allow)){ saveEntry('workers', id, { ...data, ...(hasAcc ? { loginAllowed: allow } : { loginAllowed: false, hasAccount: false, email: emailIn }) }); return null; }
+    if (!allow){ saveEntry('workers', null, { ...data, loginAllowed: false, hasAccount: false, email: emailIn }); return null; }   // працівник без входу в програму
     // потрібен вхід (новий працівник або наявний без входу): створюємо обліковий запис через окремий екземпляр Firebase, щоб не розлогінити адміна
     const email = val(o, 'email').toLowerCase(), pass = o.querySelector('[data-f="pass"]').value;
     const whom = data.role === 'Лікар' ? 'цього лікаря' : 'цього лаборанта';
@@ -1210,13 +1212,13 @@ function openWorkerForm(id, newRole){
     if (!/^\S+@\S+\.\S+$/.test(email)) return ['Некоректний e-mail', 'Перевірте адресу — вона буде логіном для входу.'];
     if (!pass) return ['Введіть пароль', `Без пароля неможливо створити вхід для ${whom}. Не менше 6 символів.`];
     if (pass.length < 6) return ['Занадто короткий пароль', 'Не менше 6 символів.'];
-    if (dir.workers.some(w => String(w.email).toLowerCase() === email)) return ['Такий e-mail уже є', 'Працівника з цим e-mail уже додано.'];
+    if (dir.workers.some(w => !w.mergedInto && (w.hasAccount ?? !!w.email) && String(w.email).toLowerCase() === email)) return ['Такий e-mail уже є', 'Працівника з цим e-mail уже додано.'];
     const secApp = initializeApp(firebaseConfig, 'sec' + Date.now());
     let cred = null;
     try {
       const secAuth = initializeAuth(secApp, { persistence: inMemoryPersistence });
       cred = await createUserWithEmailAndPassword(secAuth, email, pass);
-      const wdoc = { ...data, email, loginAllowed: true, createdBy: profile.id, ...(rec ? { legacyId: id } : {}) };
+      const wdoc = { ...data, email, loginAllowed: true, hasAccount: true, createdBy: profile.id, ...(rec ? { legacyId: id } : {}) };
       await setDoc(doc(db, 'workers', cred.user.uid), { ...wdoc, createdAt: serverTimestamp() });
       dir.workers.push({ id: cred.user.uid, ...wdoc });
       audit('create', 'workers', cred.user.uid, null, { id: cred.user.uid, ...wdoc });
@@ -1239,6 +1241,8 @@ function openWorkerForm(id, newRole){
   draw();
   const syncRole = () => { ov.querySelector('[data-sched]').hidden = !['Лаборант', 'Лікар'].includes(val(ov, 'role')); };
   ov.querySelector('[data-f="role"]').onchange = syncRole; syncRole();
+  const e1 = ov.querySelector('[data-f="email"]'), e2 = ov.querySelector('[data-f="email2"]');
+  e1.addEventListener('input', () => { e2.value = e1.value; }); e2.addEventListener('input', () => { e1.value = e2.value; });   // e-mail дублюється в «Даних» і в «Доступі»
   const lf = ov.querySelector('[data-login-fields]'), allowSeg = ov.querySelector('[data-allow]');
   let allowTouched = false;
   const syncAllow = () => { lf.hidden = allowSeg.querySelector('.on').dataset.v !== '1'; };
