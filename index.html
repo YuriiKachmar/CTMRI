@@ -1141,7 +1141,7 @@ function openWorkerForm(id, newRole){
   const stat = rec?.status === 'inactive' ? 'inactive' : 'active';
   const role = rec?.role || newRole || 'Лаборант';
   const hasAcc = rec ? (rec.hasAccount ?? !!rec.email) : false;   // чи є в працівника обліковий запис для входу
-  const allowInit = rec ? (hasAcc && rec.loginAllowed !== false) : role === 'Лаборант';
+  const allowInit = rec ? (hasAcc && rec.loginAllowed !== false) : false;   // новий працівник: за замовчуванням «Не дозволено»
   const shRow = (p, i) => {
     const r = classifyShift(p.from, p.to), open = !p.end, ro = p.excluded || !open ? 'disabled' : '';
     return `<div class="sh-item${p.excluded ? ' excluded' : ''}" data-row="${i}"><div class="sh-line">
@@ -1171,11 +1171,11 @@ function openWorkerForm(id, newRole){
       <div class="row"><div class="f full"><label>Дозволити користуватись програмою</label>
         <div class="seg" data-allow><span data-v="1" class="${allowInit ? 'on' : ''}">Дозволено</span><span data-v="0" class="${allowInit ? '' : 'on'}">Не дозволено</span></div></div></div>
       <div data-login-fields>
-        <div class="row"><div class="f"><label>E-mail (логін для входу)${hasAcc ? '' : ' — той самий, що в «Даних працівника»'}</label><input class="in" type="email" data-f="email2" autocomplete="off" value="${esc(rec?.email || '')}" ${hasAcc ? 'readonly' : ''}></div>
+        <div class="row" style="align-items:flex-end"><div class="f"><label>E-mail (логін для входу)</label><input class="in" type="email" data-f="email2" autocomplete="off" value="${esc(rec?.email || '')}" ${hasAcc ? 'readonly' : ''}></div>
           ${hasAcc ? '<div class="f" style="align-self:flex-end"><span class="chip-add" data-reset>✉ Надіслати лист для скидання пароля</span></div>'
                    : '<div class="f"><label>Пароль (не менше 6 символів)</label><input class="in" type="password" data-f="pass" autocomplete="new-password"></div>'}</div>
         ${hasAcc ? '<div class="stexp">Пароль працівнику змінюється лише листом для скидання — пряма зміна чужого пароля в безкоштовному режимі недоступна.</div>' : ''}</div>
-      <div class="al al-i" style="margin:6px 0 0"><span class="al-icon">i</span><div><strong>Дозволено</strong> — працівник входить у програму за e-mail і паролем (права доступу — окремо, у розділі «Доступи»). <strong>Не дозволено</strong> — вхід заблоковано, але працівник лишається у списках, змінах і звітах; для цього e-mail і пароль не потрібні. Керівник чи адміністратор може будь-коли заблокувати вхід цим перемикачем, а потім знову дозволити — пароль не втрачається. Для лікарів за замовчуванням вхід не дозволено.</div></div></div>`,
+      <div class="al al-i" style="margin:6px 0 0"><span class="al-icon">i</span><div><strong>Дозволено</strong> — працівник входить у програму за e-mail і паролем (права доступу — окремо, у розділі «Доступи»). <strong>Не дозволено</strong> — вхід заблоковано, але працівник лишається у списках, змінах і звітах; для цього e-mail і пароль не потрібні. Керівник чи адміністратор може будь-коли заблокувати вхід цим перемикачем, а потім знову дозволити — пароль не втрачається. Для нового працівника за замовчуванням вхід не дозволено.</div></div></div>`,
   async (o) => {
     const fio = val(o, 'fio').split(/\s+/).filter(Boolean);
     if (fio.length < 2) return ['Вкажіть прізвище та ім\'я', 'Бажано й по батькові.'];
@@ -1244,20 +1244,15 @@ function openWorkerForm(id, newRole){
   const e1 = ov.querySelector('[data-f="email"]'), e2 = ov.querySelector('[data-f="email2"]');
   e1.addEventListener('input', () => { e2.value = e1.value; }); e2.addEventListener('input', () => { e1.value = e2.value; });   // e-mail дублюється в «Даних» і в «Доступі»
   const lf = ov.querySelector('[data-login-fields]'), allowSeg = ov.querySelector('[data-allow]');
-  let allowTouched = false;
   const syncAllow = () => { lf.hidden = allowSeg.querySelector('.on').dataset.v !== '1'; };
   syncAllow();
   ov.addEventListener('click', (e) => {
     const sg = e.target.closest('.seg span');
     if (!sg) return;
-    if (sg.closest('[data-allow]')){ allowTouched = true; syncAllow(); }
+    if (sg.closest('[data-allow]')) syncAllow();
     else ov.querySelector('[data-stexp]').textContent = ST_TEXT[sg.dataset.v] || '';
   });
-  if (!rec) ov.querySelector('[data-f="role"]').addEventListener('change', () => {   // за замовчуванням: лаборант — вхід дозволено, лікар — ні
-    if (allowTouched) return;
-    const on = val(ov, 'role') === 'Лаборант';
-    allowSeg.querySelectorAll('span').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === on)); syncAllow();
-  });
+
   ov.querySelector('[data-reset]')?.addEventListener('click', async () => {
     try { await sendPasswordResetEmail(auth, rec.email); toast('ok', 'Лист надіслано', 'Працівник отримає посилання для нового пароля на ' + rec.email); }
     catch (e){ toast('e', 'Не вдалося надіслати лист', e.code || ''); }
