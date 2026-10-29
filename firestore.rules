@@ -12,7 +12,7 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function myProfile() { return get(/databases/$(database)/documents/workers/$(request.auth.uid)).data; }
     function hasProfile() { return signedIn() && exists(/databases/$(database)/documents/workers/$(request.auth.uid)); }
-    function isActive() { return hasProfile() && myProfile().status == 'active'; }
+    function isActive() { return hasProfile() && myProfile().status == 'active' && myProfile().get('loginAllowed', true) != false; }
     function isBoss() { return isActive() && myProfile().role == 'Керівник'; }
     function isAdmin() { return isActive() && (myProfile().role == 'Керівник' || myProfile().role == 'Адміністратор'); }
     function settingsExist() { return exists(/databases/$(database)/documents/settings/main); }

@@ -540,7 +540,7 @@ onAuthStateChanged(auth, async (user) => {
       return await signOut(auth); // onAuthStateChanged(null) перемалює вхід і покаже pendingErr
     }
     profile = { id: user.uid, ...snap.data() };
-    if (profile.status === 'inactive'){
+    if (profile.status === 'inactive' || profile.loginAllowed === false){
       pendingErr = ['Доступ заблоковано', 'Зверніться до керівника.'];
       return await signOut(auth);
     }
@@ -1074,7 +1074,7 @@ function classifyShift(f, t){
 }
 const currentShift = (w) => { const t = todayISO(); return [...(w.shifts || [])].reverse().find(p => !p.excluded && p.start <= t && (!p.end || p.end >= t)) || null; };
 const ST_TEXT = {
-  active: 'Працівник працює на роботі та має право входу у програму, переглядати журнал та вносити в нього зміни, переглядати звіти.',
+  active: 'Працівник працює на роботі: він у списках, змінах і звітах. Чи може він користуватись програмою — визначає панель «Доступ» нижче.',
   inactive: 'Працівник не працює. Вхід у програму заблоковано. Записи, які він вніс раніше, зберігаються у звітах.'
 };
 const sortWorkers = (a, b) => ((a.status === 'inactive') - (b.status === 'inactive')) || String(a.lastName).localeCompare(String(b.lastName), 'uk') || String(a.firstName).localeCompare(String(b.firstName), 'uk');
@@ -1087,11 +1087,11 @@ function renderStaff(){
   const sched = settings?.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
   const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : ''}"><span class="dn">${DAYS[i]}</span><input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}><span class="off" ${isBoss ? 'data-off' : ''}>вихідний</span></div>`).join('');
   const role = staffTab === 'lab' ? 'Лаборант' : 'Лікар';
-  const list = dir.workers.filter(w => w.role === role).sort(sortWorkers);
+  const list = dir.workers.filter(w => w.role === role && !w.mergedInto).sort(sortWorkers);
   const rows = list.map(w => {
     const c = currentShift(w), r = c ? classifyShift(c.from, c.to) : null;
     const shift = c ? `<span class="sh ${r.cls}">${esc(r.label)}</span><span class="wt2">${esc(c.from)}–${esc(c.to)}</span>` : '<span class="wt2">—</span>';
-    return `<div class="rowc ${w.status === 'inactive' ? 'inact' : ''}"><span class="pen" data-ew="${w.id}" ${edit ? '' : 'style="visibility:hidden"'}>✎</span><span class="nm">${esc(shortName(w))}</span><span class="wsh">${shift}</span><span class="slot">${pill2(w.status)}</span></div>`;
+    return `<div class="rowc ${w.status === 'inactive' ? 'inact' : ''}"><span class="pen" data-ew="${w.id}" ${edit ? '' : 'style="visibility:hidden"'}>✎</span><span class="nm">${esc(shortName(w))}${w.loginAllowed === false ? ' <span class="sect-sub">· без входу</span>' : ''}</span><span class="wsh">${shift}</span><span class="slot">${pill2(w.status)}</span></div>`;
   }).join('');
   sh.innerHTML = `
     <div class="sect" style="margin-top:12px"><div class="sect-h"><div class="sect-t">Графік закладу</div></div>
@@ -1140,6 +1140,8 @@ function openWorkerForm(id, newRole){
   const today = todayISO();
   const stat = rec?.status === 'inactive' ? 'inactive' : 'active';
   const role = rec?.role || newRole || 'Лаборант';
+  const hasAcc = !!rec?.email;
+  const allowInit = rec ? (hasAcc && rec.loginAllowed !== false) : role === 'Лаборант';
   const shRow = (p, i) => {
     const r = classifyShift(p.from, p.to), open = !p.end, ro = p.excluded || !open ? 'disabled' : '';
     return `<div class="sh-item${p.excluded ? ' excluded' : ''}" data-row="${i}"><div class="sh-line">
@@ -1159,17 +1161,21 @@ function openWorkerForm(id, newRole){
       <div class="row"><div class="f full"><label>Прізвище, ім'я, по батькові</label><input class="in" data-f="fio" value="${esc(rec ? fullName(rec) : '')}"></div></div>
       <div class="row"><div class="f"><label>Посада</label><select class="in" data-f="role"><option ${role === 'Лаборант' ? 'selected' : ''}>Лаборант</option><option ${role === 'Лікар' ? 'selected' : ''}>Лікар</option></select></div>
         <div class="f"><label>Телефон</label><input class="in" type="tel" data-f="phone" placeholder="+380…" value="${esc(rec?.phone || '')}"></div></div>
-      ${rec ? `<div class="row"><div class="f"><label>E-mail (логін)</label><input class="in" data-f="email" value="${esc(rec.email || '')}" readonly></div>
-          <div class="f" style="align-self:flex-end"><span class="chip-add" data-reset>✉ Надіслати лист для скидання пароля</span></div></div>
-        <div class="stexp">Пароль працівнику змінюється лише листом для скидання — пряма зміна чужого пароля в безкоштовному режимі недоступна.</div>`
-      : `<div class="row"><div class="f"><label>E-mail (логін для входу)</label><input class="in" type="email" data-f="email" autocomplete="off"></div>
-          <div class="f"><label>Пароль (не менше 6 символів)</label><input class="in" type="password" data-f="pass" autocomplete="new-password"></div></div>`}
       <div class="row"><div class="f full"><label>Статус</label>${seg(stat)}<div class="stexp" data-stexp>${ST_TEXT[stat]}</div></div></div></div>
     <div class="sect" data-sched><div class="sect-h"><div class="sect-t">Змінний графік (персональний)</div></div>
       <div data-per></div>
       <button type="button" class="per-add" data-padd>+ Додати новий робочий час</button>
       <div class="stexp">Тип (Д/Н/Доба) обчислюється <b>автоматично</b> з введених годин — не обирається. Еталонні межі (<b>${esc(settings?.shiftWindows?.dayFrom || '08:00')} / ${esc(settings?.shiftWindows?.dayTo || '20:00')}</b>) — окреме налаштування типів змін, <b>не пов'язане</b> з щоденним розкладом закладу. Редагування доступне лише адміністратору.</div></div>
-    <div class="al al-i" style="margin:14px 0 0"><span class="al-icon">i</span><div>Права доступу працівника (розділ «Доступ») з'являться на наступному етапі — разом із розділом «Доступи».</div></div>`,
+    <div class="sect"><div class="sect-h"><div class="sect-t">Доступ</div></div>
+      <div class="row"><div class="f full"><label>Дозволити користуватись програмою</label>
+        <div class="seg" data-allow><span data-v="1" class="${allowInit ? 'on' : ''}">Дозволено</span><span data-v="0" class="${allowInit ? '' : 'on'}">Не дозволено</span></div></div></div>
+      <div data-login-fields>${hasAcc
+        ? `<div class="row"><div class="f"><label>E-mail (логін)</label><input class="in" data-f="email" value="${esc(rec.email || '')}" readonly></div>
+            <div class="f" style="align-self:flex-end"><span class="chip-add" data-reset>✉ Надіслати лист для скидання пароля</span></div></div>
+           <div class="stexp">Пароль працівнику змінюється лише листом для скидання — пряма зміна чужого пароля в безкоштовному режимі недоступна.</div>`
+        : `<div class="row"><div class="f"><label>E-mail (логін для входу)</label><input class="in" type="email" data-f="email" autocomplete="off"></div>
+            <div class="f"><label>Пароль (не менше 6 символів)</label><input class="in" type="password" data-f="pass" autocomplete="new-password"></div></div>`}</div>
+      <div class="al al-i" style="margin:6px 0 0"><span class="al-icon">i</span><div><strong>Дозволено</strong> — працівник входить у програму за e-mail і паролем (права доступу — окремо, у розділі «Доступи»). <strong>Не дозволено</strong> — вхід заблоковано, але працівник лишається у списках, змінах і звітах; для цього e-mail і пароль не потрібні. Керівник чи адміністратор може будь-коли заблокувати вхід цим перемикачем, а потім знову дозволити — пароль не втрачається. Для лікарів за замовчуванням вхід не дозволено.</div></div></div>`,
   async (o) => {
     const fio = val(o, 'fio').split(/\s+/).filter(Boolean);
     if (fio.length < 2) return ['Вкажіть прізвище та ім\'я', 'Бажано й по батькові.'];
@@ -1194,8 +1200,10 @@ function openWorkerForm(id, newRole){
       const go = await new Promise((res) => confirmWin({ type: 'w', title: 'Зміни в минулому.', details: 'Ви змінюєте дати або години періоду, що вже почався. Це може вплинути на сформовані звіти (місячні можуть перестати сходитись із квартальним).', action: 'Зберегти все одно', onOk: () => res(true), onCancel: () => res(false) }));
       if (!go) return ['Збереження скасовано', 'Перевірте дати змінного графіку.'];
     }
-    if (rec){ saveEntry('workers', id, data); return null; }
-    // новий працівник: створюємо обліковий запис через окремий екземпляр Firebase, щоб не розлогінити адміна
+    const allow = o.querySelector('[data-allow] .on').dataset.v === '1';
+    if (rec && (hasAcc || !allow)){ saveEntry('workers', id, { ...data, loginAllowed: hasAcc ? allow : false }); return null; }
+    if (!allow){ saveEntry('workers', null, { ...data, loginAllowed: false, email: '' }); return null; }   // працівник без входу в програму
+    // потрібен вхід (новий працівник або наявний без входу): створюємо обліковий запис через окремий екземпляр Firebase, щоб не розлогінити адміна
     const email = val(o, 'email').toLowerCase(), pass = o.querySelector('[data-f="pass"]').value;
     const whom = data.role === 'Лікар' ? 'цього лікаря' : 'цього лаборанта';
     if (!email) return ['Введіть e-mail', `Введіть e-mail, щоб додати (зберегти) ${whom} до бази даних. Він буде логіном для входу.`];
@@ -1208,10 +1216,12 @@ function openWorkerForm(id, newRole){
     try {
       const secAuth = initializeAuth(secApp, { persistence: inMemoryPersistence });
       cred = await createUserWithEmailAndPassword(secAuth, email, pass);
-      const wdoc = { ...data, email, createdBy: profile.id };
+      const wdoc = { ...data, email, loginAllowed: true, createdBy: profile.id, ...(rec ? { legacyId: id } : {}) };
       await setDoc(doc(db, 'workers', cred.user.uid), { ...wdoc, createdAt: serverTimestamp() });
       dir.workers.push({ id: cred.user.uid, ...wdoc });
       audit('create', 'workers', cred.user.uid, null, { id: cred.user.uid, ...wdoc });
+      // id працівника з входом має дорівнювати uid акаунта (правила Firestore), тому стару картку без входу «зливаємо» в нову
+      if (rec) saveEntry('workers', id, { mergedInto: cred.user.uid, status: 'inactive', loginAllowed: false });
       await signOut(secAuth).catch(() => {});
       rerenderWins();
       return null;
@@ -1229,7 +1239,21 @@ function openWorkerForm(id, newRole){
   draw();
   const syncRole = () => { ov.querySelector('[data-sched]').hidden = !['Лаборант', 'Лікар'].includes(val(ov, 'role')); };
   ov.querySelector('[data-f="role"]').onchange = syncRole; syncRole();
-  ov.addEventListener('click', (e) => { const sg = e.target.closest('.seg span'); if (sg) ov.querySelector('[data-stexp]').textContent = ST_TEXT[sg.dataset.v] || ''; });
+  const lf = ov.querySelector('[data-login-fields]'), allowSeg = ov.querySelector('[data-allow]');
+  let allowTouched = false;
+  const syncAllow = () => { lf.hidden = allowSeg.querySelector('.on').dataset.v !== '1'; };
+  syncAllow();
+  ov.addEventListener('click', (e) => {
+    const sg = e.target.closest('.seg span');
+    if (!sg) return;
+    if (sg.closest('[data-allow]')){ allowTouched = true; syncAllow(); }
+    else ov.querySelector('[data-stexp]').textContent = ST_TEXT[sg.dataset.v] || '';
+  });
+  if (!rec) ov.querySelector('[data-f="role"]').addEventListener('change', () => {   // за замовчуванням: лаборант — вхід дозволено, лікар — ні
+    if (allowTouched) return;
+    const on = val(ov, 'role') === 'Лаборант';
+    allowSeg.querySelectorAll('span').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === on)); syncAllow();
+  });
   ov.querySelector('[data-reset]')?.addEventListener('click', async () => {
     try { await sendPasswordResetEmail(auth, rec.email); toast('ok', 'Лист надіслано', 'Працівник отримає посилання для нового пароля на ' + rec.email); }
     catch (e){ toast('e', 'Не вдалося надіслати лист', e.code || ''); }
