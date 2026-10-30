@@ -1803,7 +1803,7 @@ function openRpPeriod(){
   const quick = { '7': 7, '30': 30, '90': 90, '365': 365 };   // пресети — «сьогодні мінус N днів» (period_picker); Квартал = 90, Рік = 365
   const ov = openWin(`<div class="win-h"><h4>Довільний період</h4><button class="win-x" data-x>✕</button></div><div class="win-b">
     <div class="rp-cl">Швидкий вибір</div><div class="rp-chips" id="rpQ" style="margin-bottom:14px"><span class="rp-chip" data-q="7">Останні 7 днів</span><span class="rp-chip" data-q="30">Останні 30 днів</span><span class="rp-chip" data-q="all">Увесь час</span></div>
-    <div class="rp-cl">За роком</div><div class="rp-yr"><button class="b" id="rpYp">‹</button><b id="rpYv"></b><button class="b" id="rpYn">›</button></div><div class="rp-chips" id="rpQq" style="margin-bottom:14px"><span class="rp-chip" data-qq="1">I кв.</span><span class="rp-chip" data-qq="2">II кв.</span><span class="rp-chip" data-qq="3">III кв.</span><span class="rp-chip" data-qq="4">IV кв.</span><span class="rp-chip" data-qq="y">Весь рік</span></div>
+    <div class="rp-cl">За роком</div><div class="rp-yr"><button class="b" id="rpYp">‹</button><b id="rpYv"></b><button class="b" id="rpYn">›</button></div><div class="rp-chips" id="rpQq" style="margin-bottom:14px"><span class="rp-chip" data-qq="1">I кв.</span><span class="rp-chip" data-qq="2">II кв.</span><span class="rp-chip" data-qq="3">III кв.</span><span class="rp-chip" data-qq="4">IV кв.</span></div>
     <div class="rp-row"><label>Дата з</label><input class="in" type="date" id="rpF" value="${a}"></div><div class="rp-row" style="margin-top:8px"><label>Дата по</label><input class="in" type="date" id="rpT" value="${b}"></div>
     <div class="al al-e" id="rpE" style="display:none;margin:8px 0 0"><span class="al-icon">✕</span><div><b>Дата «по» не може бути раніше за дату «з»</b></div></div>
     <div class="rp-cl" style="margin-top:14px">Обраний період</div><div id="rpSum" style="font-weight:700"></div></div>
@@ -1817,14 +1817,24 @@ function openRpPeriod(){
   const cy = new Date().getFullYear(); let yv = +(a.slice(0, 4)) || cy, y0 = Math.min(yv, cy - 5);
   const yDraw = () => { $('rpYv').textContent = yv; $('rpYp').disabled = yv <= y0; $('rpYn').disabled = yv >= cy; };
   rpEarliest().then(d => { if (d) y0 = Math.min(+d.slice(0, 4), yv); yDraw(); }).catch(() => {});
-  const qq = (el) => { [...$('rpQq').children].forEach(x => x.classList.toggle('on', x === el)); };
-  const qtApply = (k) => {
-    const q = k.dataset.qq, [m1, m2] = q === 'y' ? [0, 11] : [(q - 1) * 3, (q - 1) * 3 + 2];
-    act(null); qq(k); $('rpF').value = iso2(yv, m1, 1); $('rpT').value = iso2(yv, m2, new Date(yv, m2 + 1, 0).getDate()); upd();
+  /* кілька кварталів поспіль: суцільний діапазон [lo, hi]; 4 квартали = весь рік. Не суміжний квартал починає вибір заново */
+  let ql = 0, qh = 0;
+  const qDraw = () => { [...$('rpQq').children].forEach(x => x.classList.toggle('on', ql && +x.dataset.qq >= ql && +x.dataset.qq <= qh)); };
+  const qSet = () => { qDraw(); if (!ql) return; act(null); $('rpF').value = iso2(yv, (ql - 1) * 3, 1); const m2 = qh * 3 - 1; $('rpT').value = iso2(yv, m2, new Date(yv, m2 + 1, 0).getDate()); upd(); };
+  const qq = (el) => { if (!el){ ql = qh = 0; qDraw(); } };
+  const qClick = (q) => {
+    if (!ql || q < ql - 1 || q > qh + 1) { ql = qh = q; }
+    else if (q === ql - 1) ql = q;
+    else if (q === qh + 1) qh = q;
+    else if (ql === qh) ql = qh = 0;               // єдиний обраний — зняти
+    else if (q === ql) ql++;
+    else if (q === qh) qh--;
+    else ql = qh = q;                              // середній — почати заново
+    qSet();
   };
-  $('rpYp').onclick = () => { yv--; yDraw(); const k = $('rpQq').querySelector('.on'); if (k) qtApply(k); };
-  $('rpYn').onclick = () => { yv++; yDraw(); const k = $('rpQq').querySelector('.on'); if (k) qtApply(k); };
-  $('rpQq').onclick = (e) => { const k = e.target.closest('[data-qq]'); if (k) qtApply(k); };
+  $('rpYp').onclick = () => { yv--; yDraw(); qSet(); };
+  $('rpYn').onclick = () => { yv++; yDraw(); qSet(); };
+  $('rpQq').onclick = (e) => { const k = e.target.closest('[data-qq]'); if (k) qClick(+k.dataset.qq); };
   yDraw();
   const act = (el) => { [...$('rpQ').children].forEach(x => x.classList.toggle('on', x === el)); };
   ov.addEventListener('input', (e) => { if (e.target.closest('#rpF,#rpT')){ act(null); qq(null); upd(); } });   // ручна зміна дати вимикає пресет
