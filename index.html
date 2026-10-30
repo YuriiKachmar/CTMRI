@@ -338,6 +338,7 @@
   .op-fld{display:block;border-radius:8px;background:var(--tile);box-shadow:var(--in);padding:5px 8px;max-height:58px;overflow:hidden}
   .op-ok{font-size:9px;font-weight:800;color:var(--green)}
   .op-no{font-size:9px;font-weight:800;color:var(--warn)}
+  .tg{cursor:pointer}.op-fld.tg:active{box-shadow:var(--in-on)}
   .nm2{font-weight:700;font-size:12px}
   .j-body .sm,.sm{font-size:10px;color:var(--muted);line-height:1.35}
   .cash{font-size:10px;color:var(--muted)}
@@ -760,7 +761,7 @@ function enterApp(){
 async function renderShell(){
   $('hFac').textContent = settings?.facilityName || APP_NAME;
   $('hWho').textContent = shortName(profile);
-  $('hRole').textContent = String(profile.role || '').toLowerCase();
+  $('hRole').textContent = String(profile.position || profile.role || '').toLowerCase();
   show('app');
   pickTab(0);
   try { await loadDirs(); rerenderWins(); } catch (e){ console.warn('dirs:', e.failed || e.code); rerenderWins(); toast('w', 'Довідники не завантажено', e.failed ? 'Не вдалося прочитати: ' + e.failed.join(', ') : 'Перевірте з\'єднання.'); }
@@ -1507,7 +1508,7 @@ const ACCESS_TEMPLATES = {
   'Адміністратор': [0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0],
   'Користувач':    [0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0],
   'Лаборант':      [0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  'Лікар':         [0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0]
+  'Лікар':         [0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0]
 };
 function normPerms(role, perms){
   const o = {}, boss = role === 'Керівник', tpl = ACCESS_TEMPLATES[role] || [];
@@ -1583,7 +1584,7 @@ function matrixHtml(){
     const inact = w.status === 'inactive', boss = w.role === 'Керівник', ed = rowEditable(w), p = permsOf(w);
     const nm = boss ? `<span class="uname lock"><span class="unm">${esc(shortName(w))}</span> 🔒</span>` : `<span class="uname" data-card="${w.id}"><span class="unm">${esc(shortName(w))}</span></span>`;
     const src = ['Лаборант', 'Лікар'].includes(w.role) ? '<span class="ups"> · із Працівників</span>' : '';
-    return `<tr class="${inact ? 'inact' : ''}"><td class="l">${nm}${src}${inact ? ' <span class="tagx">не активний</span>' : ''}</td><td class="l ups">${esc(w.role || '')}</td>${PERM_KEYS.map((k, i) => permCell(k, i, p, boss, ed && !inact, w.id)).join('')}</tr>`;
+    return `<tr class="${inact ? 'inact' : ''}"><td class="l">${nm}${src}${inact ? ' <span class="tagx">не активний</span>' : ''}</td><td class="l ups">${esc(w.position || w.role || '')}</td>${PERM_KEYS.map((k, i) => permCell(k, i, p, boss, ed && !inact, w.id)).join('')}</tr>`;
   }).join('');
   return `<div class="box-t">Користувачі та їхні доступи <span class="sect-sub">клітинка — доступ · ПІБ — картка</span></div>
     <div class="mtx"><table>${mxHead()}<tbody>${rows}</tbody></table></div>
@@ -1592,13 +1593,34 @@ function matrixHtml(){
 }
 
 /* ───── Картка користувача (Адміністратор / Користувач) ───── */
+const SYS_ROLES = ['Керівник', 'Адміністратор', 'Користувач', 'Лаборант', 'Лікар'];
+const positionsList = () => [...(settings?.positions || [])];
+/* власна посада (Директор, Бенефіціар…): назва-позначка; працює як «Користувач», права — у матриці */
+const roleOptions = (sel, withWorkers) => `<option value="" ${sel ? '' : 'selected'}>Оберіть посаду…</option><option value="Адміністратор" ${sel === 'Адміністратор' ? 'selected' : ''}>Адміністратор</option><option value="Користувач" ${sel === 'Користувач' ? 'selected' : ''}>Користувач</option>`
+  + positionsList().map(p => `<option value="pos:${esc(p)}" ${sel === 'pos:' + p ? 'selected' : ''}>${esc(p)}</option>`).join('') + '<option value="+pos">+ Створити посаду…</option>'
+  + (withWorkers ? '<option value="Лаборант">Лаборант</option><option value="Лікар">Лікар</option>' : '');
+function createPosition(onDone){
+  formWin('Нова посада', `<div class="row"><div class="f full"><label>Назва посади</label><input class="in" data-f="pname" placeholder="напр. Директор"></div></div>
+    <div class="al al-i" style="margin:4px 0 8px"><span class="al-icon">i</span><div>Посада — це назва, яка показується в списках. Працює як «Користувач»: початковий набір прав той самий, далі права змінюються в матриці.</div></div>`,
+  (o) => {
+    const name = val(o, 'pname');
+    if (!name) return ['Введіть назву посади', ''];
+    const lower = name.toLowerCase();
+    if (SYS_ROLES.some(r => r.toLowerCase() === lower) || positionsList().some(p => p.toLowerCase() === lower)) return ['Така посада вже є', 'Оберіть іншу назву.'];
+    const list = [...positionsList(), name];
+    settings = { ...(settings || {}), positions: list };
+    setDoc(doc(db, 'settings', 'main'), { positions: list, updatedAt: serverTimestamp() }, { merge: true }).catch(e => toast('e', 'Не вдалося зберегти посаду', e.code || ''));
+    audit('update', 'settings', 'main', { positions: list.slice(0, -1) }, { positions: list });
+    onDone(name);
+  }, 460);
+}
 function openUserForm(id){
   const rec = id ? dir.workers.find(x => x.id === id) : null;
   let pv = rec ? null : null;     // права нового користувача (показ у картці створення)
   const ov = formWin(rec ? fullName(rec) : 'Новий користувач', `
-    ${rec ? '' : `<div class="row"><div class="f full"><label>Посада <span style="float:right;color:var(--ph)">обов'язково</span></label><select class="in" data-f="role"><option value="">Оберіть посаду…</option><option>Адміністратор</option><option>Користувач</option><option>Лаборант</option><option>Лікар</option></select></div></div>`}
+    ${rec ? '' : `<div class="row"><div class="f full"><label>Посада <span style="float:right;color:var(--ph)">обов'язково</span></label><select class="in" data-f="role">${roleOptions('', true)}</select></div></div>`}
     <div class="row"><div class="f full"><label>Прізвище, ім'я, по батькові</label><input class="in" data-f="fio" value="${esc(rec ? fullName(rec) : '')}"></div></div>
-    ${rec ? `<div class="row"><div class="f"><label>Посада</label><select class="in" data-f="role"><option ${rec.role === 'Адміністратор' ? 'selected' : ''}>Адміністратор</option><option ${rec.role === 'Користувач' ? 'selected' : ''}>Користувач</option></select></div>
+    ${rec ? `<div class="row"><div class="f"><label>Посада</label><select class="in" data-f="role">${roleOptions(rec.position ? 'pos:' + rec.position : rec.role, false).replace('<option value="" selected>Оберіть посаду…</option>', '').replace('<option value="+pos">+ Створити посаду…</option>', '')}</select></div>
       <div class="f"><label>Статус</label>${seg(rec.status)}</div></div>` : ''}
     <div class="row"><div class="f"><label>E-mail (логін для входу)${rec ? ' — не змінюється' : ''}</label><input class="in" type="email" data-f="email" autocomplete="off" ${rec ? 'disabled' : ''} value="${esc(rec?.email || '')}"></div>
       ${rec ? '<div class="f" style="align-self:flex-end"><span class="chip-add" data-reset>✉ Надіслати лист для скидання пароля</span></div>' : '<div class="f"><label>Пароль (не менше 6 символів)</label><input class="in" type="password" data-f="pass" autocomplete="new-password"></div>'}</div>
@@ -1606,13 +1628,13 @@ function openUserForm(id){
     <div class="al al-i" style="margin:0 0 8px"><span class="al-icon">i</span><div>Права цього користувача встановлюються <strong>в матриці «Доступи»</strong>${rec ? '' : ' — початковий набір залежить від посади, далі його можна змінити тут же'}.</div></div>
     ${rec ? '' : '<div data-pv></div>'}`,
   async (o) => {
-    const fio = val(o, 'fio').split(/\s+/).filter(Boolean), role = val(o, 'role');
-    if (!role) return ['Оберіть посаду', ''];
+    const fio = val(o, 'fio').split(/\s+/).filter(Boolean), rv = val(o, 'role'), role = rv.startsWith('pos:') ? 'Користувач' : rv, position = rv.startsWith('pos:') ? rv.slice(4) : null;
+    if (!rv || rv === '+pos') return ['Оберіть посаду', ''];
     if (fio.length < 2) return ['Вкажіть прізвище та ім\'я', 'Бажано й по батькові.'];
-    const data = { lastName: fio[0], firstName: fio[1], middleName: fio.slice(2).join(' '), role };
+    const data = { lastName: fio[0], firstName: fio[1], middleName: fio.slice(2).join(' '), role, position };
     if (rec){
       const status = o.querySelector('.seg .on').dataset.v;
-      if (role !== rec.role && !o._roleOk){
+      if ((role !== rec.role || (position || null) !== (rec.position || null)) && !o._roleOk){
         const go = await new Promise((res) => confirmWin({ type: 'w', title: 'Зміна посади.', details: 'Права цього користувача в матриці буде перевстановлено на початковий набір для нової посади.', action: 'Змінити посаду', onOk: () => res(true), onCancel: () => res(false) }));
         if (!go) return ['Збереження скасовано', 'Посаду не змінено.'];
         data.perms = normPerms(role, null);
@@ -1649,16 +1671,20 @@ function openUserForm(id){
     const box = ov.querySelector('[data-pv]'), sel = ov.querySelector('[data-f="role"]');
     const drawPv = () => {
       if (!pv){ box.innerHTML = '<div class="sect-sub" style="padding:6px 2px">Оберіть посаду вище — права з\'являться тут.</div>'; return; }
-      box.innerHTML = `<div class="box-t">Доступ <span class="sect-sub">посада задає стартовий набір — можна відкоригувати одразу тут</span></div><div class="mtx"><table>${mxHead().replace(/<th class="l" rowspan="2">[^<]*<\/th><th class="l" rowspan="2">[^<]*<\/th>/, '<th class="l" rowspan="2">Права</th>')}<tbody><tr><td class="l ups">${esc(sel.value)}</td>${PERM_KEYS.map((k, i) => permCell(k, i, pv, false, true, 'new')).join('')}</tr></tbody></table></div>`;
+      box.innerHTML = `<div class="box-t">Доступ <span class="sect-sub">посада задає стартовий набір — можна відкоригувати одразу тут</span></div><div class="mtx"><table>${mxHead().replace(/<th class="l" rowspan="2">[^<]*<\/th><th class="l" rowspan="2">[^<]*<\/th>/, '<th class="l" rowspan="2">Права</th>')}<tbody><tr><td class="l ups">${esc(sel.value.replace(/^pos:/, ''))}</td>${PERM_KEYS.map((k, i) => permCell(k, i, pv, false, true, 'new')).join('')}</tr></tbody></table></div>`;
     };
     drawPv();
     sel.addEventListener('change', () => {
+      if (sel.value === '+pos'){
+        sel.value = ''; pv = null; drawPv();
+        return createPosition((name) => { sel.innerHTML = roleOptions('pos:' + name, true); pv = normPerms('Користувач', null); drawPv(); });
+      }
       if (sel.value === 'Лаборант' || sel.value === 'Лікар'){
         const r = sel.value; sel.value = ''; pv = null; drawPv();
         confirmWin({ type: 'w', title: `${r === 'Лаборант' ? 'Лаборанта' : 'Лікаря'} тут не додають.`, details: 'У лаборантів і лікарів є змінний графік і чергування — їхню роботу рахують звіти. Тому вони заводяться в розділі «Працівники», разом із графіком.', action: 'Перейти в Працівники', onOk: () => { winStack.slice().forEach(closeWin); pickTab(3); } });
         return;
       }
-      pv = sel.value ? normPerms(sel.value, null) : null; drawPv();
+      pv = sel.value ? normPerms(sel.value.startsWith('pos:') ? 'Користувач' : sel.value, null) : null; drawPv();
     });
     ov.querySelector('[data-pv]').addEventListener('click', (e) => { const c = e.target.closest('[data-cb]'); if (c && pv){ pv = togglePerm(pv, c.dataset.cb.split(':')[1]); drawPv(); } });
   } else {
@@ -1679,8 +1705,10 @@ const nfmt = (n) => Number(n || 0).toLocaleString('uk-UA');
 const nowTime = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 const p2 = (n) => String(n).padStart(2, '0');
 const isAdminRole = () => ['Керівник', 'Адміністратор'].includes(profile?.role);
+const canDescribeRec = (r) => can('jEdit') && (isAdminRole() || (isDoctor() && workerBy(r.describerId)?.id === profile.id));   // лікар — лише там, де він «Лікар (описує)»
 const canDescribe = () => ['Керівник', 'Адміністратор', 'Лікар'].includes(profile?.role);
-const canEditVisit = (r) => can('jEdit') && (isAdminRole() || (r.createdBy && r.createdBy === profile?.id));
+const isDoctor = () => profile?.role === 'Лікар';   // для Лікаря «Редагування» = лише стовпець «Опис»
+const canEditVisit = (r) => can('jEdit') && !isDoctor() && (isAdminRole() || (r.createdBy && r.createdBy === profile?.id));
 const workerBy = (id) => dir.workers.find(w => w.id === id || w.legacyId === id);
 const activeWorkers = (role) => dir.workers.filter(w => w.status !== 'inactive' && !w.mergedInto && w.role === role)
   .sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk'));
@@ -2065,7 +2093,7 @@ function jrSubscribe(){
 function renderJournal(){
   if (!can('jView')){ $('sheet').innerHTML = noAccessBox('Перегляд журналу вам не дозволено.'); return; }
   sheetRerender = () => { jrPanel(); jrTable(); };
-  $('sheet').innerHTML = `<div class="j-actions">${can('jEdit') ? '<button class="j-new" id="jNew"><span class="plus">+</span> НОВИЙ ВІЗИТ</button>' : '<span></span>'}
+  $('sheet').innerHTML = `<div class="j-actions">${can('jEdit') && !isDoctor() ? '<button class="j-new" id="jNew"><span class="plus">+</span> НОВИЙ ВІЗИТ</button>' : '<span></span>'}
       <div class="pp" id="pp"><div class="pp-b" id="ppL"></div><div class="pp-b on" id="ppM"></div><div class="pp-b" id="ppR"></div>
         <button class="pp-confirm" id="ppConfirm"><span class="pp-confirm-lbl">🔍 Показати за</span><span class="pp-confirm-month" id="ppConfirmMonth"></span></button></div><div></div></div>
     <div id="jBody"></div><div id="jLeg"></div>`;
@@ -2078,9 +2106,10 @@ function renderJournal(){
   };
   $('ppConfirm').onclick = () => { jr.loaded = { t: 'month', off: jr.pp }; jr.confirmedFor = jr.pp; jrSubscribe(); jrPanel(); jrTable(); };
   $('jBody').onclick = (e) => {
-    const p = e.target.closest('[data-vid]'), y = e.target.closest('[data-pay]');
+    const p = e.target.closest('[data-vid]'), y = e.target.closest('[data-pay]'), d = e.target.closest('[data-desc]');
     if (p && !p.classList.contains('off')) openVisitForm(p.dataset.vid);
     if (y && !y.classList.contains('off')) togglePay(y.dataset.pay);
+    if (d) toggleDescribed(d.dataset.desc);
   };
   jrPanel();
   if (!jr.unsub || (jr.loaded.t === 'today' && jr.subDay !== todayISO())) jrSubscribe();   // нова доба — «Сьогодні» оновлюється
@@ -2094,6 +2123,16 @@ function setPaid(r, paid, method){
   else b.delete(doc(db, 'payments', r.id));
   audit('update', 'records', r.id, { paid: !!r.paid, paymentMethod: r.paymentMethod || null }, { paid, paymentMethod: method || null });
   b.commit().catch(e => toast('e', 'Не вдалося змінити оплату', e.code || ''));
+}
+/* відмітка «описано»: лікар — лише своїх (де він «Лікар (описує)»), Керівник/Адмін — будь-яких */
+function toggleDescribed(id){
+  const r = [...jr.rows, ...Object.values(pt.data).flatMap(d => d.rows)].find(x => x.id === id);
+  if (!r || !canDescribeRec(r)) return;
+  const v = !r.described;
+  const b = writeBatch(db);
+  b.set(doc(db, 'records', id), { described: v, updatedAt: serverTimestamp() }, { merge: true });
+  audit('update', 'records', id, { described: !!r.described }, { described: v });
+  b.commit().catch(e => toast('e', 'Не вдалося змінити відмітку', e.code || ''));
 }
 function togglePay(id){
   const r = [...jr.rows, ...Object.values(pt.data).flatMap(d => d.rows)].find(x => x.id === id);
@@ -2183,7 +2222,7 @@ function jrTable(){
       <td class="r money m-l" ${mcls}><b>${nfmt(r.totalAmount)}</b></td>
       <td class="c cash">${r.paymentMethod === 'cash' ? 'готівка' : r.paymentMethod === 'cashless' ? 'безготівк.' : '—'}</td>
       <td class="c money pay-status m-r" ${pcls}><span class="pay ${r.paid ? 'ok2' : 'no2'} ${own ? '' : 'off'}" data-pay="${r.id}" title="${own ? (r.paid ? 'Зняти оплату' : 'Позначити оплаченою') : ''}">${r.paid ? '✓' : '✕'}</span></td>
-      <td class="desc"><span class="op-fld">${r.described ? '<span class="op-ok">● описано</span>' : '<span class="op-no">○ не описано</span>'}</span></td>
+      <td class="desc"><span class="op-fld ${canDescribeRec(r) ? 'tg' : ''}" ${canDescribeRec(r) ? `data-desc="${r.id}" title="Змінити відмітку"` : ''}>${r.described ? '<span class="op-ok">● описано</span>' : '<span class="op-no">○ не описано</span>'}</span></td>
       <td class="sm"><b>Лаб.:</b> ${esc(lw ? shortName(lw) : '')}<br><b>Лік.:</b> ${esc(dw ? shortName(dw) : '')}</td></tr>`;
   }).join('');
   const visits = new Set(rows.map(r => r.visitId)).size, pats = new Set(rows.map(r => r.patientId || r.patientName)).size;
@@ -2214,9 +2253,10 @@ function renderPatients(){
   $('ptForm').onsubmit = (e) => { e.preventDefault(); ptSearch(); };
   $('ptClr').onclick = () => { $('ptQ').value = ''; $('ptQ').focus(); };
   $('ptRes').onclick = (e) => {
-    const p = e.target.closest('[data-vid]'), y = e.target.closest('[data-pay]');
+    const p = e.target.closest('[data-vid]'), y = e.target.closest('[data-pay]'), d = e.target.closest('[data-desc]');
     if (p && !p.classList.contains('off')) openVisitForm(p.dataset.vid);
     if (y && !y.classList.contains('off')) togglePay(y.dataset.pay);
+    if (d) toggleDescribed(d.dataset.desc);
   };
   ptDraw(); $('ptQ').focus();
   $('ptQ').value = pt.q;   // результати й підписки збережені — вкладка показує те, що було
@@ -2265,7 +2305,7 @@ function ptCard(p, rowsIn){
       <td ${r.historyNo ? '' : 'class="inst"'}>${esc(r.historyNo || '—')}</td>
       <td ${ref.self ? 'class="inst"' : ''}>${ref.self ? 'самозвернення' : esc(dname) + (iname ? `<div class="inst">${esc(iname)}</div>` : '')}</td>
       <td><span class="srv">${esc(r.serviceSnapshot?.name || '')}</span>${r.discountSnapshot ? `<div class="extra">${esc(r.discountSnapshot.name)} −${r.discountSnapshot.percent}%</div>` : ''}</td>
-      <td class="inst">${r.described ? '● описано' : '—'}</td>
+      <td class="inst ${canDescribeRec(r) ? 'tg' : ''}" ${canDescribeRec(r) ? `data-desc="${r.id}" title="Змінити відмітку"` : ''}>${r.described ? '● описано' : canDescribeRec(r) ? '○ не описано' : '—'}</td>
       <td class="cash m-l" ${pc}>${r.paymentMethod === 'cash' ? 'готівка' : r.paymentMethod === 'cashless' ? 'безготівка' : '—'}</td>
       <td class="c" ${pc}><span class="pay ${r.paid ? 'ok2' : 'no2'} ${own ? '' : 'off'}" data-pay="${r.id}">${r.paid ? '✓' : '✕'}</span></td>
       <td class="r ${payCol ? 'm-r' : 'm-l m-r'}" ${mc}>${nfmt(r.servicePriceAfterDiscount)}</td>
