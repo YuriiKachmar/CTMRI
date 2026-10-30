@@ -1749,8 +1749,7 @@ function rpHub(){
 function rpOpen(){
   const name = REPORTS.find(r => r[0] === rp.cur)[1];
   const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
-  $('sheet').innerHTML = `<div class="rp-win"><div class="rp-top"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div><button class="win-x" id="rpX">✕</button></div>
-    <div class="pp-wrap">${ppMarkup('rp')}</div>
+  $('sheet').innerHTML = `<div class="rp-win"><div class="j-actions"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div>${ppMarkup('rp')}<button class="win-x" id="rpX" style="justify-self:end">✕</button></div>
     <div class="rp-card"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>
     <div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
     <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpCols">
