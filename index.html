@@ -305,7 +305,7 @@
   .cell.today{background:var(--soft);box-shadow:var(--in-on)}.cell.today .dnum{color:var(--green)}
   .cell .grp{display:flex;gap:2px}.cell .grp.lab{flex-direction:column-reverse}.cell .grp.doc{flex-direction:column}
   .slot{min-height:16px;display:flex;align-items:center;gap:3px;padding:0 3px;border-radius:5px;font-size:10px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-  .slot.fl{background:#F2F5F6;cursor:pointer}.slot.fl.der{cursor:default;font-style:italic}.slot.nodata{background:var(--warn-bg);color:var(--warn)}
+  .slot.fl{background:#F2F5F6;cursor:pointer}.cell.past .slot.fl{cursor:default}.slot.fl.der{cursor:default;font-style:italic}.slot.nodata{background:var(--warn-bg);color:var(--warn)}
   .slot.add{justify-content:center;color:var(--muted);background:var(--bg);box-shadow:var(--bump);cursor:pointer;font-size:10px}.slot.add:active{box-shadow:var(--in)}
   .slot .sh-badge{padding:1px 4px;min-width:0;font-size:8px;border-radius:4px;flex:0 0 auto}
   .cal-sums{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
@@ -1574,9 +1574,9 @@ function calDraw(){
   let h = '<div class="cell out"></div>'.repeat(lead);
   for (const c of out){
     h += `<div class="cell${c.iso < td ? ' past' : ''}${c.iso === td ? ' today' : ''}${sched[c.wd]?.off ? ' rest' : ''}" data-iso="${c.iso}">
-      <div class="grp lab">${c.labs.map(i => chip(i, 'lab', c.iso)).join('')}${ed ? '<div class="slot add" data-g="lab" title="Додати лаборанта">+</div>' : ''}</div>
+      <div class="grp lab">${c.labs.map(i => chip(i, 'lab', c.iso)).join('')}${ed && c.iso >= td ? '<div class="slot add" data-g="lab" title="Додати лаборанта">+</div>' : ''}</div>
       <div class="dnum">${c.d}</div>
-      <div class="grp doc">${c.docs.map(i => chip(i, 'doc', c.iso)).join('')}${ed ? '<div class="slot add" data-g="doc" title="Додати лікаря">+</div>' : ''}</div></div>`;
+      <div class="grp doc">${c.docs.map(i => chip(i, 'doc', c.iso)).join('')}${ed && c.iso >= td ? '<div class="slot add" data-g="doc" title="Додати лікаря">+</div>' : ''}</div></div>`;
   }
   ov.querySelector('[data-cg]').innerHTML = h;
   const sumTbl = (g, title) => {
@@ -1611,7 +1611,7 @@ function calShift(step){
 function openCalendar(){
   const n = new Date(); cal.y = n.getFullYear(); cal.m = n.getMonth(); cal.onLeft = false;
   const ov = openWin(`<div class="win-h"><h4>Календар чергувань</h4><button class="win-x" data-x>✕</button></div>
-    <div class="win-b"><div class="cal-hint">Хто чергував / чергуватиме. Минуле — факт із журналу, майбутнє — призначення. ${canEditCal() ? 'Тут відмічають і ті дні, коли пацієнтів не було.' : 'Ви можете лише переглядати.'}</div>
+    <div class="win-b"><div class="cal-hint">Хто чергував / чергуватиме. Минуле — факт із журналу (не редагується), сьогодні й майбутнє — призначення. ${canEditCal() ? 'Призначене чергування лишається в календарі, навіть якщо пацієнтів не було.' : 'Ви можете лише переглядати.'}</div>
     <div class="pp cal-pp"><div class="pp-b" data-tl></div><div class="pp-b on" data-tm></div><div class="pp-b" data-tr></div></div>
     <div class="dow"><span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>нд</span></div>
     <div class="cal-grid" data-cg></div><div data-cs></div></div>
@@ -1625,6 +1625,7 @@ function openCalendar(){
     if (!canEditCal()) return;
     const cell = e.target.closest('.cell[data-iso]'), slot = e.target.closest('.slot[data-g]');
     if (!cell || !slot) return;
+    if (cell.dataset.iso < todayISO()) return toast('i', 'Минулі дні не редагуються', 'Вони заповнюються з журналу та з раніше призначених чергувань. Вручну вносять лише сьогодні й майбутні дні.');
     if (slot.dataset.der === '1') return toast('i', 'Запис із журналу', 'Цей працівник вносив записи в журнал цього дня — це факт, його не прибрати. Чергування можна лише додати іншим.');
     openDutyPicker(cell.dataset.iso, slot.dataset.g, slot.classList.contains('add') ? null : slot.dataset.wid);
   });
