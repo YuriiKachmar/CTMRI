@@ -1601,17 +1601,20 @@ const roleOptions = (sel, withWorkers) => `<option value="" ${sel ? '' : 'select
   + (withWorkers ? '<option value="Лаборант">Лаборант</option><option value="Лікар">Лікар</option>' : '');
 function createPosition(onDone){
   formWin('Нова посада', `<div class="row"><div class="f full"><label>Назва посади</label><input class="in" data-f="pname" placeholder="напр. Директор"></div></div>
-    <div class="al al-i" style="margin:4px 0 8px"><span class="al-icon">i</span><div>Посада — це назва, яка показується в списках. Працює як «Користувач»: початковий набір прав той самий, далі права змінюються в матриці.</div></div>`,
+    <div class="al al-i" style="margin:4px 0 8px"><span class="al-icon">i</span><div>Кілька людей можуть мати одну посаду — якщо така назва вже є, її буде просто обрано. Посада — це назва, яка показується в списках. Працює як «Користувач»: початковий набір прав той самий, далі права змінюються в матриці.</div></div>`,
   (o) => {
     const name = val(o, 'pname');
     if (!name) return ['Введіть назву посади', ''];
     const lower = name.toLowerCase();
-    if (SYS_ROLES.some(r => r.toLowerCase() === lower) || positionsList().some(p => p.toLowerCase() === lower)) return ['Така посада вже є', 'Оберіть іншу назву.'];
+    const sys = ['Адміністратор', 'Користувач'].find(r => r.toLowerCase() === lower), have = positionsList().find(p => p.toLowerCase() === lower);
+    if (sys){ onDone(sys); return null; }          // така посада вже є — просто обираємо її (кілька людей можуть мати одну посаду)
+    if (have){ onDone('pos:' + have); return null; }
+    if (SYS_ROLES.some(r => r.toLowerCase() === lower)) return ['Ця посада системна', 'Лаборантів і лікарів додають у розділі «Працівники».'];
     const list = [...positionsList(), name];
     settings = { ...(settings || {}), positions: list };
     setDoc(doc(db, 'settings', 'main'), { positions: list, updatedAt: serverTimestamp() }, { merge: true }).catch(e => toast('e', 'Не вдалося зберегти посаду', e.code || ''));
     audit('update', 'settings', 'main', { positions: list.slice(0, -1) }, { positions: list });
-    onDone(name);
+    onDone('pos:' + name);
   }, 460);
 }
 function openUserForm(id){
@@ -1677,7 +1680,7 @@ function openUserForm(id){
     sel.addEventListener('change', () => {
       if (sel.value === '+pos'){
         sel.value = ''; pv = null; drawPv();
-        return createPosition((name) => { sel.innerHTML = roleOptions('pos:' + name, true); pv = normPerms('Користувач', null); drawPv(); });
+        return createPosition((v) => { sel.innerHTML = roleOptions(v, true); pv = normPerms(v.startsWith('pos:') ? 'Користувач' : v, null); drawPv(); });
       }
       if (sel.value === 'Лаборант' || sel.value === 'Лікар'){
         const r = sel.value; sel.value = ''; pv = null; drawPv();
@@ -1705,10 +1708,10 @@ const nfmt = (n) => Number(n || 0).toLocaleString('uk-UA');
 const nowTime = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 const p2 = (n) => String(n).padStart(2, '0');
 const isAdminRole = () => ['Керівник', 'Адміністратор'].includes(profile?.role);
-const canDescribeRec = (r) => can('jEdit') && (isAdminRole() || (isDoctor() && workerBy(r.describerId)?.id === profile.id));   // лікар — лише там, де він «Лікар (описує)»
-const canDescribe = () => ['Керівник', 'Адміністратор', 'Лікар'].includes(profile?.role);
+const canDescribeRec = (r) => can('jEdit') && (!isDoctor() || workerBy(r.describerId)?.id === profile.id);   // лікар — лише там, де він «Лікар (описує)»
+const canDescribe = () => can('jEdit');
 const isDoctor = () => profile?.role === 'Лікар';   // для Лікаря «Редагування» = лише стовпець «Опис»
-const canEditVisit = (r) => can('jEdit') && !isDoctor() && (isAdminRole() || (r.createdBy && r.createdBy === profile?.id));
+const canEditVisit = (r) => can('jEdit') && !isDoctor();   // лаборант часто виконує функції адміністратора — редагує будь-який візит; лікар — лише «Опис»
 const workerBy = (id) => dir.workers.find(w => w.id === id || w.legacyId === id);
 const activeWorkers = (role) => dir.workers.filter(w => w.status !== 'inactive' && !w.mergedInto && w.role === role)
   .sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk'));
