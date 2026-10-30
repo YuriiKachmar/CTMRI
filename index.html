@@ -285,6 +285,123 @@
   .sh-item.excluded .per-del{pointer-events:none;box-shadow:none;cursor:default}
   @media (max-width:560px){.sh-line{grid-template-columns:44px 58px 1fr 14px 1fr}.sh-line>*:nth-child(n+6){grid-column:1 / -1;justify-self:start}}
 
+
+  /* ── Журнал + форма візиту (main.html, forma_vizytu.html) ── */
+  :root{--rule:#B9C4C2;--tile:#e6ebf0;--field-ro:#E4E9EA;--card:#e9edf2}
+  .pen.off{opacity:.35;cursor:default;box-shadow:none;pointer-events:none}
+  .j-actions{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:14px}
+  .j-new{justify-self:start;display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border:none;border-radius:12px;background:var(--btn-main);color:#fff;font-size:13px;font-weight:800;letter-spacing:.3px;cursor:pointer;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark);font-family:inherit}
+  .j-new:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
+  .j-new .plus{font-size:22px;font-weight:900;line-height:1}
+  .pp{display:flex;padding:5px;border-radius:14px;background:var(--bg);box-shadow:var(--in);height:48px;position:relative}
+  .pp-b{flex:0 0 auto;width:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 14px;border-radius:11px;font-size:12px;color:var(--muted);cursor:pointer}
+  .pp-b.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
+  .pp-b.on .pp-m{color:var(--green)}
+  .pp-m{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;line-height:1.15}
+  .pp-d{font-size:10px;font-weight:400;color:var(--muted);line-height:1.2}
+  .pp-date{font-size:15px;letter-spacing:.2px;text-transform:none}
+  .pp-confirm{display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:5;min-width:132px;height:38px;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:none;border-radius:12px;background:var(--btn-main);color:#fff;white-space:nowrap;cursor:pointer;padding:0 8px;box-sizing:border-box;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark);animation:ppPulse 1.8s ease-in-out infinite;font-family:inherit}
+  .pp-confirm .pp-confirm-lbl{font-size:9.5px;font-weight:600;opacity:.9}
+  .pp-confirm .pp-confirm-month{font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px}
+  .pp-confirm:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18);animation:none}
+  .pp-confirm.show{display:flex}
+  @keyframes ppPulse{0%,100%{background-color:var(--btn-main)}50%{background-color:#83B8A5}}
+  .j-body{border-radius:16px;overflow:auto;background:transparent;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 330px);min-height:180px}
+  .j-body table{border-collapse:collapse;font-size:11.5px;table-layout:fixed}
+  .j-body th{background:var(--green);color:#fff;padding:9px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap;text-align:left;position:sticky;top:0;z-index:3}
+  .j-body th.c{text-align:center}.j-body th.r{text-align:right}
+  .j-body td{padding:9px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:break-word}
+  .j-body td.c{text-align:center}
+  .j-body td.r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .j-body tbody td{height:74px;max-height:74px;overflow:hidden}
+  .j-body tbody td > *{overflow:hidden}
+  .j-body tbody .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .j-body th.desc,.j-body td.desc{border-left:2px solid var(--rule);border-right:2px solid var(--rule)}
+  .j-body th.m-l,.j-body td.m-l{border-left:2px solid var(--rule)}
+  .j-body th.m-r,.j-body td.m-r{border-right:2px solid var(--rule)}
+  .j-body tfoot td{position:sticky;bottom:0;background:var(--bg);border-top:2px solid var(--green);padding:11px 9px;z-index:4;box-shadow:0 -3px 8px rgba(163,177,180,.25)}
+  .j-body tr.g td:nth-child(2),.j-body tr.g td:nth-child(3),.j-body tr.g td:nth-child(4),.j-body tr.g td:nth-child(5){background-repeat:no-repeat;background-size:412px 100%;background-image:linear-gradient(90deg,var(--g1),var(--g0) 412px)}
+  .j-body tr.g td:nth-child(3){background-position:-54px 0}
+  .j-body tr.g td:nth-child(4){background-position:-120px 0}
+  .j-body tr.g td:nth-child(5){background-position:-320px 0}
+  .j-cont-row td{border-top:1px dashed var(--muted)}
+  .svc-cell{white-space:normal}
+  .svc-price{font-size:11px;font-weight:700;color:var(--ink);margin-left:6px}
+  .svc-price.old{font-size:10px;font-weight:400;color:var(--muted);text-decoration:line-through}
+  .svc-l2,.svc-l3{margin-top:2px;display:flex;align-items:center}
+  .pil{display:inline-block;font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--soft);color:var(--green);margin-right:3px;margin-top:2px}
+  .pil.g{background:var(--field-ro);color:var(--muted)}
+  .pay{display:inline-flex;align-items:center;justify-content:center;width:34px;height:32px;border-radius:9px;font-size:17px;font-weight:900;line-height:1;background:var(--card);box-shadow:var(--bump);-webkit-text-stroke:.5px currentColor;user-select:none}
+  .pay.ok2{color:var(--green);background:var(--soft);box-shadow:var(--in-on)}
+  .pay.no2{color:var(--red)}
+  .op-fld{display:block;border-radius:8px;background:var(--tile);box-shadow:var(--in);padding:5px 8px;max-height:58px;overflow:hidden}
+  .op-ok{font-size:9px;font-weight:800;color:var(--green)}
+  .op-no{font-size:9px;font-weight:800;color:var(--warn)}
+  .nm2{font-weight:700;font-size:12px}
+  .j-body .sm,.sm{font-size:10px;color:var(--muted);line-height:1.35}
+  .cash{font-size:10px;color:var(--muted)}
+  .j-tot-k{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.2px}
+  .j-tot-v{font-size:13px;font-weight:800;color:var(--ink)}
+  .j-cash{font-size:10px;color:var(--muted);line-height:1.5}
+  .j-leg{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:12px;padding:11px 14px 11px 16px;border-radius:12px;border-left:3px solid var(--line);font-size:11.5px;color:var(--muted)}
+  .j-leg b{color:var(--ink);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+  .j-leg span{display:flex;align-items:center;gap:7px}
+  .j-leg i{width:4px;height:16px;border-radius:2px;display:inline-block}
+  /* вибір дня */
+  .dm-h{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .dm-t{flex:1;font-size:15px;font-weight:800;color:var(--green);text-align:center}
+  .dm-nav{width:38px;height:38px;border-radius:11px;background:var(--bg);box-shadow:var(--bump);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--green);cursor:pointer}
+  .dm-nav:active{box-shadow:var(--in)}
+  .dm-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:6px}
+  .dm-dow span{text-align:center;font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase}
+  .dm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .dm-d{aspect-ratio:1;border-radius:10px;background:var(--bg);box-shadow:var(--bump);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer}
+  .dm-d:active{box-shadow:var(--in)}
+  .dm-d.pale{box-shadow:none;cursor:default}
+  .dm-d.off{background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(163,177,180,.28) 4px,rgba(163,177,180,.28) 6px)}
+  .dm-d.today{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .dm-leg{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding-left:2px;font-size:10.5px;color:var(--muted)}
+  /* форма візиту */
+  .vg{border-radius:16px;background:var(--bg);box-shadow:var(--in);padding:15px 16px;margin-bottom:16px}
+  .vg-h{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .vg-t{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px}
+  .lp{display:flex;gap:12px;align-items:center;margin-left:auto;flex-wrap:wrap}
+  .lp i{width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;box-shadow:var(--bump);overflow:hidden;white-space:nowrap;font-size:12px;font-weight:800;color:var(--ink);font-style:normal}
+  .lp i.sel-dot{width:auto;min-width:32px;padding:7px 16px;border-radius:14px;box-shadow:var(--in-on)}
+  .lp i.sel-dot::after{content:attr(title)}
+  .vs{border-radius:16px;background:var(--bg);box-shadow:var(--up);padding:15px 16px;margin-bottom:12px}
+  .vs-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .vs-n{font-size:10.5px;font-weight:800;color:var(--green);letter-spacing:.5px;text-transform:uppercase}
+  .vs-x{margin-left:auto;width:32px;height:30px;border-radius:9px;background:var(--bg);box-shadow:var(--bump);display:flex;align-items:center;justify-content:center;color:var(--red);font-size:14px;font-weight:900;cursor:pointer}
+  .vs-x:active{box-shadow:var(--in)}
+  .vchips{display:flex;gap:7px;flex-wrap:wrap}
+  .vchip{padding:8px 12px;border-radius:10px;background:var(--bg);box-shadow:var(--bump);font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer}
+  .vchip.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .vs-sum{display:flex;align-items:baseline;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid var(--rule)}
+  .vs-sum .calc{font-size:11px;color:var(--muted)}
+  .vs-sum .v{margin-left:auto;font-size:16px;font-weight:800;color:var(--green)}
+  .vf-note{font-size:11px;color:var(--muted);margin:2px 0 8px 3px;line-height:1.5}
+  .addsrv{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border:none;border-radius:12px;background:var(--bg);box-shadow:var(--bump);color:var(--green);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.3px;margin-top:2px;font-family:inherit}
+  .addsrv:active{box-shadow:var(--in)}
+  .addsrv .plus{font-size:22px;font-weight:900;line-height:1}
+  .vtot{display:flex;align-items:center;gap:12px;padding:15px 18px;border-radius:14px;background:var(--bg);box-shadow:var(--in);margin-bottom:6px}
+  .vtot .k{font-size:11.5px;color:var(--muted)}
+  .vtot .v{margin-left:auto;font-size:19px;font-weight:800;color:var(--green)}
+  .vtot-sub{font-size:10.5px;color:var(--muted);margin:0 0 10px 6px}
+  .vf{flex:1 1 190px;min-width:0;margin-bottom:10px;position:relative}
+  .vf.sm{flex:0 0 145px}
+  .vf.opis{flex:0 0 190px}
+  .vf label{display:block;font-size:10.5px;color:var(--muted);margin-bottom:5px;padding-left:3px}
+  .op-tgl{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 10px;border-radius:11px;background:var(--bg);box-shadow:var(--bump);font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;user-select:none}
+  .op-tgl.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .op-tgl.dis{opacity:.5;cursor:default;box-shadow:none}
+  .sug{position:absolute;left:0;right:0;top:100%;z-index:6;margin-top:4px;border-radius:12px;background:var(--bg);box-shadow:var(--up),0 8px 20px rgba(31,58,52,.18);overflow:hidden;max-height:240px;overflow-y:auto}
+  .sug div{padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;border-bottom:1px solid var(--line)}
+  .sug div:last-child{border-bottom:none}
+  .sug div:hover{background:var(--soft)}
+  .sug small{display:block;font-weight:400;color:var(--muted);font-size:10.5px}
+  .b.red{color:var(--red);margin-right:auto}
+
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:360px;z-index:60}
 
   @media (max-width:560px){
@@ -330,7 +447,7 @@ import { initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmai
          createUserWithEmailAndPassword, sendPasswordResetEmail, signOut,
          reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc,
-         writeBatch, serverTimestamp, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+         writeBatch, serverTimestamp, collection, getDocs, query, where, limit, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ═══ Firebase — проєкт ctmri-1 ═══ */
 const firebaseConfig = {
@@ -589,11 +706,12 @@ if (!navigator.onLine) $('netBanner').hidden = false;
 const TABS = ['Журнал', 'Пацієнти', 'Скерування', 'Працівники', 'Звіти'];
 let sheetRerender = null;
 function pickTab(i){
-  sheetRerender = null; $('sheet').onclick = null;
+  sheetRerender = null; $('sheet').onclick = null; jrStop();
   [...$('folder').querySelectorAll('.tab')].forEach((t, k) => t.classList.toggle('on', k === i));
   $('sheet').classList.toggle('tl-round', i !== 0);
   $('sheet').classList.toggle('tr-flat', i === TABS.length - 1);
   $('sheet').innerHTML = `<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Розділ «${esc(TABS[i])}» — наступний крок розробки</b>Зараз працюють довідники: Послуги, Пільги, Розподіл і розділ «Скерування».</div></div>`;
+  if (TABS[i] === 'Журнал') renderJournal();
   if (TABS[i] === 'Скерування') renderRef();
   if (TABS[i] === 'Працівники') renderStaff();
 }
@@ -1031,7 +1149,7 @@ function openInstForm(id){
 }
 
 /* ─── Картка лікуючого лікаря ─── */
-function openDocForm(id){
+function openDocForm(id, onSaved){
   const rec = id ? dir.doctors.find(x => x.id === id) : null;
   let ids = [...(rec?.institutionIds || [])];
   const ov = formWin(rec ? rec.name : 'Новий лікуючий лікар', `
@@ -1045,8 +1163,9 @@ function openDocForm(id){
   (o) => {
     const name = val(o, 'name');
     if (!name) return ['Введіть ПІБ', ''];
-    saveEntry('doctors', id, { name, status: o.querySelector('.seg .on').dataset.v, specialty: val(o, 'specialty'),
+    const nid = saveEntry('doctors', id, { name, status: o.querySelector('.seg .on').dataset.v, specialty: val(o, 'specialty'),
       phone: val(o, 'phone'), address: val(o, 'address'), email: val(o, 'email'), institutionIds: ids });
+    if (onSaved) onSaved(nid);
   }, 600);
   const chipsEl = ov.querySelector('[data-chips]');
   const renderChips = () => { chipsEl.innerHTML = ids.map(i => `<span class="chip">${esc(instNameById(i))}<span class="x" data-rm="${i}">✕</span></span>`).join('') + '<span class="chip-add" data-addinst>+ додати установу</span>'; };
@@ -1304,6 +1423,506 @@ $('mbLab').onclick = openLabelsWin;
 $('mbCal').onclick = () => toast('i', 'Календар чергувань', 'Розділ ще в розробці.');
 $('mbSet').onclick = () => toast('i', 'Налаштування', 'Розділ ще в розробці.');
 TABS.forEach((t, i) => { const el = document.createElement('div'); el.className = 'tab' + (i === 0 ? ' on' : ''); el.textContent = t; el.onclick = () => pickTab(i); $('folder').insertBefore(el, $('sheet')); });
+
+/* ═══ ЖУРНАЛ + ФОРМА ВІЗИТУ (main.html, forma_vizytu.html) ═══
+   Дані: visits (візит), records (по одному на послугу; несуть копію полів візиту, щоб Журнал читав одну колекцію),
+   payments (id = id послуги), patients, counters/sequential + counters/monthly (транзакція). */
+const MON_SHORT = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
+const MON_NAME = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+const r2 = (x) => Math.round((Number(x) || 0) * 100) / 100;
+const nfmt = (n) => Number(n || 0).toLocaleString('uk-UA');
+const nowTime = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const p2 = (n) => String(n).padStart(2, '0');
+const isAdminRole = () => ['Керівник', 'Адміністратор'].includes(profile?.role);
+const canDescribe = () => ['Керівник', 'Адміністратор', 'Лікар'].includes(profile?.role);
+const canEditVisit = (r) => isAdminRole() || (r.createdBy && r.createdBy === profile?.id);
+const workerBy = (id) => dir.workers.find(w => w.id === id || w.legacyId === id);
+const activeWorkers = (role) => dir.workers.filter(w => w.status !== 'inactive' && !w.mergedInto && w.role === role)
+  .sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk'));
+const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
+const monthLabel = (r) => r.monthlyNumber ? `№ ${r.monthlyNumber}/${MON_SHORT[(+String(r.date).slice(5, 7) || 1) - 1]}` : '';
+const HAS_MONEY_RIGHT = true;            // «Перегляд Суми» — з матриці «Доступи» (ще не побудована)
+const FACILITY_TRACKS_PAYMENT = true;    // Налаштування → Журнал → «Стовпець Оплата» (ще не побудовано)
+
+/* розрахунок послуги: знижка від основної ціни, додаткові — без знижки (schema_v1: records) */
+function calcSvc(s){
+  const base = r2(s.basePrice), pct = Number(s.pct) || 0;
+  const disc = r2(base * pct / 100), after = r2(base - disc);
+  const ex = r2((s.extras || []).reduce((a, e) => a + Number(e.price || 0), 0));
+  return { base, pct, disc, after, ex, total: r2(after + ex) };
+}
+function calcText(s){
+  const c = calcSvc(s);
+  if (!s.serviceId) return 'рахується автоматично';
+  let t = c.disc ? `${nfmt(c.base)} − ${nfmt(c.disc)} (пільга ${c.pct}%)` : `Основна ${nfmt(c.base)}`;
+  if (c.ex) t += c.disc ? ` + додаткові ${nfmt(c.ex)}` : ` + додаткові ${nfmt(c.ex)}`;
+  return t;
+}
+
+/* лічильники: наскрізний і місячний (schema_v1: counters). Потрібен інтернет — інакше два комп'ютери можуть видати однаковий номер */
+async function allocNumbers(n){
+  const gRef = doc(db, 'counters', 'sequential'), mRef = doc(db, 'counters', 'monthly');
+  const month = todayISO().slice(0, 7);
+  return runTransaction(db, async (tx) => {
+    const g = await tx.get(gRef), m = await tx.get(mRef);
+    const gv = g.exists() ? Number(g.data().value) || 0 : 0;
+    const mv = m.exists() && m.data().month === month ? Number(m.data().value) || 0 : 0;   // новий місяць — рахунок спочатку
+    tx.set(gRef, { value: gv + n });
+    tx.set(mRef, { value: mv + n, month });
+    return { seq: gv, mseq: mv };
+  });
+}
+
+/* ───── Форма візиту ───── */
+function refOptions(vs){
+  const items = [];
+  for (const d of dir.doctors.filter(d => d.status !== 'inactive').sort(byName)){
+    const ids = d.institutionIds || [];
+    if (!ids.length) items.push({ v: `d:${d.id}:`, t: d.name });
+    for (const i of ids) items.push({ v: `d:${d.id}:${i}`, t: `${d.name} — ${instNameById(i)}` });
+  }
+  if (vs.refKey && vs.refKey !== 'self' && !items.some(x => x.v === vs.refKey)){
+    const [, did, iid] = vs.refKey.split(':'), d = dir.doctors.find(x => x.id === did);
+    items.push({ v: vs.refKey, t: (d?.name || vs.refSnap || '(лікаря видалено)') + (iid ? ' — ' + instNameById(iid) : '') });
+  }
+  return items;
+}
+function newSvc(vs){
+  return { rid: null, serviceId: '', svcName: '', basePrice: 0, discountId: '', discName: '', pct: 0, discComment: '', extras: [], comment: '',
+    described: false, method: null, paid: false, paidDate: null, labId: vs.labId, docId: vs.docId };
+}
+function svcSelectHtml(vs, s, i){
+  const opts = dir.services.filter(x => x.status !== 'inactive' || x.id === s.serviceId).sort(byName)
+    .map(x => `<option value="${x.id}" ${x.id === s.serviceId ? 'selected' : ''}>${esc(x.name)} — ${nfmt(x.id === s.serviceId && s.rid ? s.basePrice : x.price)} грн</option>`).join('');
+  const missing = s.serviceId && !dir.services.some(x => x.id === s.serviceId) ? `<option value="${s.serviceId}" selected>${esc(s.svcName)} — ${nfmt(s.basePrice)} грн</option>` : '';
+  return `<select class="in" data-k="service" data-i="${i}"><option value="">— оберіть з довідника —</option>${opts}${missing}</select>`;
+}
+function discSelectHtml(s, i){
+  const opts = dir.discounts.filter(x => x.status !== 'inactive' || x.id === s.discountId).sort(byName)
+    .map(x => `<option value="${x.id}" ${x.id === s.discountId ? 'selected' : ''}>${esc(x.name)}${x.percent == null ? '…' : ' −' + x.percent + '%'}</option>`).join('');
+  const missing = s.discountId && !dir.discounts.some(x => x.id === s.discountId) ? `<option value="${s.discountId}" selected>${esc(s.discName)} −${s.pct}%</option>` : '';
+  return `<select class="in" data-k="disc" data-i="${i}"><option value="">Без пільги</option>${opts}${missing}</select>`;
+}
+const sgHtml = (i, k, items, cur) => `<div class="seg">${items.map(([v, t]) => `<span data-sg="${k}" data-v="${v}" data-i="${i}" class="${cur === v ? 'on' : ''}">${t}</span>`).join('')}</div>`;
+const METHODS = [['cashless', 'Безготівкова'], ['cash', 'Готівкова']];
+const PAYST = [['paid', 'Оплачено'], ['unpaid', 'Не оплачено']];
+
+function svcCardHtml(vs, s, i){
+  const isCustom = dir.discounts.find(d => d.id === s.discountId)?.isCustom;
+  const extrasAll = dir.extras.filter(x => x.status !== 'inactive' || s.extras.some(e => e.extraId === x.id)).sort(byName);
+  const chips = extrasAll.map(x => {
+    const on = s.extras.find(e => e.extraId === x.id);
+    return `<span class="vchip ${on ? 'on' : ''}" data-ex="${x.id}" data-i="${i}">${esc(x.name)} +${nfmt(on ? on.price : x.price)}</span>`;
+  }).join('') || '<span class="free">Довідник додаткових послуг порожній</span>';
+  const showX = s.rid ? (vs.services.length > 1 || canEditDirs()) : vs.services.length > 1;
+  const describedOn = s.described;
+  return `<div class="vs">
+    <div class="vs-h"><div class="vs-n">${esc(s.rid ? `№ ${s.sequentialNumber} · ${s.monthlyNumber}/${MON_SHORT[(+vs.date.slice(5, 7) || 1) - 1]}` : `Послуга ${i + 1} · № присвоїться при збереженні`)}</div>${showX ? `<div class="vs-x" data-del="${i}" title="Видалити послугу">✕</div>` : ''}</div>
+    <div class="row"><div class="vf"><label>Послуга</label>${svcSelectHtml(vs, s, i)}</div><div class="vf"><label>Пільга</label>${discSelectHtml(s, i)}</div></div>
+    ${isCustom ? `<div class="row"><div class="vf sm"><label>Знижка, %</label><input class="in" inputmode="decimal" data-k="pct" data-i="${i}" value="${s.pct || ''}" placeholder="0–100"></div>
+      <div class="vf"><label>Коментар до пільги</label><input class="in" data-k="discComment" data-i="${i}" value="${esc(s.discComment)}"></div></div>` : ''}
+    <div class="vf" style="margin-bottom:12px"><label>Додаткові послуги</label><div class="vchips">${chips}</div></div>
+    <div class="row"><div class="vf"><label>Коментар</label><input class="in" data-k="comment" data-i="${i}" value="${esc(s.comment)}" placeholder="за потреби"></div>
+      <div class="vf opis"><label>Опис</label><div class="op-tgl ${describedOn ? 'on' : ''} ${canDescribe() ? '' : 'dis'}" data-opt="${i}" title="${canDescribe() ? '' : 'Відмічає лікар або адміністратор'}">${describedOn ? '● описано' : '○ не описано'}</div></div></div>
+    <div class="row"><div class="vf"><label>Форма оплати</label>${sgHtml(i, 'method', METHODS, s.method)}</div>
+      <div class="vf"><label>Статус оплати</label>${sgHtml(i, 'paid', PAYST, s.paid ? 'paid' : 'unpaid')}</div></div>
+    <div class="vs-sum"><span class="calc" data-calc="${i}">${esc(calcText(s))}</span><span class="v" data-sum="${i}">${nfmt(calcSvc(s).total)} грн</span></div></div>`;
+}
+function visitBodyHtml(vs){
+  const lab = dir.labels.find(l => l.id === vs.labelId);
+  const grad = lab ? `background:linear-gradient(90deg,${rgba(lab.color, .5)},${rgba(lab.color, 0)} 62%),var(--bg)` : '';
+  const dots = [...dir.labels].sort((a, b) => hueOf(a.color) - hueOf(b.color))
+    .map(l => `<i data-dot="${l.id}" class="${l.id === vs.labelId ? 'sel-dot' : ''}" style="background:${esc(l.color)}" title="${esc(l.name)}"></i>`).join('');
+  const refOpts = refOptions(vs).map(x => `<option value="${esc(x.v)}" ${x.v === vs.refKey ? 'selected' : ''}>${esc(x.t)}</option>`).join('');
+  const myRole = profile.role, same = activeWorkers(myRole).filter(w => w.id !== profile.id);
+  const labList = [{ id: profile.id, t: shortName(profile) + ' (я)' }, ...same.map(w => ({ id: w.id, t: shortName(w) }))];
+  if (vs.labId && !labList.some(x => x.id === vs.labId)){ const w = workerBy(vs.labId); labList.push({ id: vs.labId, t: w ? shortName(w) : '(працівника видалено)' }); }
+  const docs = activeWorkers('Лікар').map(w => ({ id: w.id, t: shortName(w) }));
+  if (vs.docId && !docs.some(x => x.id === vs.docId)){ const w = workerBy(vs.docId); docs.push({ id: vs.docId, t: w ? shortName(w) : '(працівника видалено)' }); }
+  const allM = vs.services.length && vs.services.every(s => s.method && s.method === vs.services[0].method) ? vs.services[0].method : null;
+  const allP = vs.services.length ? (vs.services.every(s => s.paid) ? 'paid' : vs.services.every(s => !s.paid) ? 'unpaid' : null) : null;
+  return `
+  <div class="vg" data-pat style="${grad}"><div class="vg-h"><div class="vg-t">Пацієнт</div><div class="lp">${dots}</div></div>
+    <div class="row"><div class="vf"><label>ПІБ ${vs.isNew ? '(пошук у базі або новий)' : ''}</label><input class="in" data-vf="pname" value="${esc(vs.pname)}" autocomplete="off"><div class="sug" data-sug hidden></div></div>
+      <div class="vf sm"><label>Дата народження</label><input class="in" data-vf="pbirth" value="${esc(vs.pbirth)}" placeholder="ДД.ММ.РРРР"></div></div>
+    <div class="row"><div class="vf"><label>Адреса</label><input class="in" data-vf="paddr" value="${esc(vs.paddr)}"></div></div></div>
+  <div class="vg"><div class="vg-h"><div class="vg-t">Скерування</div></div>
+    <div class="row"><div class="vf"><label>Лікуючий лікар</label><select class="in" data-vs="ref"><option value="" ${vs.refKey ? '' : 'selected'}>— оберіть —</option><option value="self" ${vs.refKey === 'self' ? 'selected' : ''}>Самоскерування</option>${refOpts}<option value="new">+ Додати нового…</option></select></div>
+      <div class="vf sm"><label>№ історії хвороби</label><input class="in" data-vf="hist" value="${esc(vs.hist)}"></div></div></div>
+  <div class="vg"><div class="vg-h"><div class="vg-t">Працівники</div></div>
+    <div class="row"><div class="vf"><label>${esc(myRole)}</label><select class="in" data-vs="lab">${labList.map(x => `<option value="${x.id}" ${x.id === vs.labId ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}</select></div>
+      <div class="vf"><label>Лікар (описує)</label><select class="in" data-vs="doc"><option value="">— оберіть —</option>${docs.map(x => `<option value="${x.id}" ${x.id === vs.docId ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}</select></div></div></div>
+  <div class="vg" style="background:transparent;box-shadow:none;padding:0 0 4px"><div class="vg-h" style="padding:0 2px"><div class="vg-t">Послуги</div></div>
+    ${vs.services.map((s, i) => svcCardHtml(vs, s, i)).join('')}
+    <button type="button" class="addsrv" data-add><span class="plus">+</span>ДОДАТИ ЩЕ ПОСЛУГУ</button></div>
+  <div class="vg"><div class="vg-h"><div class="vg-t">Оплата візиту — для всіх послуг</div></div>
+    <div class="vf-note">Кнопки тут одним натиском виставляють оплату всім послугам візиту. Далі кожну можна змінити окремо у її картці.</div>
+    <div class="row"><div class="vf"><label>Форма оплати</label><div class="seg">${METHODS.map(([v, t]) => `<span data-all="method" data-v="${v}" class="${allM === v ? 'on' : ''}">${t}</span>`).join('')}</div></div>
+      <div class="vf"><label>Статус оплати</label><div class="seg">${PAYST.map(([v, t]) => `<span data-all="paid" data-v="${v}" class="${allP === v ? 'on' : ''}">${t}</span>`).join('')}</div></div></div></div>
+  <div class="vtot"><span class="k" data-vcnt></span><span class="v" data-vtot></span></div><div class="vtot-sub" data-vsub></div>`;
+}
+
+async function loadVisitState(visitId){
+  const snap = await getDocs(query(collection(db, 'records'), where('visitId', '==', visitId)));
+  const recs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.sequentialNumber || 0) - (b.sequentialNumber || 0));
+  if (!recs.length) return null;
+  const f = recs[0];
+  let pat = { name: f.patientName || '', birthDate: f.patientBirth || '', address: f.patientAddress || '' };
+  if (f.patientId){ try { const p = await getDoc(doc(db, 'patients', f.patientId)); if (p.exists()) pat = { ...pat, ...p.data() }; } catch (_) {} }
+  const ref = f.referral || {};
+  return {
+    isNew: false, id: visitId, date: f.date, time: f.time, createdBy: f.createdBy, pid: f.patientId || null,
+    pname: pat.name || '', pbirth: isoToUa(pat.birthDate), paddr: pat.address || '',
+    labelId: f.labelId || '', hist: f.historyNo || '',
+    refKey: ref.self ? 'self' : ref.doctorId ? `d:${ref.doctorId}:${ref.institutionId || ''}` : '', refSnap: ref.doctorName || '',
+    labId: f.labTechId || '', docId: f.describerId || '', removed: [],
+    services: recs.map(r => ({
+      rid: r.id, sequentialNumber: r.sequentialNumber, monthlyNumber: r.monthlyNumber, serviceId: r.serviceId, svcName: r.serviceSnapshot?.name || '',
+      basePrice: r.servicePrice, discountId: r.discountId || '', discName: r.discountSnapshot?.name || '',
+      pct: r.customDiscountPercent != null ? r.customDiscountPercent : (r.discountSnapshot?.percent || 0), discComment: r.customDiscountComment || '',
+      extras: (r.extras || []).map(e => ({ ...e })), comment: r.comment || '', described: !!r.described,
+      method: r.paymentMethod || null, paid: !!r.paid, paidDate: r.paidDate || null, labId: r.labTechId || '', docId: r.describerId || ''
+    }))
+  };
+}
+function openVisitForm(visitId){
+  if (visitId){
+    loadVisitState(visitId).then(vs => { if (vs) visitWin(vs); else toast('e', 'Візит не знайдено', 'Можливо, його вже видалили.'); })
+      .catch(e => toast('e', 'Не вдалося відкрити візит', e.code || ''));
+  } else {
+    const vs = { isNew: true, id: null, date: todayISO(), time: nowTime(), createdBy: profile.id, pid: null, pname: '', pbirth: '', paddr: '', labelId: '', hist: '', refKey: '',
+      refSnap: '', labId: profile.id, docId: '', removed: [], services: [] };
+    vs.services.push(newSvc(vs));
+    visitWin(vs);
+  }
+}
+function visitWin(vs){
+  const nums = vs.services.map(s => s.sequentialNumber).filter(Boolean);
+  const title = vs.isNew ? 'Новий візит' : 'Редагування візиту — № ' + (nums.length > 1 ? nums[0] + '–' + nums[nums.length - 1] : nums[0] || '');
+  const ov = formWin(title, '<div data-vb></div>', (o) => saveVisit(o, vs), 820, vs.isNew ? 'Зберегти візит' : 'Зберегти зміни');
+  const vb = ov.querySelector('[data-vb]'), scroller = ov.querySelector('.win-b');
+  const render = () => { const y = scroller.scrollTop; vb.innerHTML = visitBodyHtml(vs); scroller.scrollTop = y; upd(); };
+  const upd = () => {
+    vs.services.forEach((s, i) => { const c = vb.querySelector(`[data-calc="${i}"]`), v = vb.querySelector(`[data-sum="${i}"]`); if (c) c.textContent = calcText(s); if (v) v.textContent = nfmt(calcSvc(s).total) + ' грн'; });
+    const tot = r2(vs.services.reduce((a, s) => a + calcSvc(s).total, 0)), n = vs.services.length;
+    const paid = r2(vs.services.filter(s => s.paid).reduce((a, s) => a + calcSvc(s).total, 0));
+    vb.querySelector('[data-vcnt]').textContent = `Разом за візит · ${n} ${n === 1 ? 'послуга' : n < 5 ? 'послуги' : 'послуг'}`;
+    vb.querySelector('[data-vtot]').textContent = nfmt(tot) + ' грн';
+    vb.querySelector('[data-vsub]').textContent = n ? `оплачено ${nfmt(paid)} · не оплачено ${nfmt(r2(tot - paid))}` : '';
+  };
+  ov._render = render;       // зміни довідників (наприклад новий лікар) перемальовують форму зі стану
+  ov._vs = vs;
+  render();
+  vb.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.stopPropagation(); });   // Enter у полі не зберігає весь візит
+  const setAll = (k, v) => vs.services.forEach(s => { s[k] = v; });
+  let sugTimer = null;
+  const showSug = (list) => {
+    const box = vb.querySelector('[data-sug]'); if (!box) return;
+    if (!list.length){ box.hidden = true; return; }
+    box.innerHTML = list.map((p, k) => `<div data-sp="${k}">${esc(p.name)}<small>${esc([isoToUa(p.birthDate), p.address].filter(Boolean).join(' · '))}</small></div>`).join('');
+    box.hidden = false; box._list = list;
+  };
+  vb.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.dataset.vf){
+      const f = t.dataset.vf; vs[f] = t.value;
+      if (f === 'pname' && vs.isNew){
+        vs.pid = null; clearTimeout(sugTimer);
+        const q = t.value.trim().toLowerCase();
+        if (q.length < 2) return showSug([]);
+        sugTimer = setTimeout(async () => {
+          try {
+            const snap = await getDocs(query(collection(db, 'patients'), where('nameLower', '>=', q), where('nameLower', '<=', q + ''), limit(8)));
+            if (vs.pname.trim().toLowerCase() === q) showSug(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } catch (_) {}
+        }, 250);
+      }
+    } else if (t.dataset.k && t.dataset.i !== undefined){
+      const s = vs.services[+t.dataset.i];
+      if (t.dataset.k === 'pct'){ const v = Number(String(t.value).replace(',', '.')); s.pct = Number.isFinite(v) ? v : 0; }
+      else s[t.dataset.k] = t.value;
+      upd();
+    }
+  });
+  vb.addEventListener('change', async (e) => {
+    const t = e.target;
+    if (t.dataset.vs === 'ref'){
+      if (t.value === 'new'){
+        t.value = vs.refKey || '';
+        return openDocForm(null, (id) => { const d = dir.doctors.find(x => x.id === id); vs.refKey = `d:${id}:${(d?.institutionIds || [])[0] || ''}`; render(); });
+      }
+      vs.refKey = t.value;
+    } else if (t.dataset.vs === 'lab'){ vs.labId = t.value; setAll('labId', t.value); }
+    else if (t.dataset.vs === 'doc'){ vs.docId = t.value; setAll('docId', t.value); }
+    else if (t.dataset.k === 'service'){
+      const s = vs.services[+t.dataset.i], x = dir.services.find(y => y.id === t.value);
+      s.serviceId = t.value; s.svcName = x?.name || ''; s.basePrice = x ? x.price : 0;
+      render();
+    } else if (t.dataset.k === 'disc'){
+      const s = vs.services[+t.dataset.i], x = dir.discounts.find(y => y.id === t.value);
+      s.discountId = t.value; s.discName = x?.name || ''; s.pct = x && x.percent != null ? x.percent : 0; s.discComment = '';
+      render();
+    }
+  });
+  vb.addEventListener('click', (e) => {
+    const t = e.target;
+    const dot = t.closest('[data-dot]'), sp = t.closest('[data-sp]'), ex = t.closest('[data-ex]'), sg = t.closest('[data-sg]'), al = t.closest('[data-all]');
+    const del = t.closest('[data-del]'), opt = t.closest('[data-opt]');
+    if (dot){ vs.labelId = vs.labelId === dot.dataset.dot ? '' : dot.dataset.dot; render(); }
+    else if (sp){
+      const p = vb.querySelector('[data-sug]')._list[+sp.dataset.sp];
+      vs.pid = p.id; vs.pname = p.name; vs.pbirth = isoToUa(p.birthDate); vs.paddr = p.address || ''; render();
+    }
+    else if (ex){
+      const s = vs.services[+ex.dataset.i], k = s.extras.findIndex(x => x.extraId === ex.dataset.ex);
+      if (k >= 0) s.extras.splice(k, 1);
+      else { const x = dir.extras.find(y => y.id === ex.dataset.ex); s.extras.push({ extraId: x.id, name: x.name, price: x.price }); }
+      render();
+    }
+    else if (sg){
+      const s = vs.services[+sg.dataset.i];
+      if (sg.dataset.sg === 'method') s.method = sg.dataset.v; else s.paid = sg.dataset.v === 'paid';
+      render();
+    }
+    else if (al){ if (al.dataset.all === 'method') setAll('method', al.dataset.v); else setAll('paid', al.dataset.v === 'paid'); render(); }
+    else if (opt){ if (canDescribe()){ const s = vs.services[+opt.dataset.opt]; s.described = !s.described; render(); } }
+    else if (t.closest('[data-add]')){ vs.services.push(newSvc(vs)); render(); vb.querySelectorAll('.vs')[vs.services.length - 1]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    else if (del){
+      const i = +del.dataset.del, s = vs.services[i];
+      const remove = () => { if (s.rid) vs.removed.push(s.rid); vs.services.splice(i, 1); render(); };
+      if (!s.rid) return remove();
+      if (vs.services.length === 1){
+        confirmWin({ type: 'e', title: 'Це остання послуга візиту.', details: 'Видалення останньої послуги видалить увесь візит разом із оплатою. Це незворотно.', action: 'Видалити візит', onOk: () => deleteVisit(ov, vs) });
+      } else {
+        confirmWin({ type: 'w', title: `Видалити послугу № ${s.sequentialNumber}?`, details: 'Послугу буде прибрано з візиту після натискання «Зберегти зміни».', action: 'Видалити', onOk: remove });
+      }
+    }
+  });
+  if (!vs.isNew && isAdminRole()){
+    const f = ov.querySelector('.win-f');
+    f.insertAdjacentHTML('afterbegin', '<button class="b red" data-delv>Видалити візит</button>');
+    f.querySelector('[data-delv]').onclick = () => confirmWin({ type: 'e', title: 'Видалити візит?', details: 'Буде видалено візит, усі його послуги й записи про оплату. Це незворотно.', action: 'Видалити візит', onOk: () => deleteVisit(ov, vs) });
+  }
+}
+
+function deleteVisit(ov, vs){
+  const b = writeBatch(db);
+  b.delete(doc(db, 'visits', vs.id));
+  const ids = [...vs.services.map(s => s.rid), ...vs.removed].filter(Boolean);
+  for (const id of ids){ b.delete(doc(db, 'records', id)); b.delete(doc(db, 'payments', id)); }
+  audit('delete', 'visits', vs.id, { date: vs.date, patient: vs.pname, records: ids }, null);
+  b.commit().catch(e => toast('e', 'Не вдалося видалити візит', e.code || ''));
+  closeWin(ov); toast('ok', 'Візит видалено', '');
+}
+
+async function saveVisit(ov, vs){
+  const name = vs.pname.trim();
+  if (!name) return ['Введіть ПІБ пацієнта', ''];
+  let birth = '';
+  if (vs.pbirth.trim()){
+    birth = uaToIso(vs.pbirth);
+    if (!birth) return ['Некоректна дата народження', 'Формат: ДД.ММ.РРРР, наприклад 12.04.1978.'];
+    if (birth > todayISO()) return ['Дата народження в майбутньому', 'Перевірте рік.'];
+  }
+  if (!vs.refKey) return ['Оберіть скерування', 'Самоскерування або лікуючий лікар.'];
+  if (!vs.services.length) return ['Додайте хоча б одну послугу', ''];
+  for (let i = 0; i < vs.services.length; i++){
+    const s = vs.services[i], n = i + 1;
+    if (!s.serviceId) return [`Послуга ${n}: оберіть послугу`, 'Список береться з довідника «Послуги».'];
+    if (dir.discounts.find(d => d.id === s.discountId)?.isCustom && !(s.pct > 0 && s.pct <= 100)) return [`Послуга ${n}: вкажіть знижку`, 'Для «призначеної» пільги — число від 0 до 100.'];
+    if (s.paid && !s.method) return [`Послуга ${n}: оберіть форму оплати`, 'Оплачену послугу не можна лишити без форми оплати.'];
+  }
+  const me = profile.id, now = serverTimestamp();
+  /* пацієнт: обраний із бази — оновлюємо його картку; новий — шукаємо точний збіг (ПІБ + дата народження), інакше створюємо */
+  let pid = vs.pid;
+  const pdata = { name, nameLower: name.toLowerCase(), birthDate: birth, address: vs.paddr.trim() };
+  if (!pid){
+    try {
+      const snap = await getDocs(query(collection(db, 'patients'), where('nameLower', '==', pdata.nameLower)));
+      const m = snap.docs.find(d => (d.data().birthDate || '') === birth);
+      if (m) pid = m.id;
+    } catch (_) {}
+  }
+  if (pid) setDoc(doc(db, 'patients', pid), { ...pdata, updatedAt: now }, { merge: true }).catch(e => toast('e', 'Не вдалося зберегти пацієнта', e.code || ''));
+  else { const pr = doc(collection(db, 'patients')); pid = pr.id; setDoc(pr, { ...pdata, createdAt: now, createdBy: me }).catch(e => toast('e', 'Не вдалося зберегти пацієнта', e.code || '')); }
+  /* номери нових послуг */
+  const fresh = vs.services.filter(s => !s.rid);
+  let base = { seq: 0, mseq: 0 };
+  if (fresh.length){
+    try { base = await allocNumbers(fresh.length); }
+    catch (e){ return ['Не вдалося отримати номер', 'Нова послуга потребує з\'єднання з інтернетом. ' + (e.code || '')]; }
+  }
+  const visitId = vs.id || doc(collection(db, 'visits')).id;
+  const ref = vs.refKey === 'self' ? { self: true } : (() => { const [, did, iid] = vs.refKey.split(':'); const d = dir.doctors.find(x => x.id === did);
+    return { self: false, doctorId: did, institutionId: iid || null, doctorName: d?.name || vs.refSnap || '', institutionName: iid ? instNameById(iid) : '' }; })();
+  const vis = { patientId: pid, patientName: name, patientBirth: birth, patientAddress: vs.paddr.trim(), labelId: vs.labelId || '', historyNo: vs.hist.trim(), referral: ref, describerId: vs.docId || '', labTechId: vs.labId || '' };
+  const batch = writeBatch(db);
+  let total = 0, k = 0;
+  const names = [];
+  for (const s of vs.services){
+    const c = calcSvc(s), rid = s.rid || doc(collection(db, 'records')).id, rref = doc(db, 'records', rid);
+    total += c.total; names.push(s.svcName || dir.services.find(x => x.id === s.serviceId)?.name || '');
+    const custom = dir.discounts.find(d => d.id === s.discountId)?.isCustom;
+    const paidDate = s.paid ? (s.paidDate || todayISO()) : null;
+    const data = {
+      ...vis, visitId, date: vs.date, time: vs.time, serviceId: s.serviceId, serviceSnapshot: { name: s.svcName || dir.services.find(x => x.id === s.serviceId)?.name || '', price: c.base },
+      extras: s.extras.map(e => ({ extraId: e.extraId, name: e.name, price: e.price })), discountId: s.discountId || '',
+      discountSnapshot: s.discountId ? { name: s.discName, percent: c.pct } : null,
+      customDiscountPercent: custom ? c.pct : null, customDiscountComment: custom ? s.discComment.trim() : '',
+      servicePrice: c.base, discountAmount: c.disc, servicePriceAfterDiscount: c.after, extrasTotal: c.ex, totalAmount: c.total,
+      comment: s.comment.trim(), described: !!s.described, paid: !!s.paid, paymentMethod: s.method || null, paidDate, updatedAt: now
+    };
+    if (!s.rid){ data.sequentialNumber = base.seq + (++k); data.monthlyNumber = base.mseq + k; data.createdAt = now; data.createdBy = vs.createdBy || me; }
+    batch.set(rref, data, { merge: true });
+    const pref = doc(db, 'payments', rid);
+    if (s.paid) batch.set(pref, { recordId: rid, visitId, date: paidDate, amount: c.total, method: s.method, updatedAt: now, createdBy: me }, { merge: true });
+    else batch.delete(pref);
+  }
+  for (const rid of vs.removed){ batch.delete(doc(db, 'records', rid)); batch.delete(doc(db, 'payments', rid)); }
+  batch.set(doc(db, 'visits', visitId), {
+    ...vis, date: vs.date, time: vs.time, total: r2(total), servicesCount: vs.services.length, updatedAt: now,
+    ...(vs.isNew ? { createdAt: now, createdBy: me } : {})
+  }, { merge: true });
+  audit(vs.isNew ? 'create' : 'update', 'visits', visitId, null, { date: vs.date, patient: name, services: names, total: r2(total) });
+  batch.commit().catch(e => toast('e', 'Не вдалося зберегти візит', e.code || ''));
+  toast('ok', vs.isNew ? 'Візит збережено' : 'Зміни збережено', '');
+  return null;
+}
+
+/* ───── Журнал ───── */
+const jr = { loaded: { t: 'today' }, pp: null, confirmedFor: null, rows: [], unsub: null, err: null, ready: false };
+function jrStop(){ if (jr.unsub){ jr.unsub(); jr.unsub = null; } }
+const ppMonthDate = (off) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + off); return d; };
+const ppRange = (off) => { const d = ppMonthDate(off), y = d.getFullYear(), m = d.getMonth(); return `01.${p2(m + 1)}.${y} – ${new Date(y, m + 1, 0).getDate()}.${p2(m + 1)}.${y}`; };
+function jrBounds(){
+  const L = jr.loaded;
+  if (L.t === 'today') return [todayISO(), todayISO()];
+  if (L.t === 'day') return [L.iso, L.iso];
+  const d = ppMonthDate(L.off), y = d.getFullYear(), m = d.getMonth();
+  return [`${y}-${p2(m + 1)}-01`, `${y}-${p2(m + 1)}-${p2(new Date(y, m + 1, 0).getDate())}`];
+}
+function jrSubscribe(){
+  jrStop(); jr.ready = false; jr.err = null; jr.rows = [];
+  const [a, b] = jrBounds();
+  jr.unsub = onSnapshot(query(collection(db, 'records'), where('date', '>=', a), where('date', '<=', b)),
+    (snap) => { jr.rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); jr.ready = true; jr.err = null; jrTable(); },
+    (e) => { jr.err = e.code || 'error'; jr.ready = true; jrTable(); });
+}
+function renderJournal(){
+  sheetRerender = () => { jrPanel(); jrTable(); };
+  $('sheet').innerHTML = `<div class="j-actions"><button class="j-new" id="jNew"><span class="plus">+</span> НОВИЙ ВІЗИТ</button>
+      <div class="pp" id="pp"><div class="pp-b" id="ppL"></div><div class="pp-b on" id="ppM"></div><div class="pp-b" id="ppR"></div>
+        <button class="pp-confirm" id="ppConfirm"><span class="pp-confirm-lbl">🔍 Показати за</span><span class="pp-confirm-month" id="ppConfirmMonth"></span></button></div><div></div></div>
+    <div id="jBody"></div><div id="jLeg"></div>`;
+  $('jNew').onclick = () => openVisitForm(null);
+  $('ppL').onclick = () => { jr.pp = jr.pp === null ? 0 : jr.pp - 1; jrPanel(); };
+  $('ppM').onclick = () => { if (jr.pp !== null || jr.loaded.t === 'day') ppToday(); };
+  $('ppR').onclick = () => {
+    if (jr.pp === null && jr.loaded.t !== 'day') return openDayPicker();
+    if (jr.pp !== null && jr.pp < 0){ jr.pp += 1; jrPanel(); } else ppToday();
+  };
+  $('ppConfirm').onclick = () => { jr.loaded = { t: 'month', off: jr.pp }; jr.confirmedFor = jr.pp; jrSubscribe(); jrPanel(); jrTable(); };
+  $('jBody').onclick = (e) => { const p = e.target.closest('[data-vid]'); if (p && !p.classList.contains('off')) openVisitForm(p.dataset.vid); };
+  jrPanel(); jrSubscribe(); jrTable();
+}
+function ppToday(){ jr.pp = null; jr.confirmedFor = null; jr.loaded = { t: 'today' }; jrSubscribe(); jrPanel(); jrTable(); }
+function jrPanel(){
+  const L = $('ppL'), M = $('ppM'), R = $('ppR'), C = $('ppConfirm'); if (!L) return;
+  const cell = (a, b) => `<span class="pp-m">${a}</span><span class="pp-d">${b}</span>`;
+  if (jr.pp === null && jr.loaded.t !== 'day'){
+    const t = new Date();
+    M.innerHTML = cell('Сьогодні', `${p2(t.getDate())}.${p2(t.getMonth() + 1)}.${t.getFullYear()}`);
+    L.innerHTML = cell(MON_NAME[t.getMonth()], 'увесь місяць'); R.innerHTML = cell('Обрати день', 'календар');
+    C.classList.remove('show');
+  } else if (jr.pp === null){
+    const [y, m, d] = jr.loaded.iso.split('-');
+    M.innerHTML = `<span class="pp-d">Обраний день</span><span class="pp-m pp-date">${d}.${m}.${y}</span>`;
+    L.innerHTML = cell(MON_NAME[+m - 1], 'увесь місяць'); R.innerHTML = cell('Сьогодні', 'повернутись');
+    C.classList.remove('show');
+  } else {
+    M.innerHTML = cell(MON_NAME[ppMonthDate(jr.pp).getMonth()], ppRange(jr.pp));
+    L.innerHTML = cell(MON_NAME[ppMonthDate(jr.pp - 1).getMonth()], '← назад');
+    R.innerHTML = jr.pp >= 0 ? cell('Сьогодні', 'повернутись') : cell(MON_NAME[ppMonthDate(jr.pp + 1).getMonth()], 'вперед →');
+    $('ppConfirmMonth').textContent = MON_NAME[ppMonthDate(jr.pp).getMonth()];
+    const pr = $('pp').getBoundingClientRect(), mr = M.getBoundingClientRect();
+    C.style.left = (mr.left - pr.left + mr.width / 2) + 'px'; C.style.width = mr.width + 'px';
+    C.classList.toggle('show', !(jr.loaded.t === 'month' && jr.loaded.off === jr.pp));
+  }
+}
+/* «Увесь місяць» ліворуч при «Сьогодні»: перша дія — ppL (зсув на поточний місяць), далі підтвердження */
+function openDayPicker(){
+  let off = 0;
+  const sched = settings?.schedule || [];
+  const ov = openWin(`<div class="win-b" style="padding:20px"><div class="dm-h"><span class="dm-nav" data-n="-1">‹</span><div class="dm-t" data-t></div><span class="dm-nav" data-n="1">›</span></div>
+    <div class="dm-dow"><span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>нд</span></div><div class="dm-grid" data-g></div>
+    <div class="dm-leg"><span>штрихування — вихідний за графіком закладу</span></div></div>
+    <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" data-today>Сьогодні</button></div>`, 400);
+  const draw = () => {
+    const base = ppMonthDate(off), y = base.getFullYear(), m = base.getMonth();
+    ov.querySelector('[data-t]').textContent = MON_NAME[m] + ' ' + y;
+    const lead = (new Date(y, m, 1).getDay() + 6) % 7, last = new Date(y, m + 1, 0).getDate(), td = todayISO();
+    let h = '<div class="dm-d pale"></div>'.repeat(lead);
+    for (let d = 1; d <= last; d++){
+      const iso = `${y}-${p2(m + 1)}-${p2(d)}`, wd = (new Date(y, m, d).getDay() + 6) % 7;
+      h += `<div class="dm-d ${sched[wd]?.off ? 'off' : ''} ${iso === td ? 'today' : ''}" data-d="${iso}">${d}</div>`;
+    }
+    ov.querySelector('[data-g]').innerHTML = h;
+  };
+  draw();
+  ov.addEventListener('click', (e) => {
+    const n = e.target.closest('[data-n]'), d = e.target.closest('[data-d]');
+    if (n){ off += +n.dataset.n; draw(); }
+    else if (d){ closeWin(ov); jr.pp = null; jr.loaded = d.dataset.d === todayISO() ? { t: 'today' } : { t: 'day', iso: d.dataset.d }; jrSubscribe(); jrPanel(); jrTable(); }
+    else if (e.target.closest('[data-today]')){ closeWin(ov); ppToday(); }
+  });
+}
+function jrTable(){
+  const box = $('jBody'); if (!box) return;
+  const monthMode = jr.loaded.t === 'month';
+  if (jr.err){ box.innerHTML = `<div class="al al-e" style="margin:12px 0 0"><span class="al-icon">✕</span><div><b>Не вдалося завантажити журнал</b>${esc(jr.err)}</div></div>`; $('jLeg').innerHTML = ''; return; }
+  const rows = [...jr.rows].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.time || '').localeCompare(String(a.time || '')) || (b.sequentialNumber || 0) - (a.sequentialNumber || 0));
+  const money = HAS_MONEY_RIGHT, payCol = HAS_MONEY_RIGHT && FACILITY_TRACKS_PAYMENT;
+  const mcls = money ? '' : 'style="display:none"', pcls = payCol ? '' : 'style="display:none"';
+  const labelOf = (id) => dir.labels.find(l => l.id === id);
+  const body = rows.map((r, idx) => {
+    const lab = labelOf(r.labelId), prev = rows[idx - 1];
+    const cont = prev && prev.visitId === r.visitId;
+    const ref = r.referral || {};
+    const dname = ref.self ? '' : (dir.doctors.find(d => d.id === ref.doctorId)?.name || ref.doctorName || '');
+    const iname = ref.self ? '' : (ref.institutionId ? (dir.institutions.find(i => i.id === ref.institutionId)?.name || ref.institutionName || '') : '');
+    const lw = workerBy(r.labTechId), dw = workerBy(r.describerId);
+    const own = canEditVisit(r);
+    const ex = (r.extras || []).map(e => `<div class="svc-l3"><span class="pil g">+ ${esc(e.name)}</span><span class="svc-price">${nfmt(e.price)}</span></div>`).join('');
+    const disc = r.discountSnapshot ? `<div class="svc-l2"><span class="pil">${esc(r.discountSnapshot.name)} −${r.discountSnapshot.percent}%</span><span class="svc-price">${nfmt(r.servicePriceAfterDiscount)}</span></div>` : '';
+    const dt = String(r.date).split('-');
+    return `<tr class="${cont ? 'j-cont-row ' : ''}${lab ? 'g' : ''}"${lab ? ` style="--g1:${rgba(lab.color, .55)};--g0:${rgba(lab.color, 0)}"` : ''}>
+      <td class="c"><span class="pen ${own ? '' : 'off'}" data-vid="${r.visitId}">✎</span></td>
+      <td class="c"><b>${r.sequentialNumber ?? ''}</b><div class="sm">${esc(monthLabel(r))}</div></td>
+      <td class="c">${esc(r.time || '')}${monthMode ? `<div class="sm">${dt[2]}.${dt[1]}</div>` : ''}</td>
+      <td><span class="nm2">${esc(r.patientName || '')}</span><div class="sm">${esc(isoToUa(r.patientBirth))}</div><div class="sm">${esc(r.patientAddress || '')}</div></td>
+      <td ${r.historyNo ? '' : 'class="sm"'}>${esc(r.historyNo || '—')}</td>
+      <td ${ref.self ? 'class="sm"' : ''}>${ref.self ? 'самозвернення' : esc(dname) + (iname ? `<div class="sm">${esc(iname)}</div>` : '')}</td>
+      <td class="svc-cell">${esc(r.serviceSnapshot?.name || '')}<span class="svc-price ${r.discountSnapshot ? 'old' : ''}">${money ? nfmt(r.servicePrice) : ''}</span>${money ? disc : ''}${money ? ex : ex.replace(/<span class="svc-price">[^<]*<\/span>/g, '')}</td>
+      <td class="r money m-l" ${mcls}><b>${nfmt(r.totalAmount)}</b></td>
+      <td class="c cash">${r.paymentMethod === 'cash' ? 'готівка' : r.paymentMethod === 'cashless' ? 'безготівк.' : '—'}</td>
+      <td class="c money pay-status m-r" ${pcls}><span class="pay ${r.paid ? 'ok2' : 'no2'}">${r.paid ? '✓' : '✕'}</span></td>
+      <td class="desc"><span class="op-fld">${r.described ? '<span class="op-ok">● описано</span>' : '<span class="op-no">○ не описано</span>'}</span></td>
+      <td class="sm"><b>Лаб.:</b> ${esc(lw ? shortName(lw) : '')}<br><b>Лік.:</b> ${esc(dw ? shortName(dw) : '')}</td></tr>`;
+  }).join('');
+  const visits = new Set(rows.map(r => r.visitId)).size, pats = new Set(rows.map(r => r.patientId || r.patientName)).size;
+  const sumM = (m) => r2(rows.filter(r => r.paymentMethod === m).reduce((a, r) => a + (r.totalAmount || 0), 0));
+  const none = r2(rows.filter(r => !r.paymentMethod).reduce((a, r) => a + (r.totalAmount || 0), 0));
+  const empty = !jr.ready ? '<span class="spin dk"></span>' : '';
+  box.innerHTML = `<div class="j-body"><table style="width:1400px"><colgroup><col style="width:54px"><col style="width:66px"><col style="width:54px"><col style="width:200px"><col style="width:92px"><col style="width:130px"><col><col style="width:90px"><col style="width:86px"><col style="width:54px"><col style="width:130px"><col style="width:165px"></colgroup>
+    <thead><tr><th class="c">Ред.</th><th class="c">№</th><th class="c">Час</th><th>Пацієнт</th><th>№ іст. хв.</th><th>Лікуючий лікар</th><th>Послуга, дод. послуга</th><th class="r money m-l" ${mcls}>Сума</th><th class="c">Спосіб оплати</th><th class="c money pay-status m-r" ${pcls}>Оплата</th><th class="desc">Опис</th><th>Працівники</th></tr></thead>
+    <tbody>${body || `<tr><td colspan="12" style="padding:18px 10px">${!jr.ready ? '<span class="spin dk"></span>' : `<div class="al al-i" style="display:inline-flex;max-width:340px;margin:0"><span class="al-icon">i</span><div><b>Тут поки нічого немає</b>За цей період візитів немає. Додайте перший кнопкою «Новий візит».</div></div>`}</td></tr>`}</tbody>
+    <tfoot><tr><td class="c"></td><td class="c"><div class="j-tot-k">Візитів</div><div class="j-tot-v">${visits}</div></td><td class="c"></td><td><div class="j-tot-k">Пацієнтів</div><div class="j-tot-v">${pats}</div></td><td colspan="2"></td>
+      <td><div class="j-tot-k">Послуг</div><div class="j-tot-v">${rows.length}</div></td>
+      <td class="r money m-l" ${mcls}><div class="j-tot-v" style="min-height:15px">${nfmt(sumM('cashless'))}</div><div class="j-tot-v" style="min-height:15px">${nfmt(sumM('cash'))}</div>${none ? `<div class="j-tot-v" style="min-height:15px">${nfmt(none)}</div>` : ''}</td>
+      <td class="c"><div class="j-cash" style="min-height:15px">- безготівка</div><div class="j-cash" style="min-height:15px">- готівка</div>${none ? '<div class="j-cash" style="min-height:15px">- без форми</div>' : ''}</td>
+      <td class="c money pay-status m-r" ${pcls}></td><td class="desc"></td><td></td></tr></tfoot></table></div>`;
+  $('jLeg').innerHTML = dir.labels.length ? `<div class="j-leg"><b>Розподіл:</b>${[...dir.labels].sort((a, b) => hueOf(a.color) - hueOf(b.color)).map(l => `<span><i style="background:${esc(l.color)}"></i>${esc(l.name)}</span>`).join('')}<span style="margin-left:auto;font-size:10.5px">кольори — з довідника <b>Розподіл</b></span></div>` : '';
+}
 
 /* ═══ МАЙСТЕР ПЕРШОГО ЗАПУСКУ (pershyi_pusk_v2.html) ═══ */
 const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
