@@ -723,6 +723,7 @@ async function loadSettings(){
 }
 async function showLogin(){
   show('boot');
+  jrStop(); ptStop(); jr.rows = []; jr.loaded = { t: 'today' }; jr.pp = null; pt.q = ''; pt.res = null; pt.data = {}; pt.msg = null;   // дані попереднього користувача не лишаються в пам'яті
   await loadSettings(); // публічне читання settings/main: назва закладу на екрані входу, ознака першого запуску
   renderAuth('login');
   if (pendingErr){ setErr(pendingErr[0], pendingErr[1]); pendingErr = null; }
@@ -752,7 +753,7 @@ if (!navigator.onLine) $('netBanner').hidden = false;
 const TABS = ['Журнал', 'Пацієнти', 'Скерування', 'Працівники', 'Звіти'];
 let sheetRerender = null;
 function pickTab(i){
-  sheetRerender = null; $('sheet').onclick = null; jrStop(); ptStop();
+  sheetRerender = null; $('sheet').onclick = null;   // підписки Журналу й Пацієнтів не зупиняємо: результати лишаються в пам'яті, повернення на вкладку без нового запиту
   [...$('folder').querySelectorAll('.tab')].forEach((t, k) => t.classList.toggle('on', k === i));
   $('sheet').classList.toggle('tl-round', i !== 0);
   $('sheet').classList.toggle('tr-flat', i === TABS.length - 1);
@@ -1852,7 +1853,7 @@ function jrBounds(){
   return [`${y}-${p2(m + 1)}-01`, `${y}-${p2(m + 1)}-${p2(new Date(y, m + 1, 0).getDate())}`];
 }
 function jrSubscribe(){
-  jrStop(); jr.ready = false; jr.err = null; jr.rows = [];
+  jrStop(); jr.ready = false; jr.err = null; jr.rows = []; jr.subDay = todayISO();
   const [a, b] = jrBounds();
   jr.unsub = onSnapshot(query(collection(db, 'records'), where('date', '>=', a), where('date', '<=', b)),
     (snap) => { jr.rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); jr.ready = true; jr.err = null; jrTable(); },
@@ -1877,7 +1878,9 @@ function renderJournal(){
     if (p && !p.classList.contains('off')) openVisitForm(p.dataset.vid);
     if (y && !y.classList.contains('off')) togglePay(y.dataset.pay);
   };
-  jrPanel(); jrSubscribe(); jrTable();
+  jrPanel();
+  if (!jr.unsub || (jr.loaded.t === 'today' && jr.subDay !== todayISO())) jrSubscribe();   // нова доба — «Сьогодні» оновлюється
+  jrTable();
 }
 /* швидка зміна оплати з журналу: та сама логіка, що у формі (запис послуги + payments) */
 function setPaid(r, paid, method){
@@ -1999,7 +2002,6 @@ function jrTable(){
 const pt = { q: '', res: null, data: {}, subs: [], msg: null, tooMany: false };
 function ptStop(){ pt.subs.forEach(u => u()); pt.subs = []; }
 function renderPatients(){
-  ptStop(); const keep = pt.q; pt.res = null; pt.data = {}; pt.msg = null;   // запит лишається: при поверненні на вкладку пошук повторюється
   sheetRerender = ptDraw;
   $('sheet').innerHTML = `<div class="srch-lbl">Пошук пацієнта</div>
     <form class="srch" id="ptForm"><div class="srch-f"><input id="ptQ" autocomplete="off" placeholder="Прізвище (початок ПІБ) або телефон"><button type="button" class="srch-clear" id="ptClr">✕</button></div><button type="submit">🔍 Пошук</button></form>
@@ -2012,7 +2014,7 @@ function renderPatients(){
     if (y && !y.classList.contains('off')) togglePay(y.dataset.pay);
   };
   ptDraw(); $('ptQ').focus();
-  if (keep){ $('ptQ').value = keep; ptSearch(); }
+  $('ptQ').value = pt.q;   // результати й підписки збережені — вкладка показує те, що було
 }
 async function ptSearch(){
   const raw = $('ptQ').value.trim(), q = raw.toLowerCase();
