@@ -317,6 +317,29 @@
   .cal-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}.lg-n{background:var(--warn-bg);box-shadow:0 0 0 1px var(--warn)}.lg-r{background:repeating-linear-gradient(45deg,#fff,#fff 2px,#cfd6d9 2px,#cfd6d9 4px)}.lg-b{background:#F2F5F6;box-shadow:0 0 0 1px var(--line)}
   .mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}.dm-d.mp{aspect-ratio:auto;height:44px}
   @media (max-width:760px){.cal-sums{grid-template-columns:1fr}}
+  /* звіти */
+  .rp-h{font-size:17px;font-weight:800;color:var(--green);margin:4px 0 4px}.rp-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .rp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+  .rp-tile{padding:16px;border-radius:16px;background:var(--bg);box-shadow:var(--up);cursor:pointer}.rp-tile:active{box-shadow:var(--in)}
+  .rp-ic{font-size:22px;margin-bottom:6px}.rp-tn{font-size:13.5px;font-weight:800;color:var(--ink)}.rp-td{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .rp-win{max-width:1500px}.rp-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.rp-top .win-x{position:static}
+  .rp-pp{margin-bottom:16px}.rp-pp .pp-b{flex:1;width:auto}
+  .rp-card{padding:14px 16px;border-radius:14px;background:var(--bg);box-shadow:var(--up);margin-bottom:16px}
+  .rp-cl{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .rp-row{display:flex;align-items:center;gap:12px}.rp-row label{font-size:12px;color:var(--muted);min-width:70px}.rp-row .in{max-width:280px}
+  .rp-chips{display:flex;flex-wrap:wrap;gap:8px}.rp-chip{padding:7px 14px;border-radius:10px;background:var(--bg);box-shadow:var(--bump);font-size:12px;font-weight:700;color:var(--muted);cursor:pointer}
+  .rp-chip.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .rp-act{margin-bottom:16px}.rp-ph{padding:26px 10px;text-align:center;color:var(--muted);font-size:13px;border-radius:14px;box-shadow:var(--in);margin-bottom:16px}.rp-ph span{font-size:11px}
+  .rp-wrap{border-radius:14px;overflow:auto;box-shadow:var(--in);padding:0}
+  .rp-t th{background:var(--green);color:#fff;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.2px;border-left:1px solid rgba(255,255,255,.25)!important;border-bottom:1px solid rgba(255,255,255,.25)!important}
+  .rp-t tr.st td:first-child,.rp-t tr.tt td:first-child{white-space:normal;min-width:130px}.rp-t td{vertical-align:middle;height:auto}
+  .rp-t{width:100%;border-collapse:collapse;font-size:12.5px}.rp-t th,.rp-t td{padding:7px 9px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);white-space:nowrap}
+  .rp-t th:first-child,.rp-t td:first-child{border-left:none}.rp-t td.c,.rp-t th.c{text-align:center}.rp-t td.r,.rp-t th.r{text-align:right}.rp-t th.l{text-align:left}
+  .rp-t th.grp{border-bottom:2px solid var(--line)}
+  .rp-t tr.gh td{background:rgba(30,107,79,.08);font-size:12.5px;border-left:none}.rp-t tr.st td{border-top:1px solid var(--line);border-bottom:2px solid var(--ink);font-weight:700}.rp-t tr.tt td{border-bottom:2px solid var(--ink);font-weight:800}
+  .rp-t tr.xs td{background:rgba(214,238,221,.35)}.rp-t .sm{font-size:10.5px;color:var(--muted);font-weight:400}
+  .rp-leg{font-size:11px;color:var(--muted);margin-top:10px}.rp-hint{font-size:11px;color:var(--muted);margin-top:8px}
+  .rp-foot{display:flex;gap:10px;align-items:center;margin-top:18px}.rp-ex{margin-left:auto;display:flex;gap:10px}.rp-foot .b[disabled]{opacity:.45;cursor:not-allowed}
   .pp{display:flex;padding:5px;border-radius:14px;background:var(--bg);box-shadow:var(--in);height:48px;position:relative}
   .pp-b{flex:0 0 auto;width:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 14px;border-radius:11px;font-size:12px;color:var(--muted);cursor:pointer}
   .pp-b.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
@@ -807,6 +830,7 @@ function pickTab(i){
   if (TABS[i] === 'Пацієнти') renderPatients();
   if (TABS[i] === 'Скерування') renderRef();
   if (TABS[i] === 'Працівники') renderStaff();
+  if (TABS[i] === 'Звіти') renderReports();
 }
 const shortName = (p) => {
   const ini = [p.firstName, p.middleName].filter(Boolean).map(x => x[0].toUpperCase() + '.').join('');
@@ -1672,6 +1696,248 @@ function saveDuty(iso, labs, docs){
   else b.set(doc(db, 'duty_days', iso), { date: iso, labs, docs, updatedAt: serverTimestamp() });
   audit('update', 'duty_days', iso, prev ? { labs: prev.labs || [], docs: prev.docs || [] } : null, { labs, docs });
   b.commit().catch(e => toast('e', 'Не вдалося зберегти чергування', e.code || ''));
+}
+
+/* ═══ ЗВІТИ (zvity_body.html + zvit_karkas + zvit_laboranty + alhorytm_cherguvan) ═══
+   Хаб не читає базу; дані завантажуються лише кнопкою «Показати звіт» (1 запит records за період + 1 запит duty_days).
+   Далі зміна «Стислий/Повний», критеріїв і стовпців не робить нових запитів. */
+const REPORTS = [
+  ['rPat', 'По пацієнтах', 'Пацієнти за період, фільтр установи/типу, оплата', '👤'],
+  ['rLab', 'По лаборантах', 'Дні, дослідження, суми по кожному', '🧑‍🔬'],
+  ['rDoc', 'По лікарях', 'Описи, суми з пільгами і без', '🩺'],
+  ['rRef', 'По скеруваннях', 'Розріз: установи / лікуючі лікарі; тип, партнери, оплата', '🧭'],
+  ['rLbl', 'За розподілом', 'Кількість візитів за кольором мітки', '🎨'],
+  ['rPay', 'По оплаті', 'По днях, безготівка/готівка, неоплачено', '💳'],
+  ['rDisc', 'По пільгах', 'Розбивка знижок за видами', '🏷'],
+  ['rSvc', 'По послугах', 'Кількість і суми; основні/додаткові разом чи окремо', '🗂'],
+  ['rCtor', 'Конструктор', 'Групування + показники + фільтр', '🔎'],
+  ['rMgmt', 'Управлінський', 'Зведення загальних показників', '📈']
+];
+const RP_READY = { rLab: true };   // звіти, що вже реалізовані
+const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, loading: false, err: null };
+const rpAllowed = () => REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
+const iso2 = (y, m, d) => `${y}-${p2(m + 1)}-${p2(d)}`;
+const rpMonthPer = (y, m, onLeft) => ({ t: 'month', y, m, onLeft: !!onLeft });
+function rpRange(){
+  const p = rp.per;
+  return p.t === 'month' ? [iso2(p.y, p.m, 1), iso2(p.y, p.m, new Date(p.y, p.m + 1, 0).getDate())] : [p.from, p.to];
+}
+const rpIsCurMonth = (p) => { const n = new Date(); return p.y === n.getFullYear() && p.m === n.getMonth(); };
+function renderReports(){
+  sheetRerender = null;
+  if (!rp.per){ const n = new Date(); rp.per = rpMonthPer(n.getFullYear(), n.getMonth(), false); }
+  if (rp.cur && !can(rp.cur)) rp.cur = null;
+  rp.cur ? rpOpen() : rpHub();
+}
+function rpHub(){
+  const list = rpAllowed();
+  $('sheet').innerHTML = `<div class="rp-h">Звіти</div><div class="rp-sub">Оберіть звіт — відкриється з панеллю періоду та кнопкою «Показати звіт»</div>`
+    + (list.length ? `<div class="rp-tiles">${list.map(r => `<div class="rp-tile" data-rep="${r[0]}"><div class="rp-ic">${r[3]}</div><div class="rp-tn">${esc(r[1])}</div><div class="rp-td">${esc(r[2])}</div></div>`).join('')}</div>`
+      : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Немає жодного дозволеного звіту</b>Права надає адміністратор у розділі «Доступи».</div></div>');
+  $('sheet').onclick = (e) => {
+    const t = e.target.closest('[data-rep]'); if (!t) return;
+    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працює звіт «По лаборантах»; решта — за зразком.');
+    rp.cur = t.dataset.rep; rp.data = null; rpOpen();
+  };
+}
+function rpOpen(){
+  const name = REPORTS.find(r => r[0] === rp.cur)[1];
+  const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
+  $('sheet').innerHTML = `<div class="rp-win"><div class="rp-top"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div><button class="win-x" id="rpX">✕</button></div>
+    <div class="pp rp-pp"><div class="pp-b" id="rpL"></div><div class="pp-b on" id="rpM"></div><div class="pp-b" id="rpR"></div></div>
+    <div class="rp-card"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>
+    <div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
+    <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpCols">
+      <span class="rp-chip" data-c="main">Основні послуги</span><span class="rp-chip" data-c="extra">Додаткові послуги</span>${pay ? '<span class="rp-chip" data-c="pay">Оплата</span>' : ''}</div></div>
+    <div class="rp-act"><button class="b pri" id="rpGo"></button></div>
+    <div id="rpBody"></div>
+    <div class="rp-foot"><button class="b" id="rpClose">Закрити</button><span class="rp-ex"><button class="b" disabled title="Експорт — наступним кроком">📄 PDF</button><button class="b" disabled title="Експорт — наступним кроком">📊 XLS</button><button class="b" disabled title="Експорт — наступним кроком">📝 DOC</button></span></div></div>`;
+  const sel = $('rpLab');
+  sel.innerHTML = '<option value="">Усі лаборанти</option>' + dir.workers.filter(w => w.role === 'Лаборант' && !w.mergedInto).sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk')).map(w => `<option value="${esc(w.id)}">${esc(shortName(w))}${w.status === 'inactive' ? ' (не працює)' : ''}</option>`).join('');
+  sel.value = rp.lab;
+  const sync = () => {
+    [...$('rpDet').children].forEach(s => s.classList.toggle('on', s.dataset.v === rp.detail));
+    [...$('rpCols').children].forEach(c => c.classList.toggle('on', !!rp.cols[c.dataset.c]));
+    $('rpGo').innerHTML = rp.loading ? '<span class="spin"></span>' : (rp.data ? '📊 Оновити звіт' : '📊 Показати звіт'); $('rpGo').disabled = rp.loading;
+  };
+  const back = () => { rp.cur = null; rp.data = null; renderReports(); };
+  $('rpX').onclick = back; $('rpClose').onclick = back;
+  $('rpL').onclick = () => { const p = rp.per; if (p.t === 'custom'){ const n = new Date(); rp.per = rpMonthPer(n.getFullYear(), n.getMonth(), false); } else rpShiftMonth(-1); rp.data = null; rpPanel(); rpDraw(); sync(); };
+  $('rpM').onclick = () => { const p = rp.per; if (p.t === 'month' && p.onLeft){ rpShiftMonth(1); rp.data = null; rpPanel(); rpDraw(); sync(); } };
+  $('rpR').onclick = openRpPeriod;
+  $('rpDet').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.detail = s.dataset.v; sync(); rpDraw(); } };
+  $('rpCols').onclick = (e) => { const c = e.target.closest('[data-c]'); if (c){ rp.cols[c.dataset.c] = !rp.cols[c.dataset.c]; sync(); rpDraw(); } };
+  sel.onchange = () => { rp.lab = sel.value; rpDraw(); };
+  $('rpGo').onclick = async () => { await rpLoad(); sync(); };
+  sheetRerender = () => { rpDraw(); };
+  rpPanel(); sync(); rpDraw();
+}
+function rpShiftMonth(step){
+  const p = rp.per, d = new Date(p.y, p.m + step, 1);
+  rp.per = rpMonthPer(d.getFullYear(), d.getMonth(), false); rp.per.onLeft = !rpIsCurMonth(rp.per);
+}
+function rpPanel(){
+  const L = $('rpL'), M = $('rpM'), R = $('rpR'); if (!L) return;
+  const c = (a, b) => `<span class="pp-m">${a}</span><span class="pp-d">${b}</span>`, p = rp.per, [a, b] = rpRange();
+  const rng = `${isoToUa(a)} – ${isoToUa(b)}`;
+  if (p.t === 'custom'){
+    L.className = 'pp-b'; M.className = 'pp-b on'; L.innerHTML = c('Місяць', 'повернутись'); M.innerHTML = c('Довільний період', rng); R.innerHTML = c('Змінити', 'період');
+  } else if (!p.onLeft){
+    L.className = 'pp-b'; M.className = 'pp-b on'; L.innerHTML = c('Попередній місяць', '← назад'); M.innerHTML = c(MON_NAME[p.m], rng); R.innerHTML = c('Довільний період', 'вибрати дати');
+  } else {
+    L.className = 'pp-b on'; M.className = 'pp-b'; L.innerHTML = c(MON_NAME[p.m], rng); M.innerHTML = c('Наступний місяць', 'вперед →'); R.innerHTML = c('Довільний період', 'вибрати дати');
+  }
+}
+function openRpPeriod(){
+  const td = todayISO(), now = new Date(), [a, b] = rpRange();
+  const addD = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return iso2(d.getFullYear(), d.getMonth(), d.getDate()); };
+  const q = Math.floor(now.getMonth() / 3) * 3;
+  const quick = { '7': [addD(td, -6), td], '30': [addD(td, -29), td], q: [iso2(now.getFullYear(), q, 1), td], y: [iso2(now.getFullYear(), 0, 1), td] };
+  const ov = openWin(`<div class="win-h"><h4>Довільний період</h4><button class="win-x" data-x>✕</button></div><div class="win-b">
+    <div class="rp-cl">Швидкий вибір</div><div class="rp-chips" style="margin-bottom:14px"><span class="rp-chip" data-q="7">Останні 7 днів</span><span class="rp-chip" data-q="30">Останні 30 днів</span><span class="rp-chip" data-q="q">Квартал</span><span class="rp-chip" data-q="y">Рік</span></div>
+    <div class="rp-row"><label>Дата з</label><input class="in" type="date" id="rpF" value="${a}"></div><div class="rp-row"><label>Дата по</label><input class="in" type="date" id="rpT" value="${b}"></div>
+    <div class="al al-e" id="rpE" style="display:none;margin:8px 0 0"><span class="al-icon">✕</span><div><b>Некоректний період</b>«Дата з» має бути не пізніше за «Дата по».</div></div></div>
+    <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" id="rpApply">Застосувати</button></div>`, 440);
+  ov.addEventListener('click', (e) => {
+    const k = e.target.closest('[data-q]');
+    if (k){ $('rpF').value = quick[k.dataset.q][0]; $('rpT').value = quick[k.dataset.q][1]; }
+    if (e.target.closest('#rpApply')){
+      const f = $('rpF').value, t = $('rpT').value;
+      if (!f || !t || f > t){ $('rpE').style.display = 'flex'; return; }
+      rp.per = { t: 'custom', from: f, to: t }; rp.data = null; closeWin(ov); rpPanel(); rpDraw(); $('rpGo').innerHTML = '📊 Показати звіт';
+    }
+  });
+}
+async function rpLoad(){
+  const [a, b] = rpRange(); rp.loading = true; rp.err = null; rpDraw();
+  try {
+    const [rs, ds] = await Promise.all([
+      getDocs(query(collection(db, 'records'), where('date', '>=', a), where('date', '<=', b))),
+      getDocs(query(collection(db, 'duty_days'), where('date', '>=', a), where('date', '<=', b))).catch(() => ({ docs: [] }))
+    ]);
+    rp.data = { a, b, recs: rs.docs.map(d => ({ id: d.id, ...d.data() })), duty: Object.fromEntries(ds.docs.map(d => [d.id, d.data()])) };
+  } catch (e){ rp.data = null; rp.err = e.code || 'помилка'; }
+  rp.loading = false; rpDraw();
+}
+
+/* ── обчислення: «По лаборантах» (алгоритм вікон змін із alhorytm_cherguvan) ── */
+const TP_NAME = { 'Д': 'денна', 'Н': 'нічна', 'Доба': 'добова' };
+const tpCls = (l) => ({ 'Д': 'sd', 'Н': 'sn', 'Доба': 's24' }[l] || 'sx');
+const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return iso2(d.getFullYear(), d.getMonth(), d.getDate()); };
+const newAgg = () => ({ n: 0, base: 0, after: 0, exN: 0, exSum: 0, cashless: 0, cash: 0 });
+function addAgg(g, r){
+  g.n++; g.base += Number(r.servicePrice) || 0; g.after += Number(r.servicePriceAfterDiscount) || 0;
+  g.exN += (r.extras || []).length; g.exSum += Number(r.extrasTotal) || 0;
+  if (r.paid && r.paymentMethod === 'cashless') g.cashless += Number(r.totalAmount) || 0;
+  if (r.paid && r.paymentMethod === 'cash') g.cash += Number(r.totalAmount) || 0;
+}
+const sumAgg = (list) => list.reduce((s, g) => { for (const k of Object.keys(s)) s[k] += g[k]; return s; }, newAgg());
+function labReport(data, filterLab){
+  const sw = settings?.shiftWindows || {}, dF = toMin(sw.dayFrom || '08:00'), dT = toMin(sw.dayTo || '20:00'), td = todayISO();
+  const labs = new Map();
+  for (const r of data.recs){
+    const wid = wNorm(r.labTechId || '');
+    if (filterLab && wid !== filterLab) continue;
+    const L = labs.get(wid) || { wid, shifts: new Map(), nosch: 0, outs: [] }; labs.set(wid, L);
+    const per = shiftOn(workerBy(wid), r.date);
+    let tp = '—', sd = r.date, out = false, schName = '';
+    if (per){
+      tp = classifyShift(per.from, per.to).label; schName = `${per.from}–${per.to}`;
+      const f = toMin(per.from), to = toMin(per.to), t = toMin(r.time || '00:00');
+      if (f >= to){ if (t >= f) sd = r.date; else if (t < to) sd = addDays(r.date, -1); else out = true; }   // вікно через північ (нічна, доба)
+      else if (!(t >= f && t < to)) out = true;
+    } else L.nosch++;
+    const key = sd + '|' + tp;
+    const g = L.shifts.get(key) || { sd, tp, dates: new Map(), out: 0 }; L.shifts.set(key, g);
+    const dg = g.dates.get(r.date) || newAgg(); g.dates.set(r.date, dg); addAgg(dg, r);
+    if (out){ g.out++; const t = toMin(r.time || '00:00'); L.outs.push({ date: r.date, inDay: t >= dF && t < dT, sch: `${TP_NAME[tp] || 'нетипова'} ${schName}` }); }
+  }
+  const list = [...labs.values()].map(L => {
+    const shifts = [...L.shifts.values()].sort((a, b) => a.sd.localeCompare(b.sd) || a.tp.localeCompare(b.tp));
+    const tot = sumAgg(shifts.flatMap(s => [...s.dates.values()]));
+    const types = {}; shifts.forEach(s => { types[s.tp] = (types[s.tp] || 0) + 1; });
+    const first = shifts.length ? [...shifts[0].dates.keys()].sort()[0] : '9999';
+    return { ...L, shifts, tot, types, first, count: shifts.length };
+  }).sort((a, b) => a.first.localeCompare(b.first) || nameOfW(a.wid).localeCompare(nameOfW(b.wid), 'uk'));
+  /* дні з календаря без записів (лише минулі) */
+  const nod = [];
+  for (const [iso, d] of Object.entries(data.duty)){
+    if (iso >= td) continue;
+    for (const wid of (d.labs || [])){
+      const nw = wNorm(wid); if (filterLab && nw !== filterLab) continue;
+      if (!data.recs.some(r => r.date === iso && wNorm(r.labTechId || '') === nw)) nod.push({ iso, wid: nw });
+    }
+  }
+  nod.sort((a, b) => a.iso.localeCompare(b.iso));
+  return { list, nod };
+}
+const nameOfW = (wid) => { const w = workerBy(wid); return w ? shortName(w) : '(видалений працівник)'; };
+function labSchedText(wid, a, b){
+  const ps = [...(workerBy(wid)?.shifts || [])].filter(p => !p.excluded && p.start <= b && (!p.end || p.end >= a)).sort((x, y) => x.start.localeCompare(y.start));
+  if (!ps.length) return 'графік не заданий';
+  const nm = (p) => TP_NAME[classifyShift(p.from, p.to).label] || 'нетипова';
+  if (ps.length === 1) return `${nm(ps[0])} ${ps[0].from}–${ps[0].to}`;
+  return ps.map((p, i) => i ? `${nm(p)} (з ${p.start.slice(8)}.${p.start.slice(5, 7)})` : nm(p)).join(' → ');
+}
+const tpChips = (types) => Object.entries(types).sort((a, b) => a[0].localeCompare(b[0], 'uk')).map(([t, n]) => `<span class="sh ${tpCls(t)}">${esc(t)}</span> ${n}`).join(' ');
+const plN = (n, f) => { const a = n % 10, b = n % 100; return n + ' ' + (a === 1 && b !== 11 ? f[0] : (a >= 2 && a <= 4 && (b < 12 || b > 14) ? f[1] : f[2])); };
+const dmy = (iso) => iso.slice(8) + '.' + iso.slice(5, 7);
+
+function rpDraw(){
+  const box = $('rpBody'); if (!box || rp.cur !== 'rLab') return;
+  if (rp.loading){ box.innerHTML = '<div class="rp-ph"><span class="spin dk"></span></div>'; return; }
+  if (rp.err){ box.innerHTML = `<div class="al al-e" style="margin:0"><span class="al-icon">✕</span><div><b>Не вдалося завантажити звіт</b>${esc(rp.err)}. Перевірте з'єднання й право «Дані» в Журналі.</div></div>`; return; }
+  if (!rp.data){ box.innerHTML = '<div class="rp-ph">Тут з\'явиться звіт після натискання «Показати звіт».<br><span>Дані з бази ще не завантажувались.</span></div>'; return; }
+  const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay;
+  const cm = rp.cols.main, ce = rp.cols.extra;
+  const mainSpan = cm ? (money ? 3 : 1) : 0, exSpan = ce ? (money ? 2 : 1) : 0, paySpan = pay ? 2 : 0;
+  const lead = rp.detail === 'full' ? 2 : 2;   // Повний: Дата + Зміна; Стислий: Лаборант + Змін
+  const cell = (g) => (cm ? `<td class="r">${g.n}</td>${money ? `<td class="r">${nfmt(g.base)}</td><td class="r">${nfmt(g.after)}</td>` : ''}` : '')
+    + (ce ? `<td class="r">${g.exN}</td>${money ? `<td class="r">${nfmt(g.exSum)}</td>` : ''}` : '')
+    + (pay ? `<td class="r">${nfmt(g.cashless)}</td><td class="r">${nfmt(g.cash)}</td>` : '');
+  const ncols = lead + mainSpan + exSpan + paySpan;
+  const head = `<thead><tr><th rowspan="2" class="l">${rp.detail === 'full' ? 'Дата' : 'Лаборант'}</th><th rowspan="2" class="c">${rp.detail === 'full' ? 'Зміна' : 'Змін'}</th>`
+    + (cm ? `<th colspan="${mainSpan}" class="c grp">Основні послуги</th>` : '') + (ce ? `<th colspan="${exSpan}" class="c grp">Додаткові</th>` : '') + (pay ? '<th colspan="2" class="c grp">Оплата, грн</th>' : '') + '</tr><tr>'
+    + (cm ? `<th class="r">К-сть</th>${money ? '<th class="r">Без пільг, грн</th><th class="r">З пільгами, грн</th>' : ''}` : '') + (ce ? `<th class="r">К-сть</th>${money ? '<th class="r">Сума, грн</th>' : ''}` : '')
+    + (pay ? '<th class="r">Безготівка</th><th class="r">Готівка</th>' : '') + '</tr></thead>';
+  let body = '', grand = null;
+  if (!rep.list.length){
+    body = `<tr><td colspan="${ncols}" class="c">—</td></tr>`;
+  } else if (rp.detail === 'short'){
+    body = rep.list.map(L => `<tr><td><b>${esc(nameOfW(L.wid))}</b><div class="sm">${esc(labSchedText(L.wid, a, b))}</div></td><td class="c">${tpChips(L.types)} <b>${L.count}</b></td>${cell(L.tot)}</tr>`).join('');
+  } else {
+    body = rep.list.map(L => {
+      let h = `<tr class="gh"><td colspan="${ncols}"><b>${esc(nameOfW(L.wid))}</b> · ${esc(labSchedText(L.wid, a, b))}</td></tr>`;
+      for (const s of L.shifts){
+        const ds = [...s.dates.keys()].sort();
+        ds.forEach((d, i) => {
+          h += `<tr${ds.length > 1 ? ' class="xs"' : ''}><td>${isoToUa(d)}${ds.length > 1 ? (i ? ' ◣' : ' ◤') : ''}</td>${i ? '' : `<td class="c" rowspan="${ds.length}"><span class="sh ${tpCls(s.tp)}">${esc(s.tp)}</span>${s.out ? ' <span title="Є записи поза вікном графіку">⚠️</span>' : ''}</td>`}${cell(s.dates.get(d))}</tr>`;
+        });
+      }
+      return h + `<tr class="st"><td colspan="1"><b>Разом — ${plN(L.count, ['зміна', 'зміни', 'змін'])}</b></td><td class="c">${tpChips(L.types)}</td>${cell(L.tot)}</tr>`;
+    }).join('');
+  }
+  if (rep.list.length && !rp.lab){
+    const n = rep.list.reduce((s, L) => s + L.count, 0), types = {}; rep.list.forEach(L => Object.entries(L.types).forEach(([t, c]) => { types[t] = (types[t] || 0) + c; }));
+    grand = `<tr class="tt"><td><b>${rp.detail === 'short' ? `Разом — ${plN(rep.list.length, ['лаборант', 'лаборанти', 'лаборантів'])}` : `Разом усі — ${plN(n, ['зміна', 'зміни', 'змін'])}`}</b></td><td class="c">${tpChips(types)}${rp.detail === 'short' ? ` <b>${n}</b>` : ''}</td>${cell(sumAgg(rep.list.map(L => L.tot)))}</tr>`;
+  }
+  /* примітки */
+  const notes = [];
+  for (const L of rep.list){
+    if (L.outs.length){
+      const ds = L.outs.map(o => o.date).sort(), win = L.outs.some(o => o.inDay) && L.outs.some(o => !o.inDay) ? 'іншої зміни' : (L.outs[0].inDay ? 'денної зміни' : 'нічної зміни');
+      notes.push({ crit: true, h: `${nameOfW(L.wid)}, ${dmy(ds[0])}${ds[ds.length - 1] !== ds[0] ? '–' + dmy(ds[ds.length - 1]) : ''}:`, t: `графік ${L.outs[0].sch}, але ${plN(L.outs.length, ['запис', 'записи', 'записів'])} зроблено поза його вікном — у вікні ${win}. Причину визначає адміністратор. Понаднормові система не нараховує.` });
+    }
+    const ps = (workerBy(L.wid)?.shifts || []).filter(p => !p.excluded && p.start > a && p.start <= b);
+    if (ps.length) notes.push({ crit: false, h: `${nameOfW(L.wid)}:`, t: `графік змінено ${dmy(ps[0].start)} (${labSchedText(L.wid, a, b)}). Зміни пораховані окремо: ${Object.entries(L.types).map(([t, n]) => t + ' ' + n).join(', ')}.` });
+    if (L.nosch) notes.push({ crit: false, h: `${nameOfW(L.wid)}:`, t: `на дату ${plN(L.nosch, ['запису', 'записів', 'записів'])} графік не заданий — зміну визначено за календарною датою (тип «—»).` });
+  }
+  if (rep.nod.length) notes.push({ crit: true, h: 'Чергування без записів у журналі', t: `(з календаря): ${rep.nod.map(n => `${esc(nameOfW(n.wid))} — ${dmy(n.iso)}`).join(' · ')}. Імовірно, не було пацієнтів. Ці дні не входять у підсумок змін вище — рішення про оплату ухвалює адміністратор.` });
+  box.innerHTML = `<div class="rp-wrap"><table class="rp-t">${head}<tbody>${body}${grand || ''}</tbody></table></div>`
+    + (rep.list.length ? '' : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Даних не знайдено за заданими критеріями</b></div></div>')
+    + `<div class="rp-leg">Позначки: <span class="sh sd">Д</span> денна · <span class="sh sn">Н</span> нічна · <span class="sh s24">Доба</span> ${esc(settings?.shiftWindows?.dayFrom || '08:00')}–${esc(settings?.shiftWindows?.dayFrom || '08:00')} · ⚠️ поза вікном графіку${rp.lab ? '' : ''}</div>`
+    + notes.map(n => `<div class="al ${n.crit ? 'al-w' : 'al-i'}" style="margin:8px 0 0"><span class="al-icon"><span>${n.crit ? '!' : 'i'}</span></span><div><b>${esc(n.h)}</b> ${n.crit && n.h.startsWith('Чергування') ? n.t : esc(n.t)}</div></div>`).join('')
+    + (rp.lab ? '<div class="rp-hint">Вибрано одного лаборанта — загальний підсумок «Разом усі» приховано.</div>' : '');
 }
 
 $('mbServ').onclick = openServicesWin;
