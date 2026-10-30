@@ -764,7 +764,7 @@ async function renderShell(){
   $('hRole').textContent = String(profile.position || profile.role || '').toLowerCase();
   show('app');
   pickTab(0);
-  try { await loadDirs(); rerenderWins(); } catch (e){ console.warn('dirs:', e.failed || e.code); rerenderWins(); toast('w', 'Довідники не завантажено', e.failed ? 'Не вдалося прочитати: ' + e.failed.join(', ') : 'Перевірте з\'єднання.'); }
+  try { await loadDirs(); migratePerms(); rerenderWins(); } catch (e){ console.warn('dirs:', e.failed || e.code); rerenderWins(); toast('w', 'Довідники не завантажено', e.failed ? 'Не вдалося прочитати: ' + e.failed.join(', ') : 'Перевірте з\'єднання.'); }
 }
 window.addEventListener('online', () => { $('netBanner').hidden = true; });
 window.addEventListener('offline', () => { $('netBanner').hidden = false; });
@@ -804,6 +804,17 @@ async function loadDirs(){
     } catch (e){ console.warn('dir', COL[k], e.code); failed.push(COL[k] + (e.code ? ' (' + e.code + ')' : '')); }
   }));
   if (failed.length){ const err = new Error('dirs'); err.failed = failed; throw err; }
+}
+
+/* Одноразова міграція: правила Firestore не знають шаблонів ролей, тому в кожного працівника з входом має бути явний повний map perms.
+   Виконує лише Керівник (після завантаження довідників); для вже заповнених нічого не пишеться. */
+function migratePerms(){
+  if (profile?.role !== 'Керівник') return;
+  const need = dir.workers.filter(w => w.role !== 'Керівник' && !w.mergedInto && (w.hasAccount ?? !!w.email) && !PERM_KEYS.every(k => w.perms && typeof w.perms[k] === 'boolean'));
+  if (!need.length) return;
+  const b = writeBatch(db);
+  for (const w of need){ const p = normPerms(w.role, w.perms); b.set(doc(db, 'workers', w.id), { perms: p, updatedAt: serverTimestamp() }, { merge: true }); w.perms = p; }
+  b.commit().then(() => audit('update', 'workers', '*', null, { migratedPerms: need.length })).catch(e => console.warn('perms migration:', e.code));
 }
 
 /* Журнал змін (audit_log): знімок «до/після» без службових полів часу */
@@ -1410,7 +1421,7 @@ function openWorkerForm(id, newRole){
     try {
       const secAuth = initializeAuth(secApp, { persistence: inMemoryPersistence });
       cred = await createUserWithEmailAndPassword(secAuth, email, pass);
-      const wdoc = { ...data, email, loginAllowed: allow, hasAccount: true, createdBy: profile.id, ...(rec ? { legacyId: id } : {}) };
+      const wdoc = { ...data, perms: normPerms(data.role, rec?.perms), email, loginAllowed: allow, hasAccount: true, createdBy: profile.id, ...(rec ? { legacyId: id } : {}) };
       await setDoc(doc(db, 'workers', cred.user.uid), { ...wdoc, createdAt: serverTimestamp() });
       dir.workers.push({ id: cred.user.uid, ...wdoc });
       audit('create', 'workers', cred.user.uid, null, { id: cred.user.uid, ...wdoc });

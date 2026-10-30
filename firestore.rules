@@ -3,51 +3,155 @@ rules_version = '2';
 // Правила Firestore для проєкту ctmri-1.
 // Вставити в Firebase Console → Firestore Database → Rules → Publish.
 //
-// СТАН: етап 1 (вхід + перший запуск). Правила для робочих колекцій
-// (visits, records, patients, ...) поки ПОМІРНО ВІДКРИТІ для активних працівників
-// і будуть звужені за ролями, коли з'явиться код цих розділів.
+// Принцип: права з матриці «Доступи» (workers/{uid}.perms) перевіряє СЕРВЕР, а не лише інтерфейс.
+// Керівник (role == 'Керівник') має всі права. Для решти береться явний map perms
+// (його без винятку записують при створенні працівника та міграцією при вході Керівника).
+// Немає perms → доступу до даних немає, поки Керівник не відкриє програму.
+//
+// Обмеження Firestore: приховати окреме поле («Суми») правилами неможливо — це робить лише інтерфейс.
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ───── допоміжні функції ─────
     function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
     function myProfile() { return get(/databases/$(database)/documents/workers/$(request.auth.uid)).data; }
     function hasProfile() { return signedIn() && exists(/databases/$(database)/documents/workers/$(request.auth.uid)); }
     function isActive() { return hasProfile() && myProfile().status == 'active' && myProfile().get('loginAllowed', true) != false; }
-    function isBoss() { return isActive() && myProfile().role == 'Керівник'; }
-    function isAdmin() { return isActive() && (myProfile().role == 'Керівник' || myProfile().role == 'Адміністратор'); }
+    function myRole() { return myProfile().role; }
+    function isBoss() { return isActive() && myRole() == 'Керівник'; }
+    function isAdmin() { return isActive() && (myRole() == 'Керівник' || myRole() == 'Адміністратор'); }
+    function isDoc() { return isActive() && myRole() == 'Лікар'; }
+    function perm(k) { return isBoss() || (isActive() && myProfile().get('perms', {}).get(k, false) == true); }
+    // створювати/змінювати візити, записи, пацієнтів: право «Редагування», але не Лікар
+    function canJ() { return perm('jEdit') && !isDoc(); }
     function settingsExist() { return exists(/databases/$(database)/documents/settings/main); }
+    function recPath(rid) { return /databases/$(database)/documents/records/$(rid); }
 
-    // Налаштування закладу.
-    // Читати можна без входу: назва закладу показується на екрані входу,
-    // а відсутність документа = «перший запуск».
+    // «своє» = створене цим користувачем; Керівник/Адмін — будь-яке
+    function ownOrAdmin(creator) { return isAdmin() || creator == uid(); }
+
+    // у списку прав ніхто, крім Керівника, не має «Налаштування закладу», «Резервні копії», «Видалення»
+    function noBossPerms(p) {
+      return p.get('setup', false) != true && p.get('backup', false) != true && p.get('rMgmt', false) != true;
+    }
+
+    // ───── налаштування закладу ─────
+    // Читати можна без входу: назва закладу показується на екрані входу, відсутність документа = «перший запуск».
     match /settings/main {
       allow get: if true;
-      // Створити можна лише раз — разом із першим Керівником (див. workers нижче).
-      allow create: if signedIn() && !settingsExist();
-      allow update: if isAdmin();
+      allow create: if signedIn() && !settingsExist();      // лише раз — разом із першим Керівником
+      allow update: if isBoss()
+        // Адмін: лише графік закладу, а список посад — лише з правом «Доступи»
+        || (isActive() && myRole() == 'Адміністратор'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['schedule', 'positions', 'updatedAt'])
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['positions']) || perm('access')));
       allow delete: if false;
     }
 
-    match /workers/{uid} {
-      allow read: if isActive() || (signedIn() && request.auth.uid == uid);
-      // Перший користувач (settings/main ще немає) може створити СВІЙ профіль лише як Керівник.
-      allow create: if signedIn() && request.auth.uid == uid && !settingsExist()
+    // ───── працівники ─────
+    match /workers/{wid} {
+      allow read: if isActive() || (signedIn() && uid() == wid);
+
+      // перший запуск: перший користувач створює СВІЙ профіль лише як Керівник
+      allow create: if signedIn() && uid() == wid && !settingsExist()
                     && request.resource.data.role == 'Керівник'
                     && request.resource.data.status == 'active';
-      // Далі працівників створює і змінює лише Керівник/Адміністратор.
-      allow create: if isAdmin();
-      allow update: if isAdmin();
+
+      // далі: Керівник — будь-кого, крім іншого Керівника; Адмін — лаборантів і лікарів, а «Користувач» (власні посади) — лише з правом «Доступи»
+      allow create: if settingsExist() && (
+          (isBoss() && request.resource.data.role != 'Керівник' && noBossPerms(request.resource.data.get('perms', {})))
+          || (isActive() && myRole() == 'Адміністратор'
+              && noBossPerms(request.resource.data.get('perms', {}))
+              && (request.resource.data.role in ['Лаборант', 'Лікар']
+                  || (request.resource.data.role == 'Користувач' && perm('access'))))
+        );
+
+      allow update: if
+          // Керівник: роль Керівника не змінюється, іншим її призначити не можна, «приховані» права не видаються
+          (isBoss() && (resource.data.role == 'Керівник'
+              ? request.resource.data.role == 'Керівник'
+              : (request.resource.data.role != 'Керівник' && noBossPerms(request.resource.data.get('perms', {})))))
+          // Адмін: не себе, не Керівника й не іншого Адміністратора
+          || (isActive() && myRole() == 'Адміністратор' && wid != uid()
+              && resource.data.role in ['Лаборант', 'Лікар', 'Користувач']
+              && request.resource.data.role in ['Лаборант', 'Лікар', 'Користувач']
+              && noBossPerms(request.resource.data.get('perms', {}))
+              && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['perms', 'role', 'position'])
+                  || perm('access'))
+              && (resource.data.role != 'Користувач' || perm('access')));
+
       allow delete: if false;
     }
 
-    // Тимчасово: робочі колекції — для активних працівників. Звузимо за ролями пізніше.
-    // УВАГА: список явний, щоб правило не накладалось на settings і workers
-    // (у Firestore кілька правил, що збіглися, об'єднуються через «АБО»).
+    // ───── візити й записи (послуги) ─────
+    match /visits/{id} {
+      allow read: if perm('jView');
+      allow create: if canJ() && ownOrAdmin(request.resource.data.get('createdBy', ''));
+      allow update: if canJ() && ownOrAdmin(resource.data.get('createdBy', ''))
+                    && request.resource.data.get('createdBy', '') == resource.data.get('createdBy', '');
+      allow delete: if isAdmin() && perm('jEdit');
+    }
+
+    match /records/{id} {
+      allow read: if perm('jView');
+      allow create: if canJ() && ownOrAdmin(request.resource.data.get('createdBy', ''));
+      allow update: if perm('jEdit') && (
+          // Лікар: лише відмітка «Опис» і лише там, де він указаний як «Лікар (описує)»
+          (isDoc()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['described', 'updatedAt'])
+            && (resource.data.get('describerId', '') == uid() || resource.data.get('describerId', '') == myProfile().get('legacyId', '-')))
+          // решта: Керівник/Адмін — будь-які, Лаборант — лише свої
+          || (!isDoc() && ownOrAdmin(resource.data.get('createdBy', ''))
+              && request.resource.data.get('createdBy', '') == resource.data.get('createdBy', ''))
+        );
+      allow delete: if canJ() && ownOrAdmin(resource.data.get('createdBy', ''));
+    }
+
+    // оплати (суми): читає той, хто має «Суми»; пише той, хто може змінювати відповідний запис
+    match /payments/{rid} {
+      allow read: if perm('jSums');
+      allow create, update: if canJ() && (isAdmin()
+          || (existsAfter(recPath(rid)) && getAfter(recPath(rid)).data.get('createdBy', '') == uid()));
+      allow delete: if canJ() && (isAdmin()
+          || !exists(recPath(rid))
+          || get(recPath(rid)).data.get('createdBy', '') == uid());
+    }
+
+    match /patients/{id} {
+      allow read: if perm('jView');
+      allow create, update: if canJ();
+      allow delete: if isAdmin() && perm('jEdit');
+    }
+
+    // ───── лічильники: лише зростають ─────
+    match /counters/{id} {
+      allow read: if canJ();
+      allow create: if canJ() && id in ['sequential', 'monthly']
+                    && request.resource.data.keys().hasOnly(['value', 'month']);
+      allow update: if canJ() && id in ['sequential', 'monthly']
+                    && request.resource.data.keys().hasOnly(['value', 'month'])
+                    && request.resource.data.value is int
+                    && (request.resource.data.value > resource.data.value
+                        || request.resource.data.get('month', '') != resource.data.get('month', ''));
+      allow delete: if false;
+    }
+
+    // ───── журнал змін: лише дописування ─────
+    match /audit_log/{id} {
+      allow read: if isBoss();
+      allow create: if isActive() && request.resource.data.userId == uid();
+      allow update, delete: if false;
+    }
+
+    // ───── довідники: читають усі активні, змінюють Керівник/Адмін ─────
     match /{col}/{docId} {
-      allow read, write: if isActive() && col in [
-        'patients', 'referring_doctors', 'institutions', 'institution_types', 'services_catalog', 'extra_catalog', 'discounts',
-        'labels', 'visits', 'records', 'payments', 'counters', 'audit_log', 'auto_reports'
-      ];
+      allow read: if isActive() && col in ['referring_doctors', 'institutions', 'institution_types', 'services_catalog', 'extra_catalog', 'discounts', 'labels'];
+      allow create, update, delete: if isAdmin() && col in ['referring_doctors', 'institutions', 'institution_types', 'services_catalog', 'extra_catalog', 'discounts', 'labels'];
+    }
+
+    match /auto_reports/{id} {
+      allow read, write: if isAdmin() && perm('rAuto');
     }
   }
 }
