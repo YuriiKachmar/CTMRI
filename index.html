@@ -1782,6 +1782,7 @@ async function saveVisit(ov, vs){
     if (dir.discounts.find(d => d.id === s.discountId)?.isCustom && !(s.pct > 0 && s.pct <= 100)) return [`Послуга ${n}: вкажіть знижку`, 'Для «призначеної» пільги — число від 0 до 100.'];
     if (s.paid && !s.method) return [`Послуга ${n}: оберіть форму оплати`, 'Оплачену послугу не можна лишити без форми оплати.'];
   }
+  if (vs.isNew){ vs.date = todayISO(); vs.time = nowTime(); }   // дата й час візиту — момент збереження (форма могла бути відкрита до півночі)
   const me = profile.id, now = serverTimestamp();
   /* пацієнт: обраний із бази — оновлюємо його картку; новий — шукаємо точний збіг (ПІБ + дата народження), інакше створюємо */
   let pid = vs.pid;
@@ -1842,6 +1843,12 @@ async function saveVisit(ov, vs){
 
 /* ───── Журнал ───── */
 const jr = { loaded: { t: 'today' }, pp: null, confirmedFor: null, rows: [], unsub: null, err: null, ready: false };
+/* опівночі «Сьогодні» переходить на нову добу без перемикання вкладок */
+setInterval(() => {
+  if (!profile || jr.loaded.t !== 'today' || !jr.unsub || jr.subDay === todayISO()) return;
+  jrSubscribe(); jrPanel(); jrTable();
+  if ($('jBody')) toast('i', 'Настала нова доба', 'Журнал показує сьогоднішній день. Попередній — через «Обрати день».');
+}, 20000);
 function jrStop(){ if (jr.unsub){ jr.unsub(); jr.unsub = null; } }
 const ppMonthDate = (off) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + off); return d; };
 const ppRange = (off) => { const d = ppMonthDate(off), y = d.getFullYear(), m = d.getMonth(); return `01.${p2(m + 1)}.${y} – ${new Date(y, m + 1, 0).getDate()}.${p2(m + 1)}.${y}`; };
