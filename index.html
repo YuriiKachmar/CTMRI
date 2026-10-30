@@ -1534,8 +1534,8 @@ function visitBodyHtml(vs){
   const dots = [...dir.labels].sort((a, b) => hueOf(a.color) - hueOf(b.color))
     .map(l => `<i data-dot="${l.id}" class="${l.id === vs.labelId ? 'sel-dot' : ''}" style="background:${esc(l.color)}" title="${esc(l.name)}"></i>`).join('');
   const refOpts = refOptions(vs).map(x => `<option value="${esc(x.v)}" ${x.v === vs.refKey ? 'selected' : ''}>${esc(x.t)}</option>`).join('');
-  const myRole = profile.role, same = activeWorkers(myRole).filter(w => w.id !== profile.id);
-  const labList = [{ id: profile.id, t: shortName(profile) + ' (я)' }, ...same.map(w => ({ id: w.id, t: shortName(w) }))];
+  const labList = activeWorkers('Лаборант').map(w => ({ id: w.id, t: shortName(w) + (w.id === profile.id ? ' (я)' : '') }));
+  labList.sort((x, y) => (y.id === profile.id) - (x.id === profile.id));   // «(я)» першим
   if (vs.labId && !labList.some(x => x.id === vs.labId)){ const w = workerBy(vs.labId); labList.push({ id: vs.labId, t: w ? shortName(w) : '(працівника видалено)' }); }
   const docs = activeWorkers('Лікар').map(w => ({ id: w.id, t: shortName(w) }));
   if (vs.docId && !docs.some(x => x.id === vs.docId)){ const w = workerBy(vs.docId); docs.push({ id: vs.docId, t: w ? shortName(w) : '(працівника видалено)' }); }
@@ -1550,7 +1550,7 @@ function visitBodyHtml(vs){
     <div class="row"><div class="vf"><label>Лікуючий лікар</label><select class="in" data-vs="ref"><option value="" ${vs.refKey ? '' : 'selected'}>— оберіть —</option><option value="self" ${vs.refKey === 'self' ? 'selected' : ''}>Самоскерування</option>${refOpts}<option value="new">+ Додати нового…</option></select></div>
       <div class="vf sm"><label>№ історії хвороби</label><input class="in" data-vf="hist" value="${esc(vs.hist)}"></div></div></div>
   <div class="vg"><div class="vg-h"><div class="vg-t">Працівники</div></div>
-    <div class="row"><div class="vf"><label>${esc(myRole)}</label><select class="in" data-vs="lab">${labList.map(x => `<option value="${x.id}" ${x.id === vs.labId ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}</select></div>
+    <div class="row"><div class="vf"><label>Лаборант</label><select class="in" data-vs="lab"><option value="" ${vs.labId ? '' : 'selected'}>— оберіть —</option>${labList.map(x => `<option value="${x.id}" ${x.id === vs.labId ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}</select></div>
       <div class="vf"><label>Лікар (описує)</label><select class="in" data-vs="doc"><option value="">— оберіть —</option>${docs.map(x => `<option value="${x.id}" ${x.id === vs.docId ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}</select></div></div></div>
   <div class="vg" style="background:transparent;box-shadow:none;padding:0 0 4px"><div class="vg-h" style="padding:0 2px"><div class="vg-t">Послуги</div></div>
     ${vs.services.map((s, i) => svcCardHtml(vs, s, i)).join('')}
@@ -1591,7 +1591,7 @@ function openVisitForm(visitId){
       .catch(e => toast('e', 'Не вдалося відкрити візит', e.code || ''));
   } else {
     const vs = { isNew: true, id: null, date: todayISO(), time: nowTime(), createdBy: profile.id, pid: null, pname: '', pbirth: '', paddr: '', labelId: '', hist: '', refKey: '',
-      refSnap: '', labId: profile.id, docId: '', removed: [], services: [] };
+      refSnap: '', labId: profile.role === 'Лаборант' ? profile.id : '', docId: '', removed: [], services: [] };
     vs.services.push(newSvc(vs));
     visitWin(vs);
   }
@@ -1725,6 +1725,7 @@ async function saveVisit(ov, vs){
     if (birth > todayISO()) return ['Дата народження в майбутньому', 'Перевірте рік.'];
   }
   if (!vs.refKey) return ['Оберіть скерування', 'Самоскерування або лікуючий лікар.'];
+  if (!vs.labId) return ['Оберіть лаборанта', 'Хто виконав послуги цього візиту.'];
   if (!vs.services.length) return ['Додайте хоча б одну послугу', ''];
   for (let i = 0; i < vs.services.length; i++){
     const s = vs.services[i], n = i + 1;
