@@ -334,6 +334,7 @@
   .pay{display:inline-flex;align-items:center;justify-content:center;width:34px;height:32px;border-radius:9px;font-size:17px;font-weight:900;line-height:1;background:var(--card);box-shadow:var(--bump);-webkit-text-stroke:.5px currentColor;user-select:none}
   .pay.ok2{color:var(--green);background:var(--soft);box-shadow:var(--in-on)}
   .pay.no2{color:var(--red)}
+  .pay{cursor:pointer}.pay.off{opacity:.45;cursor:default;pointer-events:none;box-shadow:none}
   .op-fld{display:block;border-radius:8px;background:var(--tile);box-shadow:var(--in);padding:5px 8px;max-height:58px;overflow:hidden}
   .op-ok{font-size:9px;font-weight:800;color:var(--green)}
   .op-no{font-size:9px;font-weight:800;color:var(--warn)}
@@ -1823,8 +1824,28 @@ function renderJournal(){
     if (jr.pp !== null && jr.pp < 0){ jr.pp += 1; jrPanel(); } else ppToday();
   };
   $('ppConfirm').onclick = () => { jr.loaded = { t: 'month', off: jr.pp }; jr.confirmedFor = jr.pp; jrSubscribe(); jrPanel(); jrTable(); };
-  $('jBody').onclick = (e) => { const p = e.target.closest('[data-vid]'); if (p && !p.classList.contains('off')) openVisitForm(p.dataset.vid); };
+  $('jBody').onclick = (e) => {
+    const p = e.target.closest('[data-vid]'), y = e.target.closest('[data-pay]');
+    if (p && !p.classList.contains('off')) openVisitForm(p.dataset.vid);
+    if (y && !y.classList.contains('off')) togglePay(y.dataset.pay);
+  };
   jrPanel(); jrSubscribe(); jrTable();
+}
+/* швидка зміна оплати з журналу: та сама логіка, що у формі (запис послуги + payments) */
+function setPaid(r, paid, method){
+  const now = serverTimestamp(), paidDate = paid ? (r.paidDate || todayISO()) : null, b = writeBatch(db);
+  b.set(doc(db, 'records', r.id), { paid, paymentMethod: method || null, paidDate, updatedAt: now }, { merge: true });
+  if (paid) b.set(doc(db, 'payments', r.id), { recordId: r.id, visitId: r.visitId, date: paidDate, amount: r.totalAmount, method, updatedAt: now, createdBy: profile.id }, { merge: true });
+  else b.delete(doc(db, 'payments', r.id));
+  audit('update', 'records', r.id, { paid: !!r.paid, paymentMethod: r.paymentMethod || null }, { paid, paymentMethod: method || null });
+  b.commit().catch(e => toast('e', 'Не вдалося змінити оплату', e.code || ''));
+}
+function togglePay(id){
+  const r = jr.rows.find(x => x.id === id);
+  if (!r || !canEditVisit(r)) return;
+  if (r.paid) return confirmWin({ type: 'w', title: `Зняти оплату з послуги № ${r.sequentialNumber}?`, details: 'Послугу буде позначено «не оплачено», запис про оплату видалиться.', action: 'Зняти оплату', onOk: () => setPaid(r, false, r.paymentMethod) });
+  if (r.paymentMethod) return setPaid(r, true, r.paymentMethod);
+  pickWin('Форма оплати', [{ id: 'cashless', label: 'Безготівкова' }, { id: 'cash', label: 'Готівкова' }], '', (m) => setPaid(r, true, m));
 }
 function ppToday(){ jr.pp = null; jr.confirmedFor = null; jr.loaded = { t: 'today' }; jrSubscribe(); jrPanel(); jrTable(); }
 function jrPanel(){
@@ -1906,7 +1927,7 @@ function jrTable(){
       <td class="svc-cell">${esc(r.serviceSnapshot?.name || '')}<span class="svc-price ${r.discountSnapshot ? 'old' : ''}">${money ? nfmt(r.servicePrice) : ''}</span>${money ? disc : ''}${money ? ex : ex.replace(/<span class="svc-price">[^<]*<\/span>/g, '')}</td>
       <td class="r money m-l" ${mcls}><b>${nfmt(r.totalAmount)}</b></td>
       <td class="c cash">${r.paymentMethod === 'cash' ? 'готівка' : r.paymentMethod === 'cashless' ? 'безготівк.' : '—'}</td>
-      <td class="c money pay-status m-r" ${pcls}><span class="pay ${r.paid ? 'ok2' : 'no2'}">${r.paid ? '✓' : '✕'}</span></td>
+      <td class="c money pay-status m-r" ${pcls}><span class="pay ${r.paid ? 'ok2' : 'no2'} ${own ? '' : 'off'}" data-pay="${r.id}" title="${own ? (r.paid ? 'Зняти оплату' : 'Позначити оплаченою') : ''}">${r.paid ? '✓' : '✕'}</span></td>
       <td class="desc"><span class="op-fld">${r.described ? '<span class="op-ok">● описано</span>' : '<span class="op-no">○ не описано</span>'}</span></td>
       <td class="sm"><b>Лаб.:</b> ${esc(lw ? shortName(lw) : '')}<br><b>Лік.:</b> ${esc(dw ? shortName(dw) : '')}</td></tr>`;
   }).join('');
