@@ -562,7 +562,7 @@ import { initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmai
          createUserWithEmailAndPassword, sendPasswordResetEmail, signOut,
          reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc,
-         writeBatch, serverTimestamp, collection, getDocs, query, where, limit, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+         writeBatch, serverTimestamp, collection, getDocs, query, where, limit, orderBy, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ═══ Firebase — проєкт ctmri-1 ═══ */
 const firebaseConfig = {
@@ -1723,10 +1723,10 @@ const RP_READY = { rLab: true };   // звіти, що вже реалізова
 const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, loading: false, err: null };
 const rpAllowed = () => REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
 const iso2 = (y, m, d) => `${y}-${p2(m + 1)}-${p2(d)}`;
-const rpMonthPer = (y, m, onLeft) => ({ t: 'month', y, m, onLeft: !!onLeft });
+const rpMonthPer = (y, m, onLeft) => ({ y, m, onLeft: !!onLeft, custom: null });   // custom: { from, to } — «Довільний період» (поверх обраного місяця, як у period_picker)
 function rpRange(){
   const p = rp.per;
-  return p.t === 'month' ? [iso2(p.y, p.m, 1), iso2(p.y, p.m, new Date(p.y, p.m + 1, 0).getDate())] : [p.from, p.to];
+  return p.custom ? [p.custom.from, p.custom.to] : [iso2(p.y, p.m, 1), iso2(p.y, p.m, new Date(p.y, p.m + 1, 0).getDate())];
 }
 const rpIsCurMonth = (p) => { const n = new Date(); return p.y === n.getFullYear() && p.m === n.getMonth(); };
 function renderReports(){
@@ -1769,8 +1769,8 @@ function rpOpen(){
   };
   const back = () => { rp.cur = null; rp.data = null; renderReports(); };
   $('rpX').onclick = back; $('rpClose').onclick = back;
-  $('rpL').onclick = () => { const p = rp.per; if (p.t === 'custom'){ const n = new Date(); rp.per = rpMonthPer(n.getFullYear(), n.getMonth(), false); } else rpShiftMonth(-1); rp.data = null; rpPanel(); rpDraw(); sync(); };
-  $('rpM').onclick = () => { const p = rp.per; if (p.t === 'month' && p.onLeft){ rpShiftMonth(1); rp.data = null; rpPanel(); rpDraw(); sync(); } };
+  $('rpL').onclick = () => { rpShiftMonth(-1); rp.data = null; rpPanel(); rpDraw(); sync(); };   // ліва — багаторазово на місяць назад (і скидає довільний період)
+  $('rpM').onclick = () => { const p = rp.per; if (p.custom){ p.custom = null; } else if (p.onLeft) rpShiftMonth(1); else return; rp.data = null; rpPanel(); rpDraw(); sync(); };
   $('rpR').onclick = openRpPeriod; $('rpPdf').onclick = () => rpExport('pdf'); $('rpDoc').onclick = () => rpExport('doc');
   $('rpDet').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.detail = s.dataset.v; sync(); rpDraw(); } };
   $('rpCols').onclick = (e) => { const c = e.target.closest('[data-c]'); if (c){ rp.cols[c.dataset.c] = !rp.cols[c.dataset.c]; sync(); rpDraw(); } };
@@ -1783,32 +1783,54 @@ function rpShiftMonth(step){
   const p = rp.per, d = new Date(p.y, p.m + step, 1);
   rp.per = rpMonthPer(d.getFullYear(), d.getMonth(), false); rp.per.onLeft = !rpIsCurMonth(rp.per);
 }
+const rpMonthRng = (p) => `01.${p2(p.m + 1)}.${p.y} – ${new Date(p.y, p.m + 1, 0).getDate()}.${p2(p.m + 1)}.${p.y}`;
 function rpPanel(){
   if (!$('rpL')) return;
   const c = ppCell, p = rp.per, [a, b] = rpRange(), rng = `${isoToUa(a)} – ${isoToUa(b)}`;
-  if (p.t === 'custom') ppSet('rp', { L: { h: c('Місяць', 'повернутись') }, M: { on: true, h: c('Довільний період', rng) }, R: { h: c('Змінити', 'період') } });
+  if (p.custom) ppSet('rp', { L: { h: c('Попередній місяць', '← назад') }, M: { h: c(MON_NAME[p.m], rpMonthRng(p)) }, R: { on: true, h: c('Довільний', rng) } });
   else if (!p.onLeft) ppSet('rp', { L: { h: c('Попередній місяць', '← назад') }, M: { on: true, h: c(MON_NAME[p.m], rng) }, R: { h: c('Довільний період', 'вибрати дати') } });
   else ppSet('rp', { L: { on: true, h: c(MON_NAME[p.m], rng) }, M: { h: c('Наступний місяць', 'вперед →') }, R: { h: c('Довільний період', 'вибрати дати') } });
 }
+/* найперша дата запису в базі (для пресета «Увесь час»): один запит, кешується */
+async function rpEarliest(){
+  if (rp.earliest !== undefined) return rp.earliest;
+  const s = await getDocs(query(collection(db, 'visits'), orderBy('date'), limit(1)));
+  return (rp.earliest = s.docs[0]?.data().date || null);
+}
 function openRpPeriod(){
-  const td = todayISO(), now = new Date(), [a, b] = rpRange();
+  const td = todayISO(), [a, b] = rpRange();
   const addD = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return iso2(d.getFullYear(), d.getMonth(), d.getDate()); };
-  const q = Math.floor(now.getMonth() / 3) * 3;
-  const quick = { '7': [addD(td, -6), td], '30': [addD(td, -29), td], q: [iso2(now.getFullYear(), q, 1), td], y: [iso2(now.getFullYear(), 0, 1), td] };
+  const quick = { '7': 7, '30': 30, '90': 90, '365': 365 };   // пресети — «сьогодні мінус N днів» (period_picker); Квартал = 90, Рік = 365
   const ov = openWin(`<div class="win-h"><h4>Довільний період</h4><button class="win-x" data-x>✕</button></div><div class="win-b">
-    <div class="rp-cl">Швидкий вибір</div><div class="rp-chips" style="margin-bottom:14px"><span class="rp-chip" data-q="7">Останні 7 днів</span><span class="rp-chip" data-q="30">Останні 30 днів</span><span class="rp-chip" data-q="q">Квартал</span><span class="rp-chip" data-q="y">Рік</span></div>
-    <div class="rp-row"><label>Дата з</label><input class="in" type="date" id="rpF" value="${a}"></div><div class="rp-row"><label>Дата по</label><input class="in" type="date" id="rpT" value="${b}"></div>
-    <div class="al al-e" id="rpE" style="display:none;margin:8px 0 0"><span class="al-icon">✕</span><div><b>Некоректний період</b>«Дата з» має бути не пізніше за «Дата по».</div></div></div>
+    <div class="rp-cl">Швидкий вибір</div><div class="rp-chips" id="rpQ" style="margin-bottom:14px"><span class="rp-chip" data-q="7">Останні 7 днів</span><span class="rp-chip" data-q="30">Останні 30 днів</span><span class="rp-chip" data-q="90">Квартал</span><span class="rp-chip" data-q="365">Рік</span><span class="rp-chip" data-q="all">Увесь час</span></div>
+    <div class="rp-row"><label>Дата з</label><input class="in" type="date" id="rpF" value="${a}"></div><div class="rp-row" style="margin-top:8px"><label>Дата по</label><input class="in" type="date" id="rpT" value="${b}"></div>
+    <div class="al al-e" id="rpE" style="display:none;margin:8px 0 0"><span class="al-icon">✕</span><div><b>Дата «по» не може бути раніше за дату «з»</b></div></div>
+    <div class="rp-cl" style="margin-top:14px">Обраний період</div><div id="rpSum" style="font-weight:700"></div></div>
     <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" id="rpApply">Застосувати</button></div>`, 440);
-  ov.addEventListener('click', (e) => {
+  const upd = () => {
+    const f = $('rpF').value, t = $('rpT').value, e = $('rpE'), s = $('rpSum'); if (!f || !t) return;
+    if (t < f){ e.style.display = 'flex'; s.textContent = '—'; return; }
+    e.style.display = 'none';
+    s.textContent = `${isoToUa(f)} – ${isoToUa(t)} · ${plN(Math.round((new Date(t) - new Date(f)) / 86400000) + 1, ['день', 'дні', 'днів'])}`;
+  };
+  const act = (el) => { [...$('rpQ').children].forEach(x => x.classList.toggle('on', x === el)); };
+  ov.addEventListener('input', (e) => { if (e.target.closest('#rpF,#rpT')){ act(null); upd(); } });   // ручна зміна дати вимикає пресет
+  ov.addEventListener('click', async (e) => {
     const k = e.target.closest('[data-q]');
-    if (k){ $('rpF').value = quick[k.dataset.q][0]; $('rpT').value = quick[k.dataset.q][1]; }
+    if (k){
+      act(k);
+      if (k.dataset.q === 'all'){
+        try { $('rpF').value = (await rpEarliest()) || td; } catch (err){ toast('e', 'Не вдалося визначити першу дату', err.code || ''); $('rpF').value = td; }
+      } else $('rpF').value = addD(td, 1 - quick[k.dataset.q]);
+      $('rpT').value = td; upd();
+    }
     if (e.target.closest('#rpApply')){
       const f = $('rpF').value, t = $('rpT').value;
-      if (!f || !t || f > t){ $('rpE').style.display = 'flex'; return; }
-      rp.per = { t: 'custom', from: f, to: t }; rp.data = null; closeWin(ov); rpPanel(); rpDraw(); $('rpGo').innerHTML = '📊 Показати звіт'; rpSyncExport();
+      if (!f || !t || t < f){ $('rpE').style.display = 'flex'; return; }
+      rp.per.custom = { from: f, to: t }; rp.data = null; closeWin(ov); rpPanel(); rpDraw(); $('rpGo').innerHTML = '📊 Показати звіт'; rpSyncExport();
     }
   });
+  upd();
 }
 async function rpLoad(){
   const [a, b] = rpRange(); rp.loading = true; rp.err = null; rpDraw();
