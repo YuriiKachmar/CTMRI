@@ -1751,20 +1751,21 @@ function rpOpen(){
       <span class="rp-chip" data-c="main">Основні послуги</span><span class="rp-chip" data-c="extra">Додаткові послуги</span>${pay ? '<span class="rp-chip" data-c="pay">Оплата</span>' : ''}</div></div>
     <div class="rp-act"><button class="b pri" id="rpGo"></button></div>
     <div id="rpBody"></div>
-    <div class="rp-foot"><button class="b" id="rpClose">Закрити</button><span class="rp-ex"><button class="b" disabled title="Експорт — наступним кроком">📄 PDF</button><button class="b" disabled title="Експорт — наступним кроком">📊 XLS</button><button class="b" disabled title="Експорт — наступним кроком">📝 DOC</button></span></div></div>`;
+    <div class="rp-foot"><button class="b" id="rpClose">Закрити</button><span class="rp-ex"><button class="b" id="rpPdf" disabled>📄 PDF</button><button class="b" id="rpXls" disabled title="Експорт у XLSX — наступним кроком">📊 XLS</button><button class="b" id="rpDoc" disabled>📝 DOC</button></span></div></div>`;
   const sel = $('rpLab');
   sel.innerHTML = '<option value="">Усі лаборанти</option>' + dir.workers.filter(w => w.role === 'Лаборант' && !w.mergedInto).sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk')).map(w => `<option value="${esc(w.id)}">${esc(shortName(w))}${w.status === 'inactive' ? ' (не працює)' : ''}</option>`).join('');
   sel.value = rp.lab;
   const sync = () => {
     [...$('rpDet').children].forEach(s => s.classList.toggle('on', s.dataset.v === rp.detail));
     [...$('rpCols').children].forEach(c => c.classList.toggle('on', !!rp.cols[c.dataset.c]));
+    rpSyncExport();
     $('rpGo').innerHTML = rp.loading ? '<span class="spin"></span>' : (rp.data ? '📊 Оновити звіт' : '📊 Показати звіт'); $('rpGo').disabled = rp.loading;
   };
   const back = () => { rp.cur = null; rp.data = null; renderReports(); };
   $('rpX').onclick = back; $('rpClose').onclick = back;
   $('rpL').onclick = () => { const p = rp.per; if (p.t === 'custom'){ const n = new Date(); rp.per = rpMonthPer(n.getFullYear(), n.getMonth(), false); } else rpShiftMonth(-1); rp.data = null; rpPanel(); rpDraw(); sync(); };
   $('rpM').onclick = () => { const p = rp.per; if (p.t === 'month' && p.onLeft){ rpShiftMonth(1); rp.data = null; rpPanel(); rpDraw(); sync(); } };
-  $('rpR').onclick = openRpPeriod;
+  $('rpR').onclick = openRpPeriod; $('rpPdf').onclick = () => rpExport('pdf'); $('rpDoc').onclick = () => rpExport('doc');
   $('rpDet').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.detail = s.dataset.v; sync(); rpDraw(); } };
   $('rpCols').onclick = (e) => { const c = e.target.closest('[data-c]'); if (c){ rp.cols[c.dataset.c] = !rp.cols[c.dataset.c]; sync(); rpDraw(); } };
   sel.onchange = () => { rp.lab = sel.value; rpDraw(); };
@@ -1804,7 +1805,7 @@ function openRpPeriod(){
     if (e.target.closest('#rpApply')){
       const f = $('rpF').value, t = $('rpT').value;
       if (!f || !t || f > t){ $('rpE').style.display = 'flex'; return; }
-      rp.per = { t: 'custom', from: f, to: t }; rp.data = null; closeWin(ov); rpPanel(); rpDraw(); $('rpGo').innerHTML = '📊 Показати звіт';
+      rp.per = { t: 'custom', from: f, to: t }; rp.data = null; closeWin(ov); rpPanel(); rpDraw(); $('rpGo').innerHTML = '📊 Показати звіт'; rpSyncExport();
     }
   });
 }
@@ -1883,6 +1884,20 @@ const tpChips = (types) => Object.entries(types).sort((a, b) => a[0].localeCompa
 const plN = (n, f) => { const a = n % 10, b = n % 100; return n + ' ' + (a === 1 && b !== 11 ? f[0] : (a >= 2 && a <= 4 && (b < 12 || b > 14) ? f[1] : f[2])); };
 const dmy = (iso) => iso.slice(8) + '.' + iso.slice(5, 7);
 
+function rpNotes(rep, a, b){
+  const notes = [];
+  for (const L of rep.list){
+    if (L.outs.length){
+      const ds = L.outs.map(o => o.date).sort(), win = L.outs.some(o => o.inDay) && L.outs.some(o => !o.inDay) ? 'іншої зміни' : (L.outs[0].inDay ? 'денної зміни' : 'нічної зміни');
+      notes.push({ crit: true, h: `${nameOfW(L.wid)}, ${dmy(ds[0])}${ds[ds.length - 1] !== ds[0] ? '–' + dmy(ds[ds.length - 1]) : ''}:`, t: `графік ${L.outs[0].sch}, але ${plN(L.outs.length, ['запис', 'записи', 'записів'])} зроблено поза його вікном — у вікні ${win}. Причину визначає адміністратор. Понаднормові система не нараховує.` });
+    }
+    const ps = (workerBy(L.wid)?.shifts || []).filter(p => !p.excluded && p.start > a && p.start <= b);
+    if (ps.length) notes.push({ crit: false, h: `${nameOfW(L.wid)}:`, t: `графік змінено ${dmy(ps[0].start)} (${labSchedText(L.wid, a, b)}). Зміни пораховані окремо: ${Object.entries(L.types).map(([t, n]) => t + ' ' + n).join(', ')}.` });
+    if (L.nosch) notes.push({ crit: false, h: `${nameOfW(L.wid)}:`, t: `на дату ${plN(L.nosch, ['запису', 'записів', 'записів'])} графік не заданий — зміну визначено за календарною датою (тип «—»).` });
+  }
+  if (rep.nod.length) notes.push({ crit: true, h: 'Чергування без записів у журналі', t: `(з календаря): ${rep.nod.map(n => `${esc(nameOfW(n.wid))} — ${dmy(n.iso)}`).join(' · ')}. Імовірно, не було пацієнтів. Ці дні не входять у підсумок змін вище — рішення про оплату ухвалює адміністратор.` });
+  return notes;
+}
 function rpDraw(){
   const box = $('rpBody'); if (!box || rp.cur !== 'rLab') return;
   if (rp.loading){ box.innerHTML = '<div class="rp-ph"><span class="spin dk"></span></div>'; return; }
@@ -1921,23 +1936,138 @@ function rpDraw(){
     const n = rep.list.reduce((s, L) => s + L.count, 0), types = {}; rep.list.forEach(L => Object.entries(L.types).forEach(([t, c]) => { types[t] = (types[t] || 0) + c; }));
     grand = `<tr class="tt"><td><b>${rp.detail === 'short' ? `Разом — ${plN(rep.list.length, ['лаборант', 'лаборанти', 'лаборантів'])}` : `Разом усі — ${plN(n, ['зміна', 'зміни', 'змін'])}`}</b></td><td class="c">${tpChips(types)}${rp.detail === 'short' ? ` <b>${n}</b>` : ''}</td>${cell(sumAgg(rep.list.map(L => L.tot)))}</tr>`;
   }
-  /* примітки */
-  const notes = [];
-  for (const L of rep.list){
-    if (L.outs.length){
-      const ds = L.outs.map(o => o.date).sort(), win = L.outs.some(o => o.inDay) && L.outs.some(o => !o.inDay) ? 'іншої зміни' : (L.outs[0].inDay ? 'денної зміни' : 'нічної зміни');
-      notes.push({ crit: true, h: `${nameOfW(L.wid)}, ${dmy(ds[0])}${ds[ds.length - 1] !== ds[0] ? '–' + dmy(ds[ds.length - 1]) : ''}:`, t: `графік ${L.outs[0].sch}, але ${plN(L.outs.length, ['запис', 'записи', 'записів'])} зроблено поза його вікном — у вікні ${win}. Причину визначає адміністратор. Понаднормові система не нараховує.` });
-    }
-    const ps = (workerBy(L.wid)?.shifts || []).filter(p => !p.excluded && p.start > a && p.start <= b);
-    if (ps.length) notes.push({ crit: false, h: `${nameOfW(L.wid)}:`, t: `графік змінено ${dmy(ps[0].start)} (${labSchedText(L.wid, a, b)}). Зміни пораховані окремо: ${Object.entries(L.types).map(([t, n]) => t + ' ' + n).join(', ')}.` });
-    if (L.nosch) notes.push({ crit: false, h: `${nameOfW(L.wid)}:`, t: `на дату ${plN(L.nosch, ['запису', 'записів', 'записів'])} графік не заданий — зміну визначено за календарною датою (тип «—»).` });
-  }
-  if (rep.nod.length) notes.push({ crit: true, h: 'Чергування без записів у журналі', t: `(з календаря): ${rep.nod.map(n => `${esc(nameOfW(n.wid))} — ${dmy(n.iso)}`).join(' · ')}. Імовірно, не було пацієнтів. Ці дні не входять у підсумок змін вище — рішення про оплату ухвалює адміністратор.` });
+  const notes = rpNotes(rep, a, b);
   box.innerHTML = `<div class="rp-wrap"><table class="rp-t">${head}<tbody>${body}${grand || ''}</tbody></table></div>`
     + (rep.list.length ? '' : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Даних не знайдено за заданими критеріями</b></div></div>')
     + `<div class="rp-leg">Позначки: <span class="sh sd">Д</span> денна · <span class="sh sn">Н</span> нічна · <span class="sh s24">Доба</span> ${esc(settings?.shiftWindows?.dayFrom || '08:00')}–${esc(settings?.shiftWindows?.dayFrom || '08:00')} · ⚠️ поза вікном графіку${rp.lab ? '' : ''}</div>`
     + notes.map(n => `<div class="al ${n.crit ? 'al-w' : 'al-i'}" style="margin:8px 0 0"><span class="al-icon"><span>${n.crit ? '!' : 'i'}</span></span><div><b>${esc(n.h)}</b> ${n.crit && n.h.startsWith('Чергування') ? n.t : esc(n.t)}</div></div>`).join('')
     + (rp.lab ? '<div class="rp-hint">Вибрано одного лаборанта — загальний підсумок «Разом усі» приховано.</div>' : '');
+}
+
+/* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
+const MON_ABBR = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
+const MON_FULL_G = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+const RP_CODE = { rLab: 'Labor' };
+/* період у назві файлу: 2026 · IV · Вер · 02Вер · 05-20Вер · 05Вер-20Жов */
+function rpPeriodToken(a, b){
+  const [ya, ma, da] = a.split('-').map(Number), [yb, mb, dbb] = b.split('-').map(Number), last = (y, m) => new Date(y, m, 0).getDate();
+  if (a === b) return p2(da) + MON_ABBR[ma - 1];
+  if (ya === yb && ma === 1 && da === 1 && mb === 12 && dbb === 31) return String(ya);
+  if (ya === yb && da === 1 && ma === mb && dbb === last(yb, mb)) return MON_ABBR[ma - 1];
+  if (ya === yb && da === 1 && (ma - 1) % 3 === 0 && mb === ma + 2 && dbb === last(yb, mb)) return ['I', 'II', 'III', 'IV'][(ma - 1) / 3];
+  if (ya === yb && ma === mb) return `${p2(da)}-${p2(dbb)}${MON_ABBR[ma - 1]}`;
+  return `${p2(da)}${MON_ABBR[ma - 1]}-${p2(dbb)}${MON_ABBR[mb - 1]}`;
+}
+function rpPeriodTitle(a, b){
+  const [ya, ma, da] = a.split('-').map(Number), [yb, mb, dbb] = b.split('-').map(Number), tk = rpPeriodToken(a, b), rng = `${p2(da)}.${p2(ma)}–${p2(dbb)}.${p2(mb)}.${yb}`;
+  if (a === b) return isoToUa(a);
+  if (tk === String(ya)) return `${ya} рік (${rng})`;
+  if (['I', 'II', 'III', 'IV'].includes(tk)) return `${tk} квартал ${ya} (${rng})`;
+  if (ya === yb && da === 1 && ma === mb && MON_ABBR[ma - 1] === tk) return `${MON_FULL_G[ma - 1]} ${ya} (${rng})`;
+  return `${isoToUa(a)} – ${isoToUa(b)}`;
+}
+function rpFileBase(){
+  const t = new Date();
+  return `ZV-${RP_CODE[rp.cur] || 'Rep'}-${rpPeriodToken(rp.data.a, rp.data.b)}-${p2(t.getDate())}${p2(t.getMonth() + 1)}${p2(t.getFullYear() % 100)}`;
+}
+const PX = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/* модель друкованої таблиці: однакова з екранною (вигляд, критерії, стовпці), але без кольорів; нулі → «—» */
+function rpPrintModel(){
+  const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay, cm = rp.cols.main, ce = rp.cols.extra, full = rp.detail === 'full';
+  const dash = (v) => (v ? nfmt(v) : '—');
+  const num = (g) => [...(cm ? [dash(g.n), ...(money ? [dash(g.base), dash(g.after)] : [])] : []), ...(ce ? [dash(g.exN), ...(money ? [dash(g.exSum)] : [])] : []), ...(pay ? [dash(g.cashless), dash(g.cash)] : [])];
+  const leaf = [...(cm ? ['К-сть', ...(money ? ['Без пільг, грн', 'З пільгами, грн'] : [])] : []), ...(ce ? ['К-сть', ...(money ? ['Сума, грн'] : [])] : []), ...(pay ? ['Безготівка', 'Готівка'] : [])];
+  const groups = [...(cm ? [['Основні послуги', money ? 3 : 1]] : []), ...(ce ? [['Додаткові', money ? 2 : 1]] : []), ...(pay ? [['Оплата, грн', 2]] : [])];
+  const tps = (types) => Object.entries(types).sort((x, y) => x[0].localeCompare(y[0], 'uk')).map(([t, n]) => `${t} ${n}`).join(', ');
+  const rows = [];
+  if (!rep.list.length) rows.push({ k: 'r', cells: [{ t: '—' }, { t: '—' }, ...leaf.map(() => ({ t: '—' }))] });
+  else if (!full){
+    rep.list.forEach(L => rows.push({ k: 'r', cells: [{ t: nameOfW(L.wid), b: true, sub: labSchedText(L.wid, a, b) }, { t: `${L.count} (${tps(L.types)})`, c: 1 }, ...num(L.tot).map(t => ({ t }))] }));
+  } else {
+    rep.list.forEach(L => {
+      rows.push({ k: 'gh', cells: [{ t: `${nameOfW(L.wid)} · ${labSchedText(L.wid, a, b)}`, b: true, span: 2 + leaf.length }] });
+      for (const s of L.shifts){
+        const ds = [...s.dates.keys()].sort();
+        ds.forEach((d, i) => rows.push({ k: 'r', cells: [{ t: isoToUa(d) + (ds.length > 1 ? (i ? ' ◣' : ' ◤') : '') }, ...(i ? [] : [{ t: s.tp + (s.out ? ' ⚠' : ''), c: 1, rs: ds.length }]), ...num(s.dates.get(d)).map(t => ({ t }))] }));
+      }
+      rows.push({ k: 'st', cells: [{ t: `Разом — ${plN(L.count, ['зміна', 'зміни', 'змін'])}`, b: true }, { t: tps(L.types), c: 1, b: true }, ...num(L.tot).map(t => ({ t, b: true }))] });
+    });
+  }
+  if (rep.list.length && !rp.lab){
+    const n = rep.list.reduce((s, L) => s + L.count, 0), types = {}; rep.list.forEach(L => Object.entries(L.types).forEach(([t, c]) => { types[t] = (types[t] || 0) + c; }));
+    rows.push({ k: 'tt', cells: [{ t: full ? `Разом усі — ${plN(n, ['зміна', 'зміни', 'змін'])}` : `Разом — ${plN(rep.list.length, ['лаборант', 'лаборанти', 'лаборантів'])}`, b: true }, { t: full ? tps(types) : `${n} (${tps(types)})`, c: 1, b: true }, ...num(sumAgg(rep.list.map(L => L.tot))).map(t => ({ t, b: true }))] });
+  }
+  return { rep, leaf, groups, rows, full, lead: [full ? 'Дата' : 'Лаборант', full ? 'Зміна' : 'Змін'], notes: rpNotes(rep, a, b), empty: !rep.list.length };
+}
+/* ширина стовпців: max(заголовок, найдовше значення) · ~1.75 мм/символ + 4 мм; «№» — 8 мм; ≤170 мм портрет, ≤267 альбомна, далі — стискаємо відступи */
+function rpWidths(m){
+  const heads = [...m.lead, ...m.leaf], w = heads.map(h => String(h).length);
+  for (const r of m.rows) if (r.k !== 'gh'){
+    let ci = 0;
+    for (const c of r.cells){
+      const lens = Math.max(...String(c.t).split('\n').map(x => x.length), c.sub ? c.sub.length * .8 : 0);
+      if (!r.rs && !c.rs) w[ci] = Math.max(w[ci], lens); else if (c.rs) w[ci] = Math.max(w[ci], lens);
+      ci++;
+    }
+  }
+  const mm = w.map(l => l * 1.75 + 4), sum = mm.reduce((s, x) => s + x, 0) + 8;
+  return { sum, orient: sum <= 170 ? 'portrait' : 'landscape', squeeze: sum > 267 };
+}
+function rpPrintHtml(m, doc){
+  const { a, b } = rp.data, base = rpFileBase(), wd = rpWidths(m), fac = settings?.facilityName || '', adr = settings?.facilityAddress || '';
+  const ini = (fac.split(/\s+/).filter(Boolean).map(x => x[0]).join('').slice(0, 2) || 'КТ').toUpperCase(), td = new Date(), tds = `${p2(td.getDate())}.${p2(td.getMonth() + 1)}.${td.getFullYear()}`;
+  const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b);
+  const sel = rp.lab ? `Вибірка даних по: лаборант — ${nameOfW(rp.lab)}` : '';
+  const cols = m.lead.length + m.leaf.length;
+  const th1 = `<tr><th rowspan="2" class="nn"></th>${m.lead.map(h => `<th rowspan="2" class="l">${PX(h)}</th>`).join('')}${m.groups.map(g => `<th colspan="${g[1]}" class="g">${PX(g[0])}</th>`).join('')}</tr><tr>${m.leaf.map(h => `<th class="r">${PX(h)}</th>`).join('')}</tr>`;
+  let n = 0;
+  const body = m.rows.map(r => {
+    if (r.k === 'gh') return `<tr class="gh"><td class="nn"></td><td colspan="${cols}"><b>${PX(r.cells[0].t)}</b></td></tr>`;
+    const nn = r.k === 'r' && !m.empty ? ++n : '';
+    const skip = m.full && r.k === 'r' && !m.empty && r.cells.length === 1 + m.leaf.length ? 1 : 0;   // рядок без комірки «Зміна» (її об'єднано з рядком вище)
+    return `<tr class="${r.k}"><td class="nn">${nn}</td>${r.cells.map((c, i) => { const idx = i ? i + skip : 0, al = idx < 2 ? (c.c ? 'c' : 'l') : 'r'; return `<td class="${al}${c.b ? ' b' : ''}"${c.rs ? ` rowspan="${c.rs}"` : ''}>${PX(c.t)}${c.sub ? `<div class="sb">${PX(c.sub)}</div>` : ''}</td>`; }).join('')}</tr>`;
+  }).join('');
+  const notes = m.notes.map((x, i) => `<div class="nt ${x.crit ? 'cr' : ''}">${i + 1}. <b>${PX(x.h)}</b> ${x.crit && x.h.startsWith('Чергування') ? x.t : PX(x.t)}</div>`).join('');
+  const css = `@page{size:A4 ${wd.orient};margin:15mm 10mm 20mm 20mm;@bottom-right{content:"Сторінка " counter(page) " з " counter(pages);font:8pt Arsenal,Arial,sans-serif;color:#6B7B78}@bottom-left{content:"Дата формування: ${tds}";font:8pt Arsenal,Arial,sans-serif;color:#6B7B78}@top-left{content:"${title.replace(/"/g, '')} · ${per.replace(/"/g, '')}";font:8pt Arsenal,Arial,sans-serif;color:#6B7B78}}
+@page :first{@top-left{content:none}}
+*{box-sizing:border-box}body{margin:0;font:9pt/1.5 Arsenal,Arial,sans-serif;color:#000}
+.hd{display:flex;align-items:center;gap:4mm;margin-bottom:5mm}.lg{width:16mm;height:16mm;flex:0 0 16mm;background:#1E6B4F;color:#fff;font-weight:700;font-size:15pt;display:flex;align-items:center;justify-content:center}
+.fn{font-size:13pt;font-weight:700}.fa{color:#6B7B78}
+.rt{display:flex;justify-content:center;align-items:center;position:relative;font-size:13pt;font-weight:700}.bd{position:absolute;right:0;font-size:9pt;border:.5pt solid #000;padding:0 2mm}
+.pr{text-align:center;font-size:11pt;font-weight:700;margin-top:1mm}.sl{text-align:center;font-weight:400;margin-top:1mm}
+table{width:100%;border-collapse:collapse;margin-top:5mm;${wd.squeeze ? '' : ''}}thead{display:table-header-group}tr{page-break-inside:avoid}
+th,td{border-bottom:.5pt solid #000;border-left:.3pt solid #777;padding:0 ${wd.squeeze ? '.8mm' : '2mm'};vertical-align:middle;white-space:nowrap}
+th{font-weight:700;border-bottom:1.1pt solid #000;text-align:center}th.l{text-align:left}th.r{text-align:right}th.g{border-bottom:.5pt solid #000}
+td.l{text-align:left}td.c{text-align:center}td.r{text-align:right}td.b,.b{font-weight:700}.sb{font-weight:400;color:#6B7B78;font-size:8pt}
+.nn{width:8mm;min-width:8mm;border-left:none!important;color:#6B7B78;font-size:8pt;text-align:center;font-weight:400}
+tr.st td{border-top:.5pt solid #000;border-bottom:1.1pt solid #000}tr.tt td{border-top:.5pt solid #000;border-bottom:1.1pt solid #000}tr.gh td{border-bottom:.5pt solid #000}
+.nt{margin-top:2mm;color:#6B7B78;font-size:8.5pt}.nt.cr{color:#7A1F1F}.em{margin-top:4mm;border:.5pt solid #000;padding:1.5mm 3mm}
+.sg{margin-top:14mm;border-top:.5pt solid #000;width:60mm}${doc ? '.ft{margin-top:8mm;color:#6B7B78;font-size:8pt}' : ''}`;
+  const inner = `<div class="hd"><div class="lg">${PX(ini)}</div><div><div class="fn">${PX(fac)}</div><div class="fa">${PX(adr)}</div></div></div>
+    <div class="rt">${PX(title)}<span class="bd">${m.full ? 'Повний' : 'Стислий'}</span></div><div class="pr">${PX(per)}</div>${sel ? `<div class="sl">${PX(sel)}</div>` : ''}
+    <table><thead>${th1}</thead><tbody>${body}</tbody></table>${m.empty ? '<div class="em">ⓘ Даних не знайдено за заданими критеріями</div>' : ''}${notes}<div class="sg"></div>${doc ? `<div class="ft">Дата формування: ${tds}</div>` : ''}`;
+  const head = `<meta charset="utf-8"><title>${PX(base)}</title><link href="https://fonts.googleapis.com/css2?family=Arsenal:wght@400;700&display=swap" rel="stylesheet"><style>${css}</style>`;
+  if (!doc) return { name: base, html: `<!doctype html><html lang="uk"><head>${head}</head><body>${inner}</body></html>`, orient: wd.orient };
+  const land = wd.orient === 'landscape';
+  const wordCss = `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]--><style>@page WS{size:${land ? '297mm 210mm' : '210mm 297mm'};mso-page-orientation:${land ? 'landscape' : 'portrait'};margin:15mm 10mm 20mm 20mm}div.WS{page:WS}</style>`;
+  return { name: base, html: `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head>${head}${wordCss}</head><body><div class="WS">${inner}</div></body></html>`, orient: wd.orient };
+}
+function rpExport(kind){
+  if (!rp.data) return toast('i', 'Спершу покажіть звіт', 'Експортується те, що відображено на екрані.');
+  const ex = rpPrintHtml(rpPrintModel(), kind === 'doc'); rp.last = { kind, name: ex.name, html: ex.html, orient: ex.orient };
+  if (kind === 'doc'){
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿', ex.html], { type: 'application/msword' })); a.download = ex.name + '.doc'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    return;
+  }
+  const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
+  const d = f.contentDocument; d.open(); d.write(ex.html); d.close();
+  const old = document.title; document.title = ex.name;   // Chrome пропонує цю назву як ім'я PDF-файлу
+  const done = () => { document.title = old; setTimeout(() => f.remove(), 1000); };
+  f.contentWindow.addEventListener('afterprint', done);
+  (d.fonts && d.fonts.ready ? d.fonts.ready.catch(() => {}) : Promise.resolve()).then(() => setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e){ toast('e', 'Не вдалося відкрити друк', e.message || ''); done(); } }, 200));
+}
+function rpSyncExport(){
+  for (const id of ['rpPdf', 'rpDoc']){ const b = $(id); if (b){ b.disabled = !rp.data; b.title = rp.data ? '' : 'Спершу покажіть звіт'; } }
 }
 
 $('mbServ').onclick = openServicesWin;
