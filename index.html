@@ -448,6 +448,26 @@
   .pt-empty{text-align:center;padding:44px 20px;color:var(--muted);font-size:12.5px}
   .pt-empty .ic{font-size:30px;display:block;margin-bottom:11px;opacity:.5}
 
+  /* ── Матриця доступів (dostupy.html) ── */
+  .cb{display:inline-flex;align-items:center;justify-content:center;width:34px;height:32px;border-radius:9px;cursor:pointer;font-size:20px;font-weight:900;line-height:1;background:var(--card);box-shadow:var(--bump);color:#C0392B;user-select:none;-webkit-text-stroke:.6px currentColor}
+  .cb.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .cb:active{box-shadow:var(--in)}
+  .cf{display:inline-flex;align-items:center;justify-content:center;width:34px;height:32px;border-radius:9px;background:#E4E9EA;font-size:20px;font-weight:900;line-height:1;color:#9AA6A4;opacity:.55;cursor:not-allowed;-webkit-text-stroke:.6px currentColor}
+  .cf.on{color:var(--green)}
+  .mtx{border-radius:12px;overflow:auto;box-shadow:var(--in);background:var(--tile);-webkit-overflow-scrolling:touch}
+  .mtx table{border-collapse:collapse;font-size:11.5px;min-width:100%}
+  .mtx th{background:var(--green);color:#fff;padding:7px 5px;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap;text-align:center}
+  .mtx th.l{text-align:left;padding-left:11px}
+  .mtx th.sub{background:color-mix(in srgb,var(--green) 80%,black);font-size:8px;text-transform:none;letter-spacing:0;font-weight:600;line-height:1.25}
+  .mtx td{padding:5px 4px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+  .mtx td.l{text-align:left;padding-left:11px}
+  .mtx .grp{border-left:2px solid #B9C4C2}
+  .mtx .unm{font-weight:700;font-size:11.5px}
+  .mtx .uname{cursor:pointer}.mtx .uname.lock{cursor:default;color:var(--muted)}
+  .mtx .ups{font-size:10px;color:var(--muted)}
+  .mtx tr.inact td{opacity:.5}
+  .tagx{display:inline-block;font-size:9px;font-weight:800;padding:3px 8px;border-radius:9px;background:#E4E9EA;color:var(--muted)}
+
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:360px;z-index:60}
 
   @media (max-width:560px){
@@ -1469,8 +1489,185 @@ $('mbServ').onclick = openServicesWin;
 $('mbDisc').onclick = openDiscountsWin;
 $('mbLab').onclick = openLabelsWin;
 $('mbCal').onclick = () => toast('i', 'Календар чергувань', 'Розділ ще в розробці.');
-$('mbSet').onclick = () => toast('i', 'Налаштування', 'Розділ ще в розробці.');
+$('mbSet').onclick = () => openSettings('zaklad');
 TABS.forEach((t, i) => { const el = document.createElement('div'); el.className = 'tab' + (i === 0 ? ' on' : ''); el.textContent = t; el.onclick = () => pickTab(i); $('folder').insertBefore(el, $('sheet')); });
+
+/* ═══ ПРАВА ДОСТУПУ (dostupy.html): матриця «користувач × право». Права лише в матриці, у картці працівника їх немає ═══ */
+const PERM_COLS = [
+  ['setup', 'Дані<br>закладу', 'Налаштування'], ['look', 'Вигляд<br>програми'], ['backup', 'Резервне<br>копіюв.'], ['access', 'Доступи'],
+  ['jView', 'Перегляд<br>Дані', 'Журнал'], ['jSums', 'Перегляд<br>Суми'], ['jEdit', 'Редагу-<br>вання'],
+  ['rPat', 'По<br>пацієнтах', 'Звіти'], ['rLab', 'По<br>лаборантах'], ['rDoc', 'По<br>лікарях'], ['rRef', 'По<br>скеруваннях'], ['rLbl', 'За<br>розподілом'],
+  ['rPay', 'По<br>оплаті'], ['rDisc', 'По<br>пільгах'], ['rSvc', 'По<br>послугах'], ['rCtor', 'Конструктор'], ['rAuto', 'Автозвіт'], ['rMgmt', 'Управлін-<br>ський']
+];
+const PERM_KEYS = PERM_COLS.map(c => c[0]);
+const BOSS_ONLY = ['setup', 'backup', 'rMgmt'];          // фіксовані: лише Керівник
+/* Початкові набори за посадою. УВАГА: це ПРИКЛАД із демо-матриці, не затверджені значення (власник визначить пізніше).
+   Кожна посада — окремий масив; порядок = PERM_KEYS. */
+const ACCESS_TEMPLATES = {
+  'Адміністратор': [0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0],
+  'Користувач':    [0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0],
+  'Лаборант':      [0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  'Лікар':         [0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0]
+};
+function normPerms(role, perms){
+  const o = {}, boss = role === 'Керівник', tpl = ACCESS_TEMPLATES[role] || [];
+  PERM_KEYS.forEach((k, i) => { o[k] = boss ? true : (perms && k in perms ? !!perms[k] : !!tpl[i]); });
+  if (!boss){
+    BOSS_ONLY.forEach(k => { o[k] = false; }); o.look = true;               // «Вигляд програми» — всім
+    if (!o.jView){ o.jSums = false; o.jEdit = false; }                      // без «Дані» суми й редагування не мають сенсу
+  }
+  return o;
+}
+const permsOf = (w) => normPerms(w?.role, w?.perms);
+const can = (k) => !!profile && permsOf(profile)[k];
+const canSeeAccess = () => profile?.role === 'Керівник' || (profile?.role === 'Адміністратор' && can('access'));
+/* перемикач одного права з автоправилами: вимкнув «Дані» → вимикаються «Суми» і «Редагування»; увімкнув їх → «Дані» вмикаються */
+function togglePerm(perms, k){
+  const n = { ...perms }; n[k] = !n[k];
+  if (k === 'jView' && !n.jView){ n.jSums = false; n.jEdit = false; }
+  if ((k === 'jSums' || k === 'jEdit') && n[k]) n.jView = true;
+  return n;
+}
+const noAccessBox = (t) => `<div class="al al-w" style="margin:12px 0 0"><span class="al-icon"><span>!</span></span><div><b>Немає доступу до цього розділу</b>${esc(t || 'Зверніться до Керівника, якщо потрібні зміни.')}</div></div>`;
+
+/* ───── Налаштування (модальне вікно; поки працює вкладка «Доступи») ───── */
+function openSettings(tab){
+  const tabs = [['zaklad', 'Заклад'], ['prog', 'Програма']];
+  if (canSeeAccess()) tabs.push(['access', 'Доступи']);
+  let cur = tabs.some(t => t[0] === tab) ? tab : 'zaklad';
+  const ov = openWin('<div class="win-h"><h4>Налаштування</h4><button class="win-x" data-x>✕</button></div><div class="win-b" data-sb></div><div class="win-f"><button class="b" data-x>Закрити</button></div>', cur === 'access' ? 1240 : 700);
+  const draw = () => {
+    ov.querySelector('.win').style.maxWidth = (cur === 'access' ? 1240 : 700) + 'px';
+    ov.querySelector('[data-sb]').innerHTML = `<div class="tabs2" style="margin-top:0">${tabs.map(t => `<span class="tab2 ${t[0] === cur ? 'on' : ''}" data-st="${t[0]}">${t[1]}</span>`).join('')}</div>` +
+      (cur === 'access' ? matrixHtml() : emptyBox('Цей розділ налаштувань — наступний крок розробки.'));
+  };
+  ov._render = draw; draw();
+  ov.addEventListener('click', async (e) => {
+    const t = e.target.closest('[data-st]'), c = e.target.closest('[data-cb]'), nm = e.target.closest('[data-card]');
+    if (t && t.dataset.st !== cur){
+      if (t.dataset.st === 'access'){
+        closeWin(ov);
+        if (await confirmPassword('Доступи')) openSettings('access'); else openSettings('zaklad');
+        return;
+      }
+      cur = t.dataset.st; draw();
+    }
+    if (c){
+      const w = dir.workers.find(x => x.id === c.dataset.cb.split(':')[0]), k = c.dataset.cb.split(':')[1];
+      if (!w || !rowEditable(w)) return;
+      saveEntry('workers', w.id, { perms: togglePerm(permsOf(w), k) });
+    }
+    if (nm){ const w = dir.workers.find(x => x.id === nm.dataset.card); if (w) w.role === 'Лаборант' || w.role === 'Лікар' ? openWorkerForm(w.id) : openUserForm(w.id); }
+    if (e.target.closest('[data-adduser]')) openUserForm(null);
+  });
+  if (cur === 'access'){ /* відкрито одразу після підтвердження пароля */ }
+  return ov;
+}
+function rowEditable(w){
+  if (w.status === 'inactive' || w.role === 'Керівник' || w.id === profile.id) return false;
+  if (profile.role === 'Керівник') return true;
+  return profile.role === 'Адміністратор' && can('access') && ['Лаборант', 'Лікар', 'Користувач'].includes(w.role);
+}
+function permCell(k, i, perms, boss, editable, key){
+  const on = perms[k], grp = [0, 4, 7].includes(i) ? ' grp' : '';
+  const fixed = boss ? true : (BOSS_ONLY.includes(k) || k === 'look');
+  if (fixed || !editable) return `<td class="${grp.trim()}"><span class="cf ${on ? 'on' : ''}">${on ? '✓' : '✕'}</span></td>`;
+  return `<td class="${grp.trim()}"><span class="cb ${on ? 'on' : ''}" data-cb="${key}:${k}">${on ? '✓' : '✕'}</span></td>`;
+}
+const mxHead = () => `<thead><tr><th class="l" rowspan="2">Користувач</th><th class="l" rowspan="2">Посада</th><th class="grp" colspan="4">Налаштування</th><th class="grp" colspan="3">Журнал</th><th class="grp" colspan="11">Звіти</th></tr>
+  <tr>${PERM_COLS.map((c, i) => `<th class="sub ${[0, 4, 7].includes(i) ? 'grp' : ''}">${c[1]}</th>`).join('')}</tr></thead>`;
+function matrixHtml(){
+  const order = ['Керівник', 'Адміністратор', 'Користувач', 'Лаборант', 'Лікар'];
+  const list = dir.workers.filter(w => !w.mergedInto).sort((a, b) => ((a.status === 'inactive') - (b.status === 'inactive')) || (order.indexOf(a.role) - order.indexOf(b.role)) || sortWorkers(a, b));
+  const rows = list.map(w => {
+    const inact = w.status === 'inactive', boss = w.role === 'Керівник', ed = rowEditable(w), p = permsOf(w);
+    const nm = boss ? `<span class="uname lock"><span class="unm">${esc(shortName(w))}</span> 🔒</span>` : `<span class="uname" data-card="${w.id}"><span class="unm">${esc(shortName(w))}</span></span>`;
+    const src = ['Лаборант', 'Лікар'].includes(w.role) ? '<span class="ups"> · із Працівників</span>' : '';
+    return `<tr class="${inact ? 'inact' : ''}"><td class="l">${nm}${src}${inact ? ' <span class="tagx">не активний</span>' : ''}</td><td class="l ups">${esc(w.role || '')}</td>${PERM_KEYS.map((k, i) => permCell(k, i, p, boss, ed && !inact, w.id)).join('')}</tr>`;
+  }).join('');
+  return `<div class="box-t">Користувачі та їхні доступи <span class="sect-sub">клітинка — доступ · ПІБ — картка</span></div>
+    <div class="mtx"><table>${mxHead()}<tbody>${rows}</tbody></table></div>
+    <div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Лаборантів і лікарів тут не додають</b>Вони заводяться в розділі «Працівники» й з'являються тут самі. Тут можна лише змінити їхні права. Зміна прав діє з наступного входу користувача.</div></div>
+    ${profile.role === 'Керівник' || canSeeAccess() ? '<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="grp-add-full" data-adduser><span class="plus">+</span>Додати користувача</button></div>' : ''}`;
+}
+
+/* ───── Картка користувача (Адміністратор / Користувач) ───── */
+function openUserForm(id){
+  const rec = id ? dir.workers.find(x => x.id === id) : null;
+  let pv = rec ? null : null;     // права нового користувача (показ у картці створення)
+  const ov = formWin(rec ? fullName(rec) : 'Новий користувач', `
+    ${rec ? '' : `<div class="row"><div class="f full"><label>Посада <span style="float:right;color:var(--ph)">обов'язково</span></label><select class="in" data-f="role"><option value="">Оберіть посаду…</option><option>Адміністратор</option><option>Користувач</option><option>Лаборант</option><option>Лікар</option></select></div></div>`}
+    <div class="row"><div class="f full"><label>Прізвище, ім'я, по батькові</label><input class="in" data-f="fio" value="${esc(rec ? fullName(rec) : '')}"></div></div>
+    ${rec ? `<div class="row"><div class="f"><label>Посада</label><select class="in" data-f="role"><option ${rec.role === 'Адміністратор' ? 'selected' : ''}>Адміністратор</option><option ${rec.role === 'Користувач' ? 'selected' : ''}>Користувач</option></select></div>
+      <div class="f"><label>Статус</label>${seg(rec.status)}</div></div>` : ''}
+    <div class="row"><div class="f"><label>E-mail (логін для входу)${rec ? ' — не змінюється' : ''}</label><input class="in" type="email" data-f="email" autocomplete="off" ${rec ? 'disabled' : ''} value="${esc(rec?.email || '')}"></div>
+      ${rec ? '<div class="f" style="align-self:flex-end"><span class="chip-add" data-reset>✉ Надіслати лист для скидання пароля</span></div>' : '<div class="f"><label>Пароль (не менше 6 символів)</label><input class="in" type="password" data-f="pass" autocomplete="new-password"></div>'}</div>
+    ${rec ? '' : '<div class="al al-w" style="margin:0 0 12px"><span class="al-icon"><span>!</span></span><div><strong>E-mail обов\'язковий і має бути справжньою поштовою скринькою.</strong> Це логін для входу та адреса відновлення пароля.</div></div>'}
+    <div class="al al-i" style="margin:0 0 8px"><span class="al-icon">i</span><div>Права цього користувача встановлюються <strong>в матриці «Доступи»</strong>${rec ? '' : ' — початковий набір залежить від посади, далі його можна змінити тут же'}.</div></div>
+    ${rec ? '' : '<div data-pv></div>'}`,
+  async (o) => {
+    const fio = val(o, 'fio').split(/\s+/).filter(Boolean), role = val(o, 'role');
+    if (!role) return ['Оберіть посаду', ''];
+    if (fio.length < 2) return ['Вкажіть прізвище та ім\'я', 'Бажано й по батькові.'];
+    const data = { lastName: fio[0], firstName: fio[1], middleName: fio.slice(2).join(' '), role };
+    if (rec){
+      const status = o.querySelector('.seg .on').dataset.v;
+      if (role !== rec.role && !o._roleOk){
+        const go = await new Promise((res) => confirmWin({ type: 'w', title: 'Зміна посади.', details: 'Права цього користувача в матриці буде перевстановлено на початковий набір для нової посади.', action: 'Змінити посаду', onOk: () => res(true), onCancel: () => res(false) }));
+        if (!go) return ['Збереження скасовано', 'Посаду не змінено.'];
+        data.perms = normPerms(role, null);
+      }
+      saveEntry('workers', id, { ...data, status }); return null;
+    }
+    const email = val(o, 'email').toLowerCase(), pass = o.querySelector('[data-f="pass"]').value;
+    if (!email) return ['Введіть e-mail', 'Введіть e-mail, щоб додати (зберегти) цього користувача до бази даних.'];
+    if (!/^\S+@\S+\.\S+$/.test(email)) return ['Некоректний e-mail', 'Перевірте адресу — вона буде логіном.'];
+    if (!pass) return ['Введіть пароль', 'Не менше 6 символів.'];
+    if (pass.length < 6) return ['Занадто короткий пароль', 'Не менше 6 символів.'];
+    if (dir.workers.some(w => !w.mergedInto && String(w.email).toLowerCase() === email)) return ['Такий e-mail уже є', 'Користувача з цим e-mail уже додано.'];
+    const secApp = initializeApp(firebaseConfig, 'sec' + Date.now());
+    let cred = null;
+    try {
+      const secAuth = initializeAuth(secApp, { persistence: inMemoryPersistence });
+      cred = await createUserWithEmailAndPassword(secAuth, email, pass);
+      const wdoc = { ...data, perms: pv, status: 'active', email, loginAllowed: true, hasAccount: true, createdBy: profile.id };
+      await setDoc(doc(db, 'workers', cred.user.uid), { ...wdoc, createdAt: serverTimestamp() });
+      dir.workers.push({ id: cred.user.uid, ...wdoc });
+      audit('create', 'workers', cred.user.uid, null, { id: cred.user.uid, ...wdoc });
+      await signOut(secAuth).catch(() => {});
+      rerenderWins();
+      return null;
+    } catch (e){
+      if (cred) await cred.user.delete().catch(() => {});
+      if (e.code === 'auth/email-already-in-use') return ['Такий e-mail уже зареєстровано', 'Використайте інший e-mail.'];
+      if (e.code === 'auth/invalid-email') return ['Некоректний e-mail', ''];
+      if (e.code === 'auth/weak-password') return ['Занадто слабкий пароль', 'Оберіть складніший.'];
+      return ['Не вдалося створити користувача', e.code || e.message || ''];
+    } finally { deleteApp(secApp).catch(() => {}); }
+  }, 1240);
+  if (!rec){
+    const box = ov.querySelector('[data-pv]'), sel = ov.querySelector('[data-f="role"]');
+    const drawPv = () => {
+      if (!pv){ box.innerHTML = '<div class="sect-sub" style="padding:6px 2px">Оберіть посаду вище — права з\'являться тут.</div>'; return; }
+      box.innerHTML = `<div class="box-t">Доступ <span class="sect-sub">посада задає стартовий набір — можна відкоригувати одразу тут</span></div><div class="mtx"><table>${mxHead().replace(/<th class="l" rowspan="2">[^<]*<\/th><th class="l" rowspan="2">[^<]*<\/th>/, '<th class="l" rowspan="2">Права</th>')}<tbody><tr><td class="l ups">${esc(sel.value)}</td>${PERM_KEYS.map((k, i) => permCell(k, i, pv, false, true, 'new')).join('')}</tr></tbody></table></div>`;
+    };
+    drawPv();
+    sel.addEventListener('change', () => {
+      if (sel.value === 'Лаборант' || sel.value === 'Лікар'){
+        const r = sel.value; sel.value = ''; pv = null; drawPv();
+        confirmWin({ type: 'w', title: `${r === 'Лаборант' ? 'Лаборанта' : 'Лікаря'} тут не додають.`, details: 'У лаборантів і лікарів є змінний графік і чергування — їхню роботу рахують звіти. Тому вони заводяться в розділі «Працівники», разом із графіком.', action: 'Перейти в Працівники', onOk: () => { winStack.slice().forEach(closeWin); pickTab(3); } });
+        return;
+      }
+      pv = sel.value ? normPerms(sel.value, null) : null; drawPv();
+    });
+    ov.querySelector('[data-pv]').addEventListener('click', (e) => { const c = e.target.closest('[data-cb]'); if (c && pv){ pv = togglePerm(pv, c.dataset.cb.split(':')[1]); drawPv(); } });
+  } else {
+    ov.querySelector('[data-reset]')?.addEventListener('click', async () => {
+      try { await sendPasswordResetEmail(auth, rec.email); toast('ok', 'Лист надіслано', 'Користувач отримає посилання для нового пароля на ' + rec.email); }
+      catch (e){ toast('e', 'Не вдалося надіслати лист', e.code || ''); }
+    });
+  }
+}
 
 /* ═══ ЖУРНАЛ + ФОРМА ВІЗИТУ (main.html, forma_vizytu.html) ═══
    Дані: visits (візит), records (по одному на послугу; несуть копію полів візиту, щоб Журнал читав одну колекцію),
@@ -1483,13 +1680,12 @@ const nowTime = () => { const d = new Date(); return String(d.getHours()).padSta
 const p2 = (n) => String(n).padStart(2, '0');
 const isAdminRole = () => ['Керівник', 'Адміністратор'].includes(profile?.role);
 const canDescribe = () => ['Керівник', 'Адміністратор', 'Лікар'].includes(profile?.role);
-const canEditVisit = (r) => isAdminRole() || (r.createdBy && r.createdBy === profile?.id);
+const canEditVisit = (r) => can('jEdit') && (isAdminRole() || (r.createdBy && r.createdBy === profile?.id));
 const workerBy = (id) => dir.workers.find(w => w.id === id || w.legacyId === id);
 const activeWorkers = (role) => dir.workers.filter(w => w.status !== 'inactive' && !w.mergedInto && w.role === role)
   .sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk'));
 const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
 const monthLabel = (r) => r.monthlyNumber ? `№ ${r.monthlyNumber}/${MON_SHORT[(+String(r.date).slice(5, 7) || 1) - 1]}` : '';
-const HAS_MONEY_RIGHT = true;            // «Перегляд Суми» — з матриці «Доступи» (ще не побудована)
 const FACILITY_TRACKS_PAYMENT = true;    // Налаштування → Журнал → «Стовпець Оплата» (ще не побудовано)
 
 /* розрахунок послуги: знижка від основної ціни, додаткові — без знижки (schema_v1: records) */
@@ -1867,12 +2063,13 @@ function jrSubscribe(){
     (e) => { jr.err = e.code || 'error'; jr.ready = true; jrTable(); });
 }
 function renderJournal(){
+  if (!can('jView')){ $('sheet').innerHTML = noAccessBox('Перегляд журналу вам не дозволено.'); return; }
   sheetRerender = () => { jrPanel(); jrTable(); };
-  $('sheet').innerHTML = `<div class="j-actions"><button class="j-new" id="jNew"><span class="plus">+</span> НОВИЙ ВІЗИТ</button>
+  $('sheet').innerHTML = `<div class="j-actions">${can('jEdit') ? '<button class="j-new" id="jNew"><span class="plus">+</span> НОВИЙ ВІЗИТ</button>' : '<span></span>'}
       <div class="pp" id="pp"><div class="pp-b" id="ppL"></div><div class="pp-b on" id="ppM"></div><div class="pp-b" id="ppR"></div>
         <button class="pp-confirm" id="ppConfirm"><span class="pp-confirm-lbl">🔍 Показати за</span><span class="pp-confirm-month" id="ppConfirmMonth"></span></button></div><div></div></div>
     <div id="jBody"></div><div id="jLeg"></div>`;
-  $('jNew').onclick = () => openVisitForm(null);
+  if ($('jNew')) $('jNew').onclick = () => openVisitForm(null);
   $('ppL').onclick = () => { jr.pp = jr.pp === null ? 0 : jr.pp - 1; jrPanel(); };
   $('ppM').onclick = () => { if (jr.pp !== null || jr.loaded.t === 'day') ppToday(); };
   $('ppR').onclick = () => {
@@ -1961,7 +2158,7 @@ function jrTable(){
   const monthMode = jr.loaded.t === 'month';
   if (jr.err){ box.innerHTML = `<div class="al al-e" style="margin:12px 0 0"><span class="al-icon">✕</span><div><b>Не вдалося завантажити журнал</b>${esc(jr.err)}</div></div>`; $('jLeg').innerHTML = ''; return; }
   const rows = [...jr.rows].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.time || '').localeCompare(String(a.time || '')) || (b.sequentialNumber || 0) - (a.sequentialNumber || 0));
-  const money = HAS_MONEY_RIGHT, payCol = HAS_MONEY_RIGHT && FACILITY_TRACKS_PAYMENT;
+  const money = can('jSums'), payCol = money && FACILITY_TRACKS_PAYMENT;
   const mcls = money ? '' : 'style="display:none"', pcls = payCol ? '' : 'style="display:none"';
   const labelOf = (id) => dir.labels.find(l => l.id === id);
   const body = rows.map((r, idx) => {
@@ -2009,6 +2206,7 @@ function jrTable(){
 const pt = { q: '', res: null, data: {}, subs: [], msg: null, tooMany: false };
 function ptStop(){ pt.subs.forEach(u => u()); pt.subs = []; }
 function renderPatients(){
+  if (!can('jView')){ $('sheet').innerHTML = noAccessBox('Перегляд даних вам не дозволено.'); return; }
   sheetRerender = ptDraw;
   $('sheet').innerHTML = `<div class="srch-lbl">Пошук пацієнта</div>
     <form class="srch" id="ptForm"><div class="srch-f"><input id="ptQ" autocomplete="off" placeholder="Прізвище (початок ПІБ) або телефон"><button type="button" class="srch-clear" id="ptClr">✕</button></div><button type="submit">🔍 Пошук</button></form>
@@ -2048,7 +2246,7 @@ async function ptSearch(){
   ptDraw();
 }
 function ptCard(p, rowsIn){
-  const money = HAS_MONEY_RIGHT, payCol = HAS_MONEY_RIGHT && FACILITY_TRACKS_PAYMENT;
+  const money = can('jSums'), payCol = money && FACILITY_TRACKS_PAYMENT;
   const rows = [...rowsIn].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.time || '').localeCompare(String(a.time || '')) || (b.sequentialNumber || 0) - (a.sequentialNumber || 0));
   const mc = money ? '' : 'style="display:none"', pc = payCol ? '' : 'style="display:none"';
   let main = 0, extra = 0, extraCnt = 0;
