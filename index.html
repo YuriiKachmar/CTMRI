@@ -1162,6 +1162,7 @@ function openWorkerForm(id, newRole){
       <div class="row"><div class="f"><label>Посада</label><select class="in" data-f="role"><option ${role === 'Лаборант' ? 'selected' : ''}>Лаборант</option><option ${role === 'Лікар' ? 'selected' : ''}>Лікар</option></select></div>
         <div class="f"><label>Телефон</label><input class="in" type="tel" data-f="phone" placeholder="+380…" value="${esc(rec?.phone || '')}"></div></div>
       <div class="row"><div class="f full"><label>E-mail ${hasAcc ? '(логін працівника — не змінюється)' : rec ? '(необов\'язково, поки немає входу)' : '(обов\'язково — стане логіном працівника)'}</label><input class="in" type="email" data-f="email" autocomplete="off" value="${esc(rec?.email || '')}" ${hasAcc ? 'readonly' : ''}></div></div>
+      ${rec ? '' : `<div class="al al-w" style="margin:0 0 12px"><span class="al-icon"><span>!</span></span><div><strong>E-mail обов'язковий і має бути справжньою поштовою скринькою працівника</strong>, до якої він має доступ. На неї надходитиме лист для встановлення пароля, а надалі — сповіщення й розсилки програми. Вигадану чи чужу адресу вказувати не можна.</div></div>`}
       <div class="row"><div class="f full"><label>Статус</label>${seg(stat)}<div class="stexp" data-stexp>${ST_TEXT[stat]}</div></div></div></div>
     <div class="sect" data-sched><div class="sect-h"><div class="sect-t">Змінний графік (персональний)</div></div>
       <div data-per></div>
