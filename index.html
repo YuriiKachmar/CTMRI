@@ -403,6 +403,51 @@
   .sug small{display:block;font-weight:400;color:var(--muted);font-size:10.5px}
   .b.red{color:var(--red);margin-right:auto}
 
+  /* ── Пацієнти (patsiyenty.html) ── */
+  .srch-lbl{font-size:10.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
+  .srch{display:flex;gap:9px;margin-bottom:18px}
+  .srch-f{position:relative;flex:1 1 auto;min-width:0}
+  .srch input{width:100%;padding:15px 42px 15px 16px;border:none;border-radius:13px;background:var(--bg);box-shadow:var(--in);font-size:13.5px;font-weight:600;color:var(--ink);font-family:inherit}
+  .srch input:focus{outline:none;box-shadow:var(--in-on)}
+  .srch input::placeholder{color:var(--ph);font-weight:500}
+  .srch-clear{position:absolute;right:14px;top:50%;transform:translateY(-50%);border:none;background:none;padding:0;color:var(--ph);font-size:22px;line-height:1;cursor:pointer}
+  .srch-clear:active{color:var(--muted)}
+  .srch button[type="submit"]{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:0 20px;border:none;border-radius:13px;background:var(--btn-main);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark)}
+  .srch button[type="submit"]:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
+  .found{font-size:11.5px;color:var(--muted);margin:0 0 12px;padding-left:2px}
+  .found b{color:var(--green)}
+  .pts{max-height:calc(100vh - 360px);min-height:200px;overflow-y:auto;scroll-snap-type:y proximity;padding:2px 4px 6px 2px}
+  .pcard{border-radius:16px;background:var(--bg);box-shadow:var(--up);padding:18px 20px;margin-bottom:16px;scroll-snap-align:start;border-left:4px solid var(--info)}
+  .pcard .sect{box-shadow:var(--in);margin-top:0}
+  .pname{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:14px}
+  .prow{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:14px}
+  .pf{min-width:150px}
+  .pf .k{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+  .pf .v{font-size:12px;font-weight:700;color:var(--ink)}
+  .hist{border-collapse:collapse;font-size:11.5px;table-layout:fixed;width:100%;min-width:1050px}
+  .hist-wrap{border-radius:12px;overflow:auto;background:transparent;max-height:280px;-webkit-overflow-scrolling:touch}
+  .hist th{background:var(--green);color:#fff;padding:9px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap;text-align:left;position:sticky;top:0;z-index:3}
+  .hist th.c{text-align:center}.hist th.r{text-align:right}
+  .hist td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:break-word}
+  .hist td.c{text-align:center}
+  .hist td.r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .hist tr.g td:nth-child(1),.hist tr.g td:nth-child(2),.hist tr.g td:nth-child(3){background-repeat:no-repeat;background-size:202px 100%;background-image:linear-gradient(90deg,var(--g1),var(--g0) 202px)}
+  .hist tr.g td:nth-child(2){background-position:-54px 0}
+  .hist tr.g td:nth-child(3){background-position:-124px 0}
+  .hist .sub td{border-top:1px dashed var(--muted)}
+  .hist .sub-srv{font-size:10.5px;font-style:italic;color:var(--muted)}
+  .hist .srv{font-weight:700}
+  .hist .extra,.hist .inst,.hist .cash{font-size:10px;color:var(--muted);font-weight:400}
+  .hist .pay{width:28px;height:26px;font-size:14px;border-radius:8px}
+  .hist .pen{width:26px;height:24px;border-radius:7px;font-size:11px}
+  .hist th.m-l,.hist td.m-l{border-left:2px solid var(--rule)}
+  .hist th.m-r,.hist td.m-r{border-right:2px solid var(--rule)}
+  .hist tfoot td{border-top:2px solid var(--green);border-bottom:none;padding-top:10px;font-size:11px;color:var(--muted);vertical-align:top;position:sticky;bottom:0;background:var(--bg)}
+  .hist tfoot b{color:var(--green);font-size:12.5px}
+  .hist tfoot .sub2{font-size:10px;color:var(--muted)}
+  .pt-empty{text-align:center;padding:44px 20px;color:var(--muted);font-size:12.5px}
+  .pt-empty .ic{font-size:30px;display:block;margin-bottom:11px;opacity:.5}
+
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:360px;z-index:60}
 
   @media (max-width:560px){
@@ -707,12 +752,13 @@ if (!navigator.onLine) $('netBanner').hidden = false;
 const TABS = ['Журнал', 'Пацієнти', 'Скерування', 'Працівники', 'Звіти'];
 let sheetRerender = null;
 function pickTab(i){
-  sheetRerender = null; $('sheet').onclick = null; jrStop();
+  sheetRerender = null; $('sheet').onclick = null; jrStop(); ptStop();
   [...$('folder').querySelectorAll('.tab')].forEach((t, k) => t.classList.toggle('on', k === i));
   $('sheet').classList.toggle('tl-round', i !== 0);
   $('sheet').classList.toggle('tr-flat', i === TABS.length - 1);
   $('sheet').innerHTML = `<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Розділ «${esc(TABS[i])}» — наступний крок розробки</b>Зараз працюють довідники: Послуги, Пільги, Розподіл і розділ «Скерування».</div></div>`;
   if (TABS[i] === 'Журнал') renderJournal();
+  if (TABS[i] === 'Пацієнти') renderPatients();
   if (TABS[i] === 'Скерування') renderRef();
   if (TABS[i] === 'Працівники') renderStaff();
 }
@@ -1841,7 +1887,7 @@ function setPaid(r, paid, method){
   b.commit().catch(e => toast('e', 'Не вдалося змінити оплату', e.code || ''));
 }
 function togglePay(id){
-  const r = jr.rows.find(x => x.id === id);
+  const r = [...jr.rows, ...Object.values(pt.data).flatMap(d => d.rows)].find(x => x.id === id);
   if (!r || !canEditVisit(r)) return;
   if (r.paid) return confirmWin({ type: 'w', title: `Зняти оплату з послуги № ${r.sequentialNumber}?`, details: 'Послугу буде позначено «не оплачено», запис про оплату видалиться.', action: 'Зняти оплату', onOk: () => setPaid(r, false, r.paymentMethod) });
   if (r.paymentMethod) return setPaid(r, true, r.paymentMethod);
@@ -1944,6 +1990,91 @@ function jrTable(){
       <td class="c"><div class="j-cash" style="min-height:15px">- безготівка</div><div class="j-cash" style="min-height:15px">- готівка</div>${none ? '<div class="j-cash" style="min-height:15px">- без форми</div>' : ''}</td>
       <td class="c money pay-status m-r" ${pcls}></td><td class="desc"></td><td></td></tr></tfoot></table></div>`;
   $('jLeg').innerHTML = dir.labels.length ? `<div class="j-leg"><b>Розподіл:</b>${[...dir.labels].sort((a, b) => hueOf(a.color) - hueOf(b.color)).map(l => `<span><i style="background:${esc(l.color)}"></i>${esc(l.name)}</span>`).join('')}<span style="margin-left:auto;font-size:10.5px">кольори — з довідника <b>Розподіл</b></span></div>` : '';
+}
+
+
+/* ═══ ПАЦІЄНТИ (patsiyenty.html): пошук-досьє. Пацієнтів тут не створюють — вони з'являються у формі візиту ═══ */
+const pt = { q: '', res: null, data: {}, subs: [], msg: null, tooMany: false };
+function ptStop(){ pt.subs.forEach(u => u()); pt.subs = []; }
+function renderPatients(){
+  ptStop(); pt.q = ''; pt.res = null; pt.data = {}; pt.msg = null;
+  sheetRerender = ptDraw;
+  $('sheet').innerHTML = `<div class="srch-lbl">Пошук пацієнта</div>
+    <form class="srch" id="ptForm"><div class="srch-f"><input id="ptQ" autocomplete="off" placeholder="Прізвище або початок ПІБ"><button type="button" class="srch-clear" id="ptClr">✕</button></div><button type="submit">🔍 Пошук</button></form>
+    <div id="ptRes"></div>`;
+  $('ptForm').onsubmit = (e) => { e.preventDefault(); ptSearch(); };
+  $('ptClr').onclick = () => { $('ptQ').value = ''; $('ptQ').focus(); };
+  $('ptRes').onclick = (e) => {
+    const p = e.target.closest('[data-vid]'), y = e.target.closest('[data-pay]');
+    if (p && !p.classList.contains('off')) openVisitForm(p.dataset.vid);
+    if (y && !y.classList.contains('off')) togglePay(y.dataset.pay);
+  };
+  ptDraw(); $('ptQ').focus();
+}
+async function ptSearch(){
+  const raw = $('ptQ').value.trim(), q = raw.toLowerCase();
+  ptStop(); pt.data = {}; pt.msg = null; pt.q = raw;
+  if (q.length < 2){ pt.res = null; pt.msg = { k: 'i', t: 'Введіть щонайменше 2 символи прізвища.' }; return ptDraw(); }
+  try {
+    const snap = await getDocs(query(collection(db, 'patients'), where('nameLower', '>=', q), where('nameLower', '<=', q + ''), limit(11)));
+    let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    pt.tooMany = list.length > 10; list = list.slice(0, 10);
+    pt.res = list.sort((a, b) => String(a.name).localeCompare(String(b.name), 'uk'));
+  } catch (e){ pt.res = null; pt.msg = { k: 'e', t: 'Не вдалося виконати пошук. ' + (e.code || '') }; return ptDraw(); }
+  for (const p of pt.res){
+    pt.data[p.id] = { p, rows: [] };
+    pt.subs.push(onSnapshot(doc(db, 'patients', p.id), (s) => { if (s.exists()){ pt.data[p.id].p = { id: p.id, ...s.data() }; ptDraw(); } }, () => {}));
+    pt.subs.push(onSnapshot(query(collection(db, 'records'), where('patientId', '==', p.id)), (s) => { pt.data[p.id].rows = s.docs.map(d => ({ id: d.id, ...d.data() })); ptDraw(); }, () => {}));
+  }
+  ptDraw();
+}
+function ptCard(p, rowsIn){
+  const money = HAS_MONEY_RIGHT, payCol = HAS_MONEY_RIGHT && FACILITY_TRACKS_PAYMENT;
+  const rows = [...rowsIn].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.time || '').localeCompare(String(a.time || '')) || (b.sequentialNumber || 0) - (a.sequentialNumber || 0));
+  const mc = money ? '' : 'style="display:none"', pc = payCol ? '' : 'style="display:none"';
+  let main = 0, extra = 0, extraCnt = 0;
+  const body = rows.map((r, i) => {
+    const lab = dir.labels.find(l => l.id === r.labelId), ref = r.referral || {};
+    const dname = ref.self ? '' : (dir.doctors.find(d => d.id === ref.doctorId)?.name || ref.doctorName || '');
+    const iname = ref.self ? '' : (ref.institutionId ? (dir.institutions.find(x => x.id === ref.institutionId)?.name || ref.institutionName || '') : '');
+    const lw = workerBy(r.labTechId), dw = workerBy(r.describerId), own = canEditVisit(r), dt = String(r.date).split('-');
+    main += r.servicePriceAfterDiscount || 0; extra += r.extrasTotal || 0; extraCnt += (r.extras || []).length;
+    const g = lab ? ` g" style="--g1:${rgba(lab.color, .55)};--g0:${rgba(lab.color, 0)}` : '';
+    const ex = (r.extras || []).length;
+    return `<tr class="${lab ? 'g' : ''}"${lab ? ` style="--g1:${rgba(lab.color, .55)};--g0:${rgba(lab.color, 0)}"` : ''}>
+      <td class="c"><span class="pen ${own ? '' : 'off'}" data-vid="${r.visitId}">✎</span></td>
+      <td>${r.sequentialNumber ?? ''}<div class="extra">${esc(monthLabel(r).replace('№ ', ''))}</div></td>
+      <td class="c">${dt[2]}.${dt[1]}.${dt[0].slice(2)}<div class="extra">${esc(r.time || '')}</div></td>
+      <td ${r.historyNo ? '' : 'class="inst"'}>${esc(r.historyNo || '—')}</td>
+      <td ${ref.self ? 'class="inst"' : ''}>${ref.self ? 'самозвернення' : esc(dname) + (iname ? `<div class="inst">${esc(iname)}</div>` : '')}</td>
+      <td><span class="srv">${esc(r.serviceSnapshot?.name || '')}</span>${r.discountSnapshot ? `<div class="extra">${esc(r.discountSnapshot.name)} −${r.discountSnapshot.percent}%</div>` : ''}</td>
+      <td class="inst">${r.described ? '● описано' : '—'}</td>
+      <td class="cash m-l" ${pc}>${r.paymentMethod === 'cash' ? 'готівка' : r.paymentMethod === 'cashless' ? 'безготівка' : '—'}</td>
+      <td class="c" ${pc}><span class="pay ${r.paid ? 'ok2' : 'no2'} ${own ? '' : 'off'}" data-pay="${r.id}">${r.paid ? '✓' : '✕'}</span></td>
+      <td class="r ${payCol ? 'm-r' : 'm-l m-r'}" ${mc}>${nfmt(r.servicePriceAfterDiscount)}</td>
+      <td class="inst">${esc(lw ? shortName(lw) : '')}<br>${esc(dw ? shortName(dw) : '')}</td></tr>
+      ${ex ? `<tr class="sub${lab ? ' g' : ''}"${lab ? ` style="--g1:${rgba(lab.color, .55)};--g0:${rgba(lab.color, 0)}"` : ''}><td></td><td class="sub-srv">↳</td><td></td><td></td><td></td><td class="sub-srv">${esc(r.extras.map(e => e.name).join(', '))}</td><td></td><td class="m-l" ${pc}></td><td ${pc}></td><td class="r ${payCol ? 'm-r' : 'm-l m-r'}" ${mc}>${nfmt(r.extrasTotal)}</td><td></td></tr>` : ''}`;
+  }).join('');
+  const visits = new Set(rows.map(r => r.visitId)).size;
+  return `<div class="pcard"><div class="pname">${esc(p.name || '')}</div>
+    <div class="prow"><div class="pf"><div class="k">Дата народження</div><div class="v">${esc(isoToUa(p.birthDate) || '—')}</div></div>
+      <div class="pf"><div class="k">Телефон</div><div class="v">${esc(p.phone || '—')}</div></div>
+      <div class="pf"><div class="k">Адреса</div><div class="v">${esc(p.address || '—')}</div></div></div>
+    <div class="sect"><div class="sect-t">Історія візитів та послуг</div><div class="hist-wrap"><table class="hist">
+      <colgroup><col style="width:54px"><col style="width:70px"><col style="width:76px"><col style="width:92px"><col style="width:150px"><col><col style="width:90px"><col style="width:92px" ${pc}><col style="width:54px" ${pc}><col style="width:90px" ${mc}><col style="width:120px"></colgroup>
+      <thead><tr><th class="c">Ред.</th><th>№</th><th class="c">Дата</th><th>№ іст.хв.</th><th>Лікуючий лікар</th><th>Послуга</th><th>Опис</th><th class="m-l" ${pc}>Оплата</th><th class="c" ${pc}></th><th class="r m-r" ${mc}>Сума</th><th>Працівники</th></tr></thead>
+      <tbody>${body || '<tr><td colspan="11" style="padding:14px 10px"><span class="free">Візитів ще немає</span></td></tr>'}</tbody>
+      <tfoot><tr><td></td><td colspan="2">Візитів <b>${visits}</b></td><td></td><td></td><td>Основних послуг <b>${rows.length}</b><br>Додаткових послуг <b>${extraCnt}</b></td><td></td><td class="m-l" ${pc}></td><td ${pc}></td>
+        <td class="r ${payCol ? 'm-r' : 'm-l m-r'}" ${mc}><b>${nfmt(r2(main + extra))}</b><br><span class="sub2">${nfmt(r2(main))} / ${nfmt(r2(extra))}</span></td><td></td></tr></tfoot></table></div></div></div>`;
+}
+function ptDraw(){
+  const box = $('ptRes'); if (!box) return;
+  const y = box.querySelector('.pts')?.scrollTop || 0;
+  if (pt.msg){ box.innerHTML = `<div class="al al-${pt.msg.k}" style="margin:0"><span class="al-icon">${pt.msg.k === 'e' ? '✕' : 'i'}</span><div>${esc(pt.msg.t)}</div></div>`; return; }
+  if (pt.res === null){ box.innerHTML = '<div class="pt-empty"><span class="ic">🔍</span>Введіть прізвище пацієнта й натисніть «Пошук» — з\'явиться його історія візитів.</div>'; return; }
+  if (!pt.res.length){ box.innerHTML = `<div class="al al-w" style="margin:0"><span class="al-icon"><span>!</span></span><div><b>Нічого не знайдено</b>За запитом «${esc(pt.q)}» пацієнтів немає. Перевірте написання прізвища.</div></div>`; return; }
+  box.innerHTML = `<div class="found">Знайдено збігів: <b>${pt.res.length}</b>${pt.tooMany ? ' (показано перші 10 — уточніть запит)' : ''}</div><div class="pts">${pt.res.map(p => ptCard(pt.data[p.id].p, pt.data[p.id].rows)).join('')}</div>`;
+  const n = box.querySelector('.pts'); if (n) n.scrollTop = y;
 }
 
 /* ═══ МАЙСТЕР ПЕРШОГО ЗАПУСКУ (pershyi_pusk_v2.html) ═══ */
