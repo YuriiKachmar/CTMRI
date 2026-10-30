@@ -293,6 +293,30 @@
   .j-new{justify-self:start;display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border:none;border-radius:12px;background:var(--btn-main);color:#fff;font-size:13px;font-weight:800;letter-spacing:.3px;cursor:pointer;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark);font-family:inherit}
   .j-new:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
   .j-new .plus{font-size:22px;font-weight:900;line-height:1}
+  /* календар чергувань */
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}.dow span{text-align:center;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:4px 0}
+  .cal-hint{font-size:12px;color:var(--muted);margin:0 0 12px}
+  .cal-pp{margin-bottom:14px}.cal-pp .pp-b{flex:1;width:auto}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cell{min-width:0;min-height:86px;border-radius:12px;background:var(--bg);box-shadow:var(--in);padding:6px 5px;display:flex;flex-direction:column;justify-content:center;gap:3px;overflow:hidden}
+  .cell .dnum{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1;padding:1px 0}
+  .cell.out{opacity:.3;box-shadow:none}.cell.past{opacity:.78}
+  .cell.rest{background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 5px,#dfe4e7 5px,#dfe4e7 10px)}.cell.rest .dnum{color:var(--muted)}
+  .cell.today{background:var(--soft);box-shadow:var(--in-on)}.cell.today .dnum{color:var(--green)}
+  .cell .grp{display:flex;gap:2px}.cell .grp.lab{flex-direction:column-reverse}.cell .grp.doc{flex-direction:column}
+  .slot{min-height:16px;display:flex;align-items:center;gap:3px;padding:0 3px;border-radius:5px;font-size:10px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .slot.fl{background:#F2F5F6;cursor:pointer}.slot.fl.der{cursor:default;font-style:italic}.slot.nodata{background:var(--warn-bg);color:var(--warn)}
+  .slot.add{justify-content:center;color:var(--muted);background:var(--bg);box-shadow:var(--bump);cursor:pointer;font-size:10px}.slot.add:active{box-shadow:var(--in)}
+  .slot .sh-badge{padding:1px 4px;min-width:0;font-size:8px;border-radius:4px;flex:0 0 auto}
+  .cal-sums{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  .cal-sh,.cal-sr{display:grid;grid-template-columns:1fr 70px 60px;gap:6px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .cal-sh{font-size:9.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--line)}
+  .cal-sh span+span,.cal-sr b,.cal-sr .pl{text-align:center}.cal-sr .pl{color:var(--muted)}.cal-sr .mut{color:var(--muted);font-style:italic}
+  .cal-sr .sh-badge{margin-right:6px;padding:3px 7px;font-size:9px}
+  .cal-leg{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:10.5px;color:var(--muted)}
+  .cal-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}.lg-n{background:var(--warn-bg);box-shadow:0 0 0 1px var(--warn)}.lg-r{background:repeating-linear-gradient(45deg,#fff,#fff 2px,#cfd6d9 2px,#cfd6d9 4px)}.lg-b{background:#F2F5F6;box-shadow:0 0 0 1px var(--line)}
+  .mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}.dm-d.mp{aspect-ratio:auto;height:44px}
+  @media (max-width:760px){.cal-sums{grid-template-columns:1fr}}
   .pp{display:flex;padding:5px;border-radius:14px;background:var(--bg);box-shadow:var(--in);height:48px;position:relative}
   .pp-b{flex:0 0 auto;width:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 14px;border-radius:11px;font-size:12px;color:var(--muted);cursor:pointer}
   .pp-b.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
@@ -1497,10 +1521,162 @@ function openWorkerForm(id, newRole){
   });
 }
 
+/* ═══ КАЛЕНДАР ЧЕРГУВАНЬ (calendar_cherguvan.html) ═══
+   duty_days/{РРРР-ММ-ДД} = { date, labs:[workerId], docs:[workerId] } — лише ручні відмітки.
+   Лаборанти за днями додатково беруться з візитів журналу (хто вносив записи — той чергував): це «факт», його не прибрати.
+   Піктограму зміни (Д/Н/Доба) не зберігаємо — беремо зі змінного графіку працівника на цю дату. */
+const canEditCal = () => ['Керівник', 'Адміністратор', 'Лаборант'].includes(profile?.role);
+const shiftOn = (w, iso) => [...(w?.shifts || [])].reverse().find(p => !p.excluded && p.start <= iso && (!p.end || p.end >= iso)) || null;
+const wNorm = (id) => { const w = workerBy(id); return w?.mergedInto || w?.id || id; };
+const cal = { y: 0, m: 0, onLeft: false, unsub: null, duty: {}, vis: [], ov: null, seq: 0 };
+const calBadge = (wid, iso) => {
+  const p = shiftOn(workerBy(wid), iso); if (!p) return '';
+  const r = classifyShift(p.from, p.to);
+  return `<span class="sh-badge ${r.cls}" title="${esc(p.from)}–${esc(p.to)}">${r.cls === 'sx' ? '?' : esc(r.label)}</span>`;
+};
+function calData(){
+  const days = new Date(cal.y, cal.m + 1, 0).getDate(), td = todayISO(), ym = `${cal.y}-${p2(cal.m + 1)}`;
+  const labHas = {}, docHas = {};
+  for (const v of cal.vis){
+    (labHas[v.date] ||= new Set()).add(wNorm(v.labTechId));
+    if (v.describerId) (docHas[v.date] ||= new Set()).add(wNorm(v.describerId));
+  }
+  const out = [], sums = { lab: new Map(), doc: new Map() }, nod = [];
+  for (let d = 1; d <= days; d++){
+    const iso = `${ym}-${p2(d)}`, duty = cal.duty[iso] || {};
+    const mk = (g) => {
+      const ex = (g === 'lab' ? duty.labs : duty.docs) || [], has = (g === 'lab' ? labHas : docHas)[iso] || new Set();
+      const items = ex.map(wid => ({ wid, der: false, nodata: iso < td && !has.has(wNorm(wid)) }));
+      if (g === 'lab') for (const wid of has) if (wid && !ex.some(x => wNorm(x) === wid)) items.push({ wid, der: true, nodata: false });
+      for (const it of items){
+        const s = sums[g].get(it.wid) || { worked: 0, planned: 0 }; if (iso < td) s.worked++; else s.planned++; sums[g].set(it.wid, s);
+        if (it.nodata) nod.push({ iso, wid: it.wid, g });
+      }
+      return items;
+    };
+    out.push({ d, iso, wd: (new Date(cal.y, cal.m, d).getDay() + 6) % 7, labs: mk('lab'), docs: mk('doc') });
+  }
+  return { out, sums, nod };
+}
+function calDraw(){
+  const ov = cal.ov; if (!ov || !ov.isConnected) return;
+  const M = (a, b) => `<span class="pp-m">${a}</span><span class="pp-d">${b}</span>`, now = new Date(), isCur = cal.y === now.getFullYear() && cal.m === now.getMonth();
+  const mon = `${MON_NAME[cal.m]}`, rng = `01.${p2(cal.m + 1)}.${cal.y} – ${new Date(cal.y, cal.m + 1, 0).getDate()}.${p2(cal.m + 1)}.${cal.y}`;
+  const L = ov.querySelector('[data-tl]'), Mm = ov.querySelector('[data-tm]'), R = ov.querySelector('[data-tr]');
+  L.className = 'pp-b' + (cal.onLeft ? ' on' : ''); Mm.className = 'pp-b' + (cal.onLeft ? '' : ' on');
+  if (!cal.onLeft){ L.innerHTML = M('Попередній місяць', '← назад'); Mm.innerHTML = M(mon, rng); }
+  else { L.innerHTML = M(mon, rng); Mm.innerHTML = M('Наступний місяць', 'вперед →'); }
+  R.innerHTML = M('Обрати місяць', 'будь-який');
+  const { out, sums, nod } = calData(), sched = settings?.schedule || [], td = todayISO(), ed = canEditCal();
+  const lead = (new Date(cal.y, cal.m, 1).getDay() + 6) % 7;
+  const nm = (wid) => { const w = workerBy(wid); return w ? shortName(w) : '(видалений працівник)'; };
+  const chip = (it, g, iso) => `<div class="slot fl${it.nodata ? ' nodata' : ''}${it.der ? ' der' : ''}" data-g="${g}" data-wid="${esc(it.wid)}" data-der="${it.der ? 1 : 0}" title="${esc(nm(it.wid))}${it.der ? ' — вносив записи в журнал' : it.nodata ? ' — чергував, але записів немає' : ''}">${calBadge(it.wid, iso)}<span>${esc(workerBy(it.wid)?.lastName || '—')}</span></div>`;
+  let h = '<div class="cell out"></div>'.repeat(lead);
+  for (const c of out){
+    h += `<div class="cell${c.iso < td ? ' past' : ''}${c.iso === td ? ' today' : ''}${sched[c.wd]?.off ? ' rest' : ''}" data-iso="${c.iso}">
+      <div class="grp lab">${c.labs.map(i => chip(i, 'lab', c.iso)).join('')}${ed ? '<div class="slot add" data-g="lab" title="Додати лаборанта">+</div>' : ''}</div>
+      <div class="dnum">${c.d}</div>
+      <div class="grp doc">${c.docs.map(i => chip(i, 'doc', c.iso)).join('')}${ed ? '<div class="slot add" data-g="doc" title="Додати лікаря">+</div>' : ''}</div></div>`;
+  }
+  ov.querySelector('[data-cg]').innerHTML = h;
+  const sumTbl = (g, title) => {
+    const rows = [...sums[g]].map(([wid, s]) => ({ wid, ...s })).sort((a, b) => nm(a.wid).localeCompare(nm(b.wid), 'uk'));
+    return `<div class="cal-sum"><div class="cal-sh"><span>${title}</span><span>відпрац.</span><span>+план</span></div>` + (rows.length
+      ? rows.map(r => `<div class="cal-sr"><span>${calBadge(r.wid, td)}${esc(nm(r.wid))}</span><b>${r.worked}</b><span class="pl">+${r.planned}</span></div>`).join('')
+      : '<div class="cal-sr"><span class="mut">У цьому місяці чергувань немає</span><b></b><span></span></div>') + '</div>';
+  };
+  const dm = (iso) => iso.slice(8) + '.' + iso.slice(5, 7);
+  ov.querySelector('[data-cs]').innerHTML = `<div class="cal-sums">${sumTbl('lab', 'Лаборанти')}${sumTbl('doc', 'Лікарі')}</div>
+    <div class="cal-leg"><span><i class="lg-b"></i>над датою — лаборанти, під датою — лікарі</span><span>відпрац. = дні до сьогодні, +план = сьогодні й далі (в оплату йде лише перше число)</span><span><i class="lg-n"></i>чергування є, записів немає</span><span><i class="lg-r"></i>заклад не працює за графіком (вносити можна)</span></div>`
+    + (nod.length ? `<div class="al al-w" style="margin:10px 0 0"><span class="al-icon"><span>!</span></span><div><b>${nod.length} ${nod.length === 1 ? 'день відмічено' : 'дн. відмічено'} як чергування, але записів у журналі немає</b>(${nod.map(n => `${dm(n.iso)} — ${esc(workerBy(n.wid)?.lastName || '—')}`).join(', ')}). Імовірно, не було пацієнтів. Ці дні <b>не входять у підсумок звіту</b>, але виносяться в примітку — рішення про оплату ухвалює адміністратор.</div></div>` : '');
+}
+async function calLoad(){
+  const my = ++cal.seq, a = `${cal.y}-${p2(cal.m + 1)}-01`, b = `${cal.y}-${p2(cal.m + 1)}-${p2(new Date(cal.y, cal.m + 1, 0).getDate())}`;
+  if (cal.unsub){ cal.unsub(); cal.unsub = null; }
+  cal.duty = {}; cal.vis = []; calDraw();
+  cal.unsub = onSnapshot(query(collection(db, 'duty_days'), where('date', '>=', a), where('date', '<=', b)),
+    (snap) => { if (my !== cal.seq) return; cal.duty = {}; snap.docs.forEach(d => { cal.duty[d.id] = d.data(); }); calDraw(); },
+    (e) => { console.warn('duty:', e.code); });
+  try {   // хто вносив записи в журнал цього місяця (візитів значно менше, ніж послуг)
+    const snap = await getDocs(query(collection(db, 'visits'), where('date', '>=', a), where('date', '<=', b)));
+    if (my !== cal.seq) return;
+    cal.vis = snap.docs.map(d => d.data()); calDraw();
+  } catch (e){ console.warn('visits for calendar:', e.code); }
+}
+function calShift(step){
+  const d = new Date(cal.y, cal.m + step, 1); cal.y = d.getFullYear(); cal.m = d.getMonth();
+  const n = new Date(); cal.onLeft = !(cal.y === n.getFullYear() && cal.m === n.getMonth());
+  calLoad();
+}
+function openCalendar(){
+  const n = new Date(); cal.y = n.getFullYear(); cal.m = n.getMonth(); cal.onLeft = false;
+  const ov = openWin(`<div class="win-h"><h4>Календар чергувань</h4><button class="win-x" data-x>✕</button></div>
+    <div class="win-b"><div class="cal-hint">Хто чергував / чергуватиме. Минуле — факт із журналу, майбутнє — призначення. ${canEditCal() ? 'Тут відмічають і ті дні, коли пацієнтів не було.' : 'Ви можете лише переглядати.'}</div>
+    <div class="pp cal-pp"><div class="pp-b" data-tl></div><div class="pp-b on" data-tm></div><div class="pp-b" data-tr></div></div>
+    <div class="dow"><span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>нд</span></div>
+    <div class="cal-grid" data-cg></div><div data-cs></div></div>
+    <div class="win-f"><button class="b" data-x>Закрити</button></div>`, 1000);
+  cal.ov = ov; ov.classList.add('cal-ov');
+  ov._onClose = () => { cal.seq++; if (cal.unsub){ cal.unsub(); cal.unsub = null; } cal.ov = null; };
+  ov.addEventListener('click', (e) => {
+    if (e.target.closest('[data-tl]')) return calShift(-1);
+    if (e.target.closest('[data-tm]')) return cal.onLeft ? calShift(1) : undefined;
+    if (e.target.closest('[data-tr]')) return openMonthPicker();
+    if (!canEditCal()) return;
+    const cell = e.target.closest('.cell[data-iso]'), slot = e.target.closest('.slot[data-g]');
+    if (!cell || !slot) return;
+    if (slot.dataset.der === '1') return toast('i', 'Запис із журналу', 'Цей працівник вносив записи в журнал цього дня — це факт, його не прибрати. Чергування можна лише додати іншим.');
+    openDutyPicker(cell.dataset.iso, slot.dataset.g, slot.classList.contains('add') ? null : slot.dataset.wid);
+  });
+  calLoad();
+}
+function openMonthPicker(){
+  let y = cal.y;
+  const ov = openWin(`<div class="win-b" style="padding:20px"><div class="dm-h"><span class="dm-nav" data-n="-1">‹</span><div class="dm-t" data-t></div><span class="dm-nav" data-n="1">›</span></div><div class="mp-grid" data-g></div></div><div class="win-f"><button class="b" data-x>Скасувати</button></div>`, 360);
+  const draw = () => {
+    ov.querySelector('[data-t]').textContent = y;
+    const n = new Date();
+    ov.querySelector('[data-g]').innerHTML = MON_NAME.map((t, i) => `<div class="dm-d mp ${y === cal.y && i === cal.m ? 'today' : ''}" data-m="${i}">${t.slice(0, 3)}</div>`).join('');
+  };
+  draw();
+  ov.addEventListener('click', (e) => {
+    const nv = e.target.closest('[data-n]'), m = e.target.closest('[data-m]');
+    if (nv){ y += +nv.dataset.n; draw(); }
+    else if (m){ cal.y = y; cal.m = +m.dataset.m; const n = new Date(); cal.onLeft = !(cal.y === n.getFullYear() && cal.m === n.getMonth()); closeWin(ov); calLoad(); }
+  });
+}
+function openDutyPicker(iso, g, cur){
+  const role = g === 'lab' ? 'Лаборант' : 'Лікар', duty = cal.duty[iso] || {}, list = [...((g === 'lab' ? duty.labs : duty.docs) || [])];
+  const taken = new Set(list.map(wNorm)); if (g === 'lab') cal.vis.filter(v => v.date === iso).forEach(v => taken.add(wNorm(v.labTechId)));
+  const ws = activeWorkers(role).filter(w => w.id === cur || !taken.has(w.id));
+  const cw = cur ? workerBy(cur) : null;
+  if (cw && !ws.some(w => w.id === cw.id)) ws.unshift(cw);
+  const [, mm, dd] = iso.split('-'), title = `Чергування — ${+dd} ${['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'][+mm - 1]}`;
+  const ov = openWin(`<div class="win-h"><h4>${esc(title)}</h4><button class="win-x" data-x>✕</button></div>
+    <div class="win-b"><div class="cal-hint" style="margin-bottom:8px">Оберіть, хто ${g === 'lab' ? 'чергує' : 'чергує (лікар)'}. Зміна підтягнеться з його графіку на цю дату.</div>
+    ${ws.length ? ws.map(w => { const p = shiftOn(w, iso); return `<div class="rowc pickrow" data-pick="${esc(w.id)}"><span class="nm">${esc(shortName(w))}</span><span class="meta">${p ? `${calBadge(w.id, iso)} ${esc(p.from)}–${esc(p.to)}` : 'графік на цю дату не заданий'}</span></div>`; }).join('')
+      : `<div class="al al-i" style="margin:0"><span class="al-icon">i</span><div><b>Нікого обрати</b>Усі ${role === 'Лаборант' ? 'лаборанти' : 'лікарі'} вже в цьому дні або їх ще не додано в розділі «Працівники».</div></div>`}</div>
+    <div class="win-f">${cur ? '<button class="b red" data-del>Прибрати з дня</button>' : ''}<button class="b" data-x>Скасувати</button></div>`, 460);
+  const other = g === 'lab' ? (duty.docs || []) : (duty.labs || []);
+  const commit = (arr) => { const L = g === 'lab' ? arr : (duty.labs || []), D = g === 'lab' ? (duty.docs || []) : arr; saveDuty(iso, L, D); };
+  ov.addEventListener('click', (e) => {
+    const p = e.target.closest('[data-pick]');
+    if (p){ const arr = cur ? list.map(x => x === cur ? p.dataset.pick : x) : [...list, p.dataset.pick]; closeWin(ov); commit(arr); }
+    else if (e.target.closest('[data-del]')){ closeWin(ov); commit(list.filter(x => x !== cur)); }
+  });
+}
+function saveDuty(iso, labs, docs){
+  const prev = cal.duty[iso] || null, b = writeBatch(db);
+  if (!labs.length && !docs.length) b.delete(doc(db, 'duty_days', iso));
+  else b.set(doc(db, 'duty_days', iso), { date: iso, labs, docs, updatedAt: serverTimestamp() });
+  audit('update', 'duty_days', iso, prev ? { labs: prev.labs || [], docs: prev.docs || [] } : null, { labs, docs });
+  b.commit().catch(e => toast('e', 'Не вдалося зберегти чергування', e.code || ''));
+}
+
 $('mbServ').onclick = openServicesWin;
 $('mbDisc').onclick = openDiscountsWin;
 $('mbLab').onclick = openLabelsWin;
-$('mbCal').onclick = () => toast('i', 'Календар чергувань', 'Розділ ще в розробці.');
+$('mbCal').onclick = openCalendar;
 $('mbSet').onclick = () => openSettings('zaklad');
 TABS.forEach((t, i) => { const el = document.createElement('div'); el.className = 'tab' + (i === 0 ? ' on' : ''); el.textContent = t; el.onclick = () => pickTab(i); $('folder').insertBefore(el, $('sheet')); });
 

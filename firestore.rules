@@ -124,6 +124,16 @@ service cloud.firestore {
       allow delete: if isAdmin() && perm('jEdit');
     }
 
+    // ───── календар чергувань: читають усі активні; пишуть Керівник, Адмін і Лаборант ─────
+    match /duty_days/{day} {
+      allow read: if isActive();
+      allow create, update: if isActive() && myRole() in ['Керівник', 'Адміністратор', 'Лаборант']
+                            && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+                            && request.resource.data.keys().hasOnly(['date', 'labs', 'docs', 'updatedAt'])
+                            && request.resource.data.date == day;
+      allow delete: if isActive() && myRole() in ['Керівник', 'Адміністратор', 'Лаборант'];
+    }
+
     // ───── лічильники: лише зростають ─────
     match /counters/{id} {
       allow read: if canJ();
