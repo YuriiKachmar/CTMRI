@@ -701,7 +701,9 @@ function formWin(title, body, onSave, width, saveLabel){
     if (!r) return closeWin(ov);
     ov.querySelector('[data-et]').textContent = r[0];
     ov.querySelector('[data-ex]').textContent = r[1] ? ' ' + r[1] : '';
-    ov.querySelector('[data-err]').style.display = 'flex';
+    const errBox = ov.querySelector('[data-err]');
+    errBox.style.display = 'flex';
+    errBox.scrollIntoView({ block: 'nearest', behavior: 'smooth' });   // помилка внизу довгої картки — підводимо її в поле зору
   };
   ov.addEventListener('click', (e) => {
     const s = e.target.closest('.seg span');
@@ -1008,6 +1010,7 @@ function openInstForm(id){
       }
     }
     periods.push({ from: today, to: '', excluded: false, note: null }); draw();
+    per.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 
   const sel = ov.querySelector('[data-f="type"]');
@@ -1291,6 +1294,7 @@ function openWorkerForm(id, newRole){
       else if (today <= last.end){ last.note = { t: 'w', x: 'Новий період не може починатися раніше за закриття попереднього — він завершується не раніше сьогодні. Перевірте дати.' }; draw(); return; }
     }
     periods.push({ from: '08:00', to: '20:00', start: today, end: '', excluded: false, note: null }); draw();
+    per.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 }
 
