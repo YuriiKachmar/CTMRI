@@ -1591,7 +1591,8 @@ function visitBodyHtml(vs){
   return `
   <div class="vg" data-pat style="${grad}"><div class="vg-h"><div class="vg-t">Пацієнт</div><div class="lp">${dots}</div></div>
     <div class="row"><div class="vf"><label>ПІБ ${vs.isNew ? '(пошук у базі або новий)' : ''}</label><input class="in" data-vf="pname" value="${esc(vs.pname)}" autocomplete="off"><div class="sug" data-sug hidden></div></div>
-      <div class="vf sm"><label>Дата народження</label><input class="in" data-vf="pbirth" value="${esc(vs.pbirth)}" placeholder="ДД.ММ.РРРР"></div></div>
+      <div class="vf sm"><label>Дата народження</label><input class="in" data-vf="pbirth" value="${esc(vs.pbirth)}" placeholder="ДД.ММ.РРРР"></div>
+      <div class="vf sm"><label>Телефон</label><input class="in" inputmode="tel" data-vf="pphone" value="${esc(vs.pphone)}" placeholder="+380…"></div></div>
     <div class="row"><div class="vf"><label>Адреса</label><input class="in" data-vf="paddr" value="${esc(vs.paddr)}"></div></div></div>
   <div class="vg"><div class="vg-h"><div class="vg-t">Скерування</div></div>
     <div class="row"><div class="vf"><label>Лікуючий лікар</label><select class="in" data-vs="ref"><option value="" ${vs.refKey ? '' : 'selected'}>— оберіть —</option><option value="self" ${vs.refKey === 'self' ? 'selected' : ''}>Самоскерування</option>${refOpts}<option value="new">+ Додати нового…</option></select></div>
@@ -1619,7 +1620,7 @@ async function loadVisitState(visitId){
   const ref = f.referral || {};
   return {
     isNew: false, id: visitId, date: f.date, time: f.time, createdBy: f.createdBy, pid: f.patientId || null,
-    pname: pat.name || '', pbirth: isoToUa(pat.birthDate), paddr: pat.address || '',
+    pname: pat.name || '', pbirth: isoToUa(pat.birthDate), pphone: pat.phone || '', paddr: pat.address || '',
     labelId: f.labelId || '', hist: f.historyNo || '',
     refKey: ref.self ? 'self' : ref.doctorId ? `d:${ref.doctorId}:${ref.institutionId || ''}` : '', refSnap: ref.doctorName || '',
     labId: f.labTechId || '', docId: f.describerId || '', removed: [],
@@ -1637,7 +1638,7 @@ function openVisitForm(visitId){
     loadVisitState(visitId).then(vs => { if (vs) visitWin(vs); else toast('e', 'Візит не знайдено', 'Можливо, його вже видалили.'); })
       .catch(e => toast('e', 'Не вдалося відкрити візит', e.code || ''));
   } else {
-    const vs = { isNew: true, id: null, date: todayISO(), time: nowTime(), createdBy: profile.id, pid: null, pname: '', pbirth: '', paddr: '', labelId: '', hist: '', refKey: '',
+    const vs = { isNew: true, id: null, date: todayISO(), time: nowTime(), createdBy: profile.id, pid: null, pname: '', pbirth: '', pphone: '', paddr: '', labelId: '', hist: '', refKey: '',
       refSnap: '', labId: profile.role === 'Лаборант' ? profile.id : '', docId: '', removed: [], services: [] };
     vs.services.push(newSvc(vs));
     visitWin(vs);
@@ -1666,7 +1667,7 @@ function visitWin(vs){
   const showSug = (list) => {
     const box = vb.querySelector('[data-sug]'); if (!box) return;
     if (!list.length){ box.hidden = true; return; }
-    box.innerHTML = list.map((p, k) => `<div data-sp="${k}">${esc(p.name)}<small>${esc([isoToUa(p.birthDate), p.address].filter(Boolean).join(' · '))}</small></div>`).join('');
+    box.innerHTML = list.map((p, k) => `<div data-sp="${k}">${esc(p.name)}<small>${esc([isoToUa(p.birthDate), p.phone, p.address].filter(Boolean).join(' · '))}</small></div>`).join('');
     box.hidden = false; box._list = list;
   };
   vb.addEventListener('input', (e) => {
@@ -1718,7 +1719,7 @@ function visitWin(vs){
     if (dot){ vs.labelId = vs.labelId === dot.dataset.dot ? '' : dot.dataset.dot; render(); }
     else if (sp){
       const p = vb.querySelector('[data-sug]')._list[+sp.dataset.sp];
-      vs.pid = p.id; vs.pname = p.name; vs.pbirth = isoToUa(p.birthDate); vs.paddr = p.address || ''; render();
+      vs.pid = p.id; vs.pname = p.name; vs.pbirth = isoToUa(p.birthDate); vs.pphone = p.phone || ''; vs.paddr = p.address || ''; render();
     }
     else if (ex){
       const s = vs.services[+ex.dataset.i], k = s.extras.findIndex(x => x.extraId === ex.dataset.ex);
@@ -1783,7 +1784,8 @@ async function saveVisit(ov, vs){
   const me = profile.id, now = serverTimestamp();
   /* пацієнт: обраний із бази — оновлюємо його картку; новий — шукаємо точний збіг (ПІБ + дата народження), інакше створюємо */
   let pid = vs.pid;
-  const pdata = { name, nameLower: name.toLowerCase(), birthDate: birth, address: vs.paddr.trim() };
+  const phone = vs.pphone.trim(), digits = phone.replace(/\D/g, '');
+  const pdata = { name, nameLower: name.toLowerCase(), birthDate: birth, address: vs.paddr.trim(), phone, phoneDigits: digits, phoneRev: digits.split('').reverse().join('') };
   if (!pid){
     try {
       const snap = await getDocs(query(collection(db, 'patients'), where('nameLower', '==', pdata.nameLower)));
@@ -1803,7 +1805,7 @@ async function saveVisit(ov, vs){
   const visitId = vs.id || doc(collection(db, 'visits')).id;
   const ref = vs.refKey === 'self' ? { self: true } : (() => { const [, did, iid] = vs.refKey.split(':'); const d = dir.doctors.find(x => x.id === did);
     return { self: false, doctorId: did, institutionId: iid || null, doctorName: d?.name || vs.refSnap || '', institutionName: iid ? instNameById(iid) : '' }; })();
-  const vis = { patientId: pid, patientName: name, patientBirth: birth, patientAddress: vs.paddr.trim(), labelId: vs.labelId || '', historyNo: vs.hist.trim(), referral: ref, describerId: vs.docId || '', labTechId: vs.labId || '' };
+  const vis = { patientId: pid, patientName: name, patientBirth: birth, patientAddress: vs.paddr.trim(), patientPhone: phone, labelId: vs.labelId || '', historyNo: vs.hist.trim(), referral: ref, describerId: vs.docId || '', labTechId: vs.labId || '' };
   const batch = writeBatch(db);
   let total = 0, k = 0;
   const names = [];
@@ -1997,10 +1999,10 @@ function jrTable(){
 const pt = { q: '', res: null, data: {}, subs: [], msg: null, tooMany: false };
 function ptStop(){ pt.subs.forEach(u => u()); pt.subs = []; }
 function renderPatients(){
-  ptStop(); pt.q = ''; pt.res = null; pt.data = {}; pt.msg = null;
+  ptStop(); const keep = pt.q; pt.res = null; pt.data = {}; pt.msg = null;   // запит лишається: при поверненні на вкладку пошук повторюється
   sheetRerender = ptDraw;
   $('sheet').innerHTML = `<div class="srch-lbl">Пошук пацієнта</div>
-    <form class="srch" id="ptForm"><div class="srch-f"><input id="ptQ" autocomplete="off" placeholder="Прізвище або початок ПІБ"><button type="button" class="srch-clear" id="ptClr">✕</button></div><button type="submit">🔍 Пошук</button></form>
+    <form class="srch" id="ptForm"><div class="srch-f"><input id="ptQ" autocomplete="off" placeholder="Прізвище (початок ПІБ) або телефон"><button type="button" class="srch-clear" id="ptClr">✕</button></div><button type="submit">🔍 Пошук</button></form>
     <div id="ptRes"></div>`;
   $('ptForm').onsubmit = (e) => { e.preventDefault(); ptSearch(); };
   $('ptClr').onclick = () => { $('ptQ').value = ''; $('ptQ').focus(); };
@@ -2010,14 +2012,22 @@ function renderPatients(){
     if (y && !y.classList.contains('off')) togglePay(y.dataset.pay);
   };
   ptDraw(); $('ptQ').focus();
+  if (keep){ $('ptQ').value = keep; ptSearch(); }
 }
 async function ptSearch(){
   const raw = $('ptQ').value.trim(), q = raw.toLowerCase();
   ptStop(); pt.data = {}; pt.msg = null; pt.q = raw;
   if (q.length < 2){ pt.res = null; pt.msg = { k: 'i', t: 'Введіть щонайменше 2 символи прізвища.' }; return ptDraw(); }
   try {
-    const snap = await getDocs(query(collection(db, 'patients'), where('nameLower', '>=', q), where('nameLower', '<=', q + ''), limit(11)));
-    let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const isPhone = /^[\d\s+()\-]+$/.test(raw), dg = raw.replace(/\D/g, ''), E = String.fromCharCode(0xf8ff);
+    let docs;
+    if (isPhone){
+      if (dg.length < 3){ pt.res = null; pt.msg = { k: 'i', t: 'Для пошуку за телефоном введіть щонайменше 3 цифри.' }; return ptDraw(); }
+      const rv = dg.split('').reverse().join('');
+      const [a, b2] = await Promise.all([['phoneDigits', dg], ['phoneRev', rv]].map(([f, v]) => getDocs(query(collection(db, 'patients'), where(f, '>=', v), where(f, '<=', v + E), limit(11)))));
+      docs = [...a.docs, ...b2.docs.filter(d => !a.docs.some(x => x.id === d.id))];   // початок номера або його кінець
+    } else docs = (await getDocs(query(collection(db, 'patients'), where('nameLower', '>=', q), where('nameLower', '<=', q + E), limit(11)))).docs;
+    let list = docs.map(d => ({ id: d.id, ...d.data() }));
     pt.tooMany = list.length > 10; list = list.slice(0, 10);
     pt.res = list.sort((a, b) => String(a.name).localeCompare(String(b.name), 'uk'));
   } catch (e){ pt.res = null; pt.msg = { k: 'e', t: 'Не вдалося виконати пошук. ' + (e.code || '') }; return ptDraw(); }
@@ -2072,7 +2082,7 @@ function ptDraw(){
   const y = box.querySelector('.pts')?.scrollTop || 0;
   if (pt.msg){ box.innerHTML = `<div class="al al-${pt.msg.k}" style="margin:0"><span class="al-icon">${pt.msg.k === 'e' ? '✕' : 'i'}</span><div>${esc(pt.msg.t)}</div></div>`; return; }
   if (pt.res === null){ box.innerHTML = '<div class="pt-empty"><span class="ic">🔍</span>Введіть прізвище пацієнта й натисніть «Пошук» — з\'явиться його історія візитів.</div>'; return; }
-  if (!pt.res.length){ box.innerHTML = `<div class="al al-w" style="margin:0"><span class="al-icon"><span>!</span></span><div><b>Нічого не знайдено</b>За запитом «${esc(pt.q)}» пацієнтів немає. Перевірте написання прізвища.</div></div>`; return; }
+  if (!pt.res.length){ box.innerHTML = `<div class="al al-w" style="margin:0"><span class="al-icon"><span>!</span></span><div><b>Нічого не знайдено</b>За запитом «${esc(pt.q)}» пацієнтів немає. Перевірте написання прізвища або частину номера телефону.</div></div>`; return; }
   box.innerHTML = `<div class="found">Знайдено збігів: <b>${pt.res.length}</b>${pt.tooMany ? ' (показано перші 10 — уточніть запит)' : ''}</div><div class="pts">${pt.res.map(p => ptCard(pt.data[p.id].p, pt.data[p.id].rows)).join('')}</div>`;
   const n = box.querySelector('.pts'); if (n) n.scrollTop = y;
 }
