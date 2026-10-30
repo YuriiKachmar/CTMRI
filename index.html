@@ -289,14 +289,15 @@
   /* ── Журнал + форма візиту (main.html, forma_vizytu.html) ── */
   :root{--rule:#B9C4C2;--tile:#e6ebf0;--field-ro:#E4E9EA;--card:#e9edf2}
   .pen.off{opacity:.35;cursor:default;box-shadow:none;pointer-events:none}
-  .j-actions{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:14px}
+  .j-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,460px) minmax(0,1fr);gap:10px;align-items:center;margin-bottom:14px}
+  @media (max-width:1000px){.j-actions{grid-template-columns:minmax(0,1fr);justify-items:center}.j-actions>*{max-width:100%}}
   .j-new{justify-self:start;display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border:none;border-radius:12px;background:var(--btn-main);color:#fff;font-size:13px;font-weight:800;letter-spacing:.3px;cursor:pointer;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark);font-family:inherit}
   .j-new:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
   .j-new .plus{font-size:22px;font-weight:900;line-height:1}
   /* календар чергувань */
   .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}.dow span{text-align:center;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:4px 0}
   .cal-hint{font-size:12px;color:var(--muted);margin:0 0 12px}
-  .cal-pp{margin-bottom:14px}.cal-pp .pp-b{flex:1;width:auto}
+  .pp-wrap{display:flex;justify-content:center;margin-bottom:14px}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .cell{min-width:0;min-height:86px;border-radius:12px;background:var(--bg);box-shadow:var(--in);padding:6px 5px;display:flex;flex-direction:column;justify-content:center;gap:3px;overflow:hidden}
   .cell .dnum{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1;padding:1px 0}
@@ -323,7 +324,6 @@
   .rp-tile{padding:16px;border-radius:16px;background:var(--bg);box-shadow:var(--up);cursor:pointer}.rp-tile:active{box-shadow:var(--in)}
   .rp-ic{font-size:22px;margin-bottom:6px}.rp-tn{font-size:13.5px;font-weight:800;color:var(--ink)}.rp-td{font-size:11.5px;color:var(--muted);margin-top:3px}
   .rp-win{max-width:1500px}.rp-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.rp-top .win-x{position:static}
-  .rp-pp{margin-bottom:16px}.rp-pp .pp-b{flex:1;width:auto}
   .rp-card{padding:14px 16px;border-radius:14px;background:var(--bg);box-shadow:var(--up);margin-bottom:16px}
   .rp-cl{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
   .rp-row{display:flex;align-items:center;gap:12px}.rp-row label{font-size:12px;color:var(--muted);min-width:70px}.rp-row .in{max-width:280px}
@@ -340,10 +340,11 @@
   .rp-t tr.xs td{background:rgba(214,238,221,.35)}.rp-t .sm{font-size:10.5px;color:var(--muted);font-weight:400}
   .rp-leg{font-size:11px;color:var(--muted);margin-top:10px}.rp-hint{font-size:11px;color:var(--muted);margin-top:8px}
   .rp-foot{display:flex;gap:10px;align-items:center;margin-top:18px}.rp-ex{margin-left:auto;display:flex;gap:10px}.rp-foot .b[disabled]{opacity:.45;cursor:not-allowed}
-  .pp{display:flex;padding:5px;border-radius:14px;background:var(--bg);box-shadow:var(--in);height:48px;position:relative}
-  .pp-b{flex:0 0 auto;width:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 14px;border-radius:11px;font-size:12px;color:var(--muted);cursor:pointer}
+  .pp{display:flex;padding:5px;border-radius:14px;background:var(--bg);box-shadow:var(--in);height:48px;position:relative;width:460px;max-width:100%;min-width:0}
+  .pp-b{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 6px;overflow:hidden;border-radius:11px;font-size:12px;color:var(--muted);cursor:pointer}
   .pp-b.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
   .pp-b.on .pp-m{color:var(--green)}
+  .pp-m,.pp-d{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pp-m{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;line-height:1.15}
   .pp-d{font-size:10px;font-weight:400;color:var(--muted);line-height:1.2}
   .pp-date{font-size:15px;letter-spacing:.2px;text-transform:none}
@@ -899,6 +900,13 @@ function saveEntry(key, id, data){
     });
   rerenderWins();
   return ref.id;
+}
+
+/* ═══ Спільна панель періоду (Журнал, Календар чергувань, Звіти): одна розмітка, один стиль .pp, один сеттер ═══ */
+const ppMarkup = (p, extra = '') => `<div class="pp" id="${p}"><div class="pp-b" id="${p}L"></div><div class="pp-b on" id="${p}M"></div><div class="pp-b" id="${p}R"></div>${extra}</div>`;
+const ppCell = (a, b) => `<span class="pp-m">${a}</span><span class="pp-d">${b}</span>`;
+function ppSet(p, cells){   // cells: { L, M, R } = { on, h }
+  for (const k of ['L', 'M', 'R']){ const el = $(p + k), c = cells[k]; if (el && c){ el.className = 'pp-b' + (c.on ? ' on' : ''); el.innerHTML = c.h; } }
 }
 
 /* ═══ Модальні вікна (стек: список → форма) ═══ */
@@ -1586,11 +1594,9 @@ function calDraw(){
   const ov = cal.ov; if (!ov || !ov.isConnected) return;
   const M = (a, b) => `<span class="pp-m">${a}</span><span class="pp-d">${b}</span>`, now = new Date(), isCur = cal.y === now.getFullYear() && cal.m === now.getMonth();
   const mon = `${MON_NAME[cal.m]}`, rng = `01.${p2(cal.m + 1)}.${cal.y} – ${new Date(cal.y, cal.m + 1, 0).getDate()}.${p2(cal.m + 1)}.${cal.y}`;
-  const L = ov.querySelector('[data-tl]'), Mm = ov.querySelector('[data-tm]'), R = ov.querySelector('[data-tr]');
-  L.className = 'pp-b' + (cal.onLeft ? ' on' : ''); Mm.className = 'pp-b' + (cal.onLeft ? '' : ' on');
-  if (!cal.onLeft){ L.innerHTML = M('Попередній місяць', '← назад'); Mm.innerHTML = M(mon, rng); }
-  else { L.innerHTML = M(mon, rng); Mm.innerHTML = M('Наступний місяць', 'вперед →'); }
-  R.innerHTML = M('Обрати місяць', 'будь-який');
+  ppSet('cl', cal.onLeft
+    ? { L: { on: true, h: M(mon, rng) }, M: { h: M('Наступний місяць', 'вперед →') }, R: { h: M('Обрати місяць', 'будь-який') } }
+    : { L: { h: M('Попередній місяць', '← назад') }, M: { on: true, h: M(mon, rng) }, R: { h: M('Обрати місяць', 'будь-який') } });
   const { out, sums, nod } = calData(), sched = settings?.schedule || [], td = todayISO(), ed = canEditCal();
   const lead = (new Date(cal.y, cal.m, 1).getDay() + 6) % 7;
   const nm = (wid) => { const w = workerBy(wid); return w ? shortName(w) : '(видалений працівник)'; };
@@ -1636,16 +1642,16 @@ function openCalendar(){
   const n = new Date(); cal.y = n.getFullYear(); cal.m = n.getMonth(); cal.onLeft = false;
   const ov = openWin(`<div class="win-h"><h4>Календар чергувань</h4><button class="win-x" data-x>✕</button></div>
     <div class="win-b"><div class="cal-hint">Хто чергував / чергуватиме. Минуле — факт із журналу (не редагується), сьогодні й майбутнє — призначення. ${canEditCal() ? 'Призначене чергування лишається в календарі, навіть якщо пацієнтів не було.' : 'Ви можете лише переглядати.'}</div>
-    <div class="pp cal-pp"><div class="pp-b" data-tl></div><div class="pp-b on" data-tm></div><div class="pp-b" data-tr></div></div>
+    <div class="pp-wrap">${ppMarkup('cl')}</div>
     <div class="dow"><span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>нд</span></div>
     <div class="cal-grid" data-cg></div><div data-cs></div></div>
     <div class="win-f"><button class="b" data-x>Закрити</button></div>`, 1000);
   cal.ov = ov; ov.classList.add('cal-ov');
   ov._onClose = () => { cal.seq++; if (cal.unsub){ cal.unsub(); cal.unsub = null; } cal.ov = null; };
   ov.addEventListener('click', (e) => {
-    if (e.target.closest('[data-tl]')) return calShift(-1);
-    if (e.target.closest('[data-tm]')) return cal.onLeft ? calShift(1) : undefined;
-    if (e.target.closest('[data-tr]')) return openMonthPicker();
+    if (e.target.closest('#clL')) return calShift(-1);
+    if (e.target.closest('#clM')) return cal.onLeft ? calShift(1) : undefined;
+    if (e.target.closest('#clR')) return openMonthPicker();
     if (!canEditCal()) return;
     const cell = e.target.closest('.cell[data-iso]'), slot = e.target.closest('.slot[data-g]');
     if (!cell || !slot) return;
@@ -1744,7 +1750,7 @@ function rpOpen(){
   const name = REPORTS.find(r => r[0] === rp.cur)[1];
   const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
   $('sheet').innerHTML = `<div class="rp-win"><div class="rp-top"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div><button class="win-x" id="rpX">✕</button></div>
-    <div class="pp rp-pp"><div class="pp-b" id="rpL"></div><div class="pp-b on" id="rpM"></div><div class="pp-b" id="rpR"></div></div>
+    <div class="pp-wrap">${ppMarkup('rp')}</div>
     <div class="rp-card"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>
     <div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
     <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpCols">
@@ -1778,16 +1784,11 @@ function rpShiftMonth(step){
   rp.per = rpMonthPer(d.getFullYear(), d.getMonth(), false); rp.per.onLeft = !rpIsCurMonth(rp.per);
 }
 function rpPanel(){
-  const L = $('rpL'), M = $('rpM'), R = $('rpR'); if (!L) return;
-  const c = (a, b) => `<span class="pp-m">${a}</span><span class="pp-d">${b}</span>`, p = rp.per, [a, b] = rpRange();
-  const rng = `${isoToUa(a)} – ${isoToUa(b)}`;
-  if (p.t === 'custom'){
-    L.className = 'pp-b'; M.className = 'pp-b on'; L.innerHTML = c('Місяць', 'повернутись'); M.innerHTML = c('Довільний період', rng); R.innerHTML = c('Змінити', 'період');
-  } else if (!p.onLeft){
-    L.className = 'pp-b'; M.className = 'pp-b on'; L.innerHTML = c('Попередній місяць', '← назад'); M.innerHTML = c(MON_NAME[p.m], rng); R.innerHTML = c('Довільний період', 'вибрати дати');
-  } else {
-    L.className = 'pp-b on'; M.className = 'pp-b'; L.innerHTML = c(MON_NAME[p.m], rng); M.innerHTML = c('Наступний місяць', 'вперед →'); R.innerHTML = c('Довільний період', 'вибрати дати');
-  }
+  if (!$('rpL')) return;
+  const c = ppCell, p = rp.per, [a, b] = rpRange(), rng = `${isoToUa(a)} – ${isoToUa(b)}`;
+  if (p.t === 'custom') ppSet('rp', { L: { h: c('Місяць', 'повернутись') }, M: { on: true, h: c('Довільний період', rng) }, R: { h: c('Змінити', 'період') } });
+  else if (!p.onLeft) ppSet('rp', { L: { h: c('Попередній місяць', '← назад') }, M: { on: true, h: c(MON_NAME[p.m], rng) }, R: { h: c('Довільний період', 'вибрати дати') } });
+  else ppSet('rp', { L: { on: true, h: c(MON_NAME[p.m], rng) }, M: { h: c('Наступний місяць', 'вперед →') }, R: { h: c('Довільний період', 'вибрати дати') } });
 }
 function openRpPeriod(){
   const td = todayISO(), now = new Date(), [a, b] = rpRange();
@@ -2681,8 +2682,7 @@ function renderJournal(){
   if (!can('jView')){ $('sheet').innerHTML = noAccessBox('Перегляд журналу вам не дозволено.'); return; }
   sheetRerender = () => { jrPanel(); jrTable(); };
   $('sheet').innerHTML = `<div class="j-actions">${can('jEdit') && !isDoctor() ? '<button class="j-new" id="jNew"><span class="plus">+</span> НОВИЙ ВІЗИТ</button>' : '<span></span>'}
-      <div class="pp" id="pp"><div class="pp-b" id="ppL"></div><div class="pp-b on" id="ppM"></div><div class="pp-b" id="ppR"></div>
-        <button class="pp-confirm" id="ppConfirm"><span class="pp-confirm-lbl">🔍 Показати за</span><span class="pp-confirm-month" id="ppConfirmMonth"></span></button></div><div></div></div>
+      ${ppMarkup('pp', '<button class="pp-confirm" id="ppConfirm"><span class="pp-confirm-lbl">🔍 Показати за</span><span class="pp-confirm-month" id="ppConfirmMonth"></span></button>')}<div></div></div>
     <div id="jBody"></div><div id="jLeg"></div>`;
   if ($('jNew')) $('jNew').onclick = () => openVisitForm(null);
   $('ppL').onclick = () => { jr.pp = jr.pp === null ? 0 : jr.pp - 1; jrPanel(); };
@@ -2730,24 +2730,21 @@ function togglePay(id){
 }
 function ppToday(){ jr.pp = null; jr.confirmedFor = null; jr.loaded = { t: 'today' }; jrSubscribe(); jrPanel(); jrTable(); }
 function jrPanel(){
-  const L = $('ppL'), M = $('ppM'), R = $('ppR'), C = $('ppConfirm'); if (!L) return;
-  const cell = (a, b) => `<span class="pp-m">${a}</span><span class="pp-d">${b}</span>`;
+  const C = $('ppConfirm'); if (!$('ppL')) return;
+  const c = ppCell;
   if (jr.pp === null && jr.loaded.t !== 'day'){
     const t = new Date();
-    M.innerHTML = cell('Сьогодні', `${p2(t.getDate())}.${p2(t.getMonth() + 1)}.${t.getFullYear()}`);
-    L.innerHTML = cell(MON_NAME[t.getMonth()], 'увесь місяць'); R.innerHTML = cell('Обрати день', 'календар');
+    ppSet('pp', { L: { h: c(MON_NAME[t.getMonth()], 'увесь місяць') }, M: { on: true, h: c('Сьогодні', `${p2(t.getDate())}.${p2(t.getMonth() + 1)}.${t.getFullYear()}`) }, R: { h: c('Обрати день', 'календар') } });
     C.classList.remove('show');
   } else if (jr.pp === null){
     const [y, m, d] = jr.loaded.iso.split('-');
-    M.innerHTML = `<span class="pp-d">Обраний день</span><span class="pp-m pp-date">${d}.${m}.${y}</span>`;
-    L.innerHTML = cell(MON_NAME[+m - 1], 'увесь місяць'); R.innerHTML = cell('Сьогодні', 'повернутись');
+    ppSet('pp', { L: { h: c(MON_NAME[+m - 1], 'увесь місяць') }, M: { on: true, h: `<span class="pp-d">Обраний день</span><span class="pp-m pp-date">${d}.${m}.${y}</span>` }, R: { h: c('Сьогодні', 'повернутись') } });
     C.classList.remove('show');
   } else {
-    M.innerHTML = cell(MON_NAME[ppMonthDate(jr.pp).getMonth()], ppRange(jr.pp));
-    L.innerHTML = cell(MON_NAME[ppMonthDate(jr.pp - 1).getMonth()], '← назад');
-    R.innerHTML = jr.pp >= 0 ? cell('Сьогодні', 'повернутись') : cell(MON_NAME[ppMonthDate(jr.pp + 1).getMonth()], 'вперед →');
+    ppSet('pp', { L: { h: c(MON_NAME[ppMonthDate(jr.pp - 1).getMonth()], '← назад') }, M: { on: true, h: c(MON_NAME[ppMonthDate(jr.pp).getMonth()], ppRange(jr.pp)) },
+      R: { h: jr.pp >= 0 ? c('Сьогодні', 'повернутись') : c(MON_NAME[ppMonthDate(jr.pp + 1).getMonth()], 'вперед →') } });
     $('ppConfirmMonth').textContent = MON_NAME[ppMonthDate(jr.pp).getMonth()];
-    const pr = $('pp').getBoundingClientRect(), mr = M.getBoundingClientRect();
+    const pr = $('pp').getBoundingClientRect(), mr = $('ppM').getBoundingClientRect();
     C.style.left = (mr.left - pr.left + mr.width / 2) + 'px'; C.style.width = mr.width + 'px';
     C.classList.toggle('show', !(jr.loaded.t === 'month' && jr.loaded.off === jr.pp));
   }
