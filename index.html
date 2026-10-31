@@ -556,7 +556,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 02:30 · напис довільного періоду</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 02:50 · шрифт Arsenal</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -2106,12 +2106,14 @@ tr.st td{border-top:.5pt solid #000;border-bottom:1.1pt solid #000}tr.tt td{bord
   const inner = `<div class="hd"><div class="lg">${PX(ini)}</div><div><div class="fn">${PX(fac)}</div><div class="fa">${PX(adr)}</div></div></div>
     <div class="rt">${PX(title)}<span class="bd">${m.full ? 'Повний' : 'Стислий'}</span></div><div class="pr">${PX(per)}</div>${sel ? `<div class="sl">${PX(sel)}</div>` : ''}
     <table><thead>${th1}</thead><tbody>${body}</tbody></table>${m.empty ? '<div class="em">ⓘ Даних не знайдено за заданими критеріями</div>' : ''}${notes}<div class="sg"></div>${doc ? `<div class="ft">Дата формування: ${tds}</div>` : ''}`;
-  const head = `<meta charset="utf-8"><title>${PX(base)}</title><link href="https://fonts.googleapis.com/css2?family=Arsenal:wght@400;700&display=swap" rel="stylesheet"><style>${css}</style>`;
+  const head = `<meta charset="utf-8"><title>${PX(base)}</title><style>${FONT_FACE()}${css}</style>`;
   if (!doc) return { name: base, html: `<!doctype html><html lang="uk"><head>${head}</head><body>${inner}</body></html>`, orient: wd.orient };
   const land = wd.orient === 'landscape';
   const wordCss = `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]--><style>@page WS{size:${land ? '297mm 210mm' : '210mm 297mm'};mso-page-orientation:${land ? 'landscape' : 'portrait'};margin:15mm 10mm 20mm 20mm}div.WS{page:WS}</style>`;
   return { name: base, html: `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head>${head}${wordCss}</head><body><div class="WS">${inner}</div></body></html>`, orient: wd.orient };
 }
+/* Arsenal лежить у репозиторії (fonts/) — друк працює без інтернету. Адреса абсолютна, бо друкарський iframe не має власної бази */
+const FONT_FACE = () => { const u = (f) => new URL('fonts/' + f, document.baseURI).href; return `@font-face{font-family:Arsenal;font-weight:400;src:local('Arsenal'),url(${u('Arsenal-Regular.woff')}) format('woff')}@font-face{font-family:Arsenal;font-weight:700;src:local('Arsenal Bold'),local('Arsenal-Bold'),url(${u('Arsenal-Bold.woff')}) format('woff')}`; };
 function rpExport(kind){
   if (!rp.data) return toast('i', 'Спершу покажіть звіт', 'Експортується те, що відображено на екрані.');
   const ex = rpPrintHtml(rpPrintModel(), kind === 'doc'); rp.last = { kind, name: ex.name, html: ex.html, orient: ex.orient };
