@@ -560,7 +560,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 13:30 · XLSX: підпис у групах</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 01:30 · звіт по лікарях</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1729,7 +1729,7 @@ const REPORTS = [
   ['rCtor', 'Конструктор', 'Групування + показники + фільтр', '🔎'],
   ['rMgmt', 'Управлінський', 'Зведення загальних показників', '📈']
 ];
-const RP_READY = { rLab: true };   // звіти, що вже реалізовані
+const RP_READY = { rLab: true, rDoc: true };   // звіти, що вже реалізовані
 const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, loading: false, err: null };
 const rpAllowed = () => REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
 const iso2 = (y, m, d) => `${y}-${p2(m + 1)}-${p2(d)}`;
@@ -1752,7 +1752,7 @@ function rpHub(){
       : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Немає жодного дозволеного звіту</b>Права надає адміністратор у розділі «Доступи».</div></div>');
   $('sheet').onclick = (e) => {
     const t = e.target.closest('[data-rep]'); if (!t) return;
-    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працює звіт «По лаборантах»; решта — за зразком.');
+    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працюють «По лаборантах» і «По лікарях»; решта — за зразком.');
     rp.cur = t.dataset.rep; rp.data = null; rpOpen();
   };
 }
@@ -1761,18 +1761,18 @@ function rpOpen(){
   const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
   $('sheet').innerHTML = `<div class="rp-win"><div class="j-actions"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div>${ppMarkup('rp')}<button class="win-x" id="rpX" style="justify-self:end">✕</button></div>
     <div class="rp-card"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>
-    <div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
+    ${rp.cur === 'rLab' ? `<div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
     <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpCols">
-      <span class="rp-chip" data-c="main">Основні послуги</span><span class="rp-chip" data-c="extra">Додаткові послуги</span>${pay ? '<span class="rp-chip" data-c="pay">Оплата</span>' : ''}</div></div>
+      <span class="rp-chip" data-c="main">Основні послуги</span><span class="rp-chip" data-c="extra">Додаткові послуги</span>${pay ? '<span class="rp-chip" data-c="pay">Оплата</span>' : ''}</div></div>` : ''}
     <div class="rp-act"><button class="b pri" id="rpGo"></button></div>
     <div id="rpBody"></div>
     <div class="rp-foot"><button class="b" id="rpClose">Закрити</button><span class="rp-ex"><button class="b" id="rpPdf" disabled>📄 PDF</button><button class="b" id="rpXls" disabled>📊 XLS</button><button class="b" id="rpDoc" disabled>📝 DOC</button></span></div></div>`;
   const sel = $('rpLab');
-  sel.innerHTML = '<option value="">Усі лаборанти</option>' + dir.workers.filter(w => w.role === 'Лаборант' && !w.mergedInto).sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk')).map(w => `<option value="${esc(w.id)}">${esc(shortName(w))}${w.status === 'inactive' ? ' (не працює)' : ''}</option>`).join('');
-  sel.value = rp.lab;
+  if (sel) sel.innerHTML = '<option value="">Усі лаборанти</option>' + dir.workers.filter(w => w.role === 'Лаборант' && !w.mergedInto).sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk')).map(w => `<option value="${esc(w.id)}">${esc(shortName(w))}${w.status === 'inactive' ? ' (не працює)' : ''}</option>`).join('');
+  if (sel) sel.value = rp.lab;
   const sync = () => {
     [...$('rpDet').children].forEach(s => s.classList.toggle('on', s.dataset.v === rp.detail));
-    [...$('rpCols').children].forEach(c => c.classList.toggle('on', !!rp.cols[c.dataset.c]));
+    if ($('rpCols')) [...$('rpCols').children].forEach(c => c.classList.toggle('on', !!rp.cols[c.dataset.c]));
     rpSyncExport();
     $('rpGo').innerHTML = rp.loading ? '<span class="spin"></span>' : (rp.data ? '📊 Оновити звіт' : '📊 Показати звіт'); $('rpGo').disabled = rp.loading;
   };
@@ -1782,8 +1782,8 @@ function rpOpen(){
   $('rpM').onclick = () => { const p = rp.per; if (p.custom){ p.custom = null; } else if (p.onLeft) rpShiftMonth(1); else return; rp.data = null; rpPanel(); rpDraw(); sync(); };
   $('rpR').onclick = openRpPeriod; $('rpPdf').onclick = () => rpExport('pdf'); $('rpDoc').onclick = () => rpExport('doc'); $('rpXls').onclick = () => rpExport('xls');
   $('rpDet').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.detail = s.dataset.v; sync(); rpDraw(); } };
-  $('rpCols').onclick = (e) => { const c = e.target.closest('[data-c]'); if (c){ rp.cols[c.dataset.c] = !rp.cols[c.dataset.c]; sync(); rpDraw(); } };
-  sel.onchange = () => { rp.lab = sel.value; rpDraw(); };
+  if ($('rpCols')) $('rpCols').onclick = (e) => { const c = e.target.closest('[data-c]'); if (c){ rp.cols[c.dataset.c] = !rp.cols[c.dataset.c]; sync(); rpDraw(); } };
+  if (sel) sel.onchange = () => { rp.lab = sel.value; rpDraw(); };
   $('rpGo').onclick = async () => { await rpLoad(); sync(); };
   sheetRerender = () => { rpDraw(); };
   rpPanel(); sync(); rpDraw();
@@ -1878,7 +1878,7 @@ async function rpLoad(){
   try {
     const [rs, ds] = await Promise.all([
       getDocs(query(collection(db, 'records'), where('date', '>=', a), where('date', '<=', b))),
-      getDocs(query(collection(db, 'duty_days'), where('date', '>=', a), where('date', '<=', b))).catch(() => ({ docs: [] }))
+      rp.cur === 'rLab' ? getDocs(query(collection(db, 'duty_days'), where('date', '>=', a), where('date', '<=', b))).catch(() => ({ docs: [] })) : Promise.resolve({ docs: [] })
     ]);
     rp.data = { a, b, recs: rs.docs.map(d => ({ id: d.id, ...d.data() })), duty: Object.fromEntries(ds.docs.map(d => [d.id, d.data()])) };
   } catch (e){ rp.data = null; rp.err = e.code || 'помилка'; }
@@ -1962,11 +1962,65 @@ function rpNotes(rep, a, b){
   if (rep.nod.length) notes.push({ crit: true, h: 'Чергування без записів у журналі', t: `(з календаря): ${rep.nod.map(n => `${esc(nameOfW(n.wid))} — ${dmy(n.iso)}`).join(' · ')}. Імовірно, не було пацієнтів. Ці дні не входять у підсумок змін вище — рішення про оплату ухвалює адміністратор.` });
   return notes;
 }
+/* ── «По лікарях» (zvit_likari): групування по лікарю-діагносту; «Описи» = записи з відміткою «описано», не дослідження; «Днів» = дати, у які є описи ── */
+function docReport(data){
+  const docs = new Map(); let nodoc = 0;
+  for (const r of data.recs){
+    if (!r.described) continue;
+    if (!r.describerId){ nodoc++; continue; }
+    const wid = wNorm(r.describerId), D = docs.get(wid) || { wid, dates: new Map() }; docs.set(wid, D);
+    const g = D.dates.get(r.date) || newAgg(); D.dates.set(r.date, g); addAgg(g, r);
+  }
+  const list = [...docs.values()].map(D => ({ ...D, tot: sumAgg([...D.dates.values()]), days: D.dates.size })).sort((x, y) => nameOfW(x.wid).localeCompare(nameOfW(y.wid), 'uk'));
+  return { list, nodoc, days: list.reduce((s, D) => s + D.days, 0), tot: sumAgg(list.map(D => D.tot)) };
+}
+const DAY_F = ['день', 'дні', 'днів'], WDAY_F = ['робочий день', 'робочі дні', 'робочих днів'];
+const docNotes = (rep) => rep.nodoc ? [{ crit: false, h: 'Без лікаря:', t: `${plN(rep.nodoc, ['описаний запис', 'описані записи', 'описаних записів'])} без вказаного лікаря — у звіт не потрапили.` }] : [];
+function rpDrawDoc(box){
+  const rep = docReport(rp.data), money = can('jSums'), full = rp.detail === 'full', sm = (g) => money ? `<td class="r">${nfmt(g.base)}</td><td class="r">${nfmt(g.after)}</td>` : '';
+  const ncols = (full ? 2 : 3) + (money ? 2 : 0);
+  const head = `<thead><tr><th rowspan="2" class="l">${full ? 'Дата' : 'Лікар'}</th>${full ? '' : '<th rowspan="2" class="c">Днів</th>'}<th rowspan="2" class="c">Описи</th>${money ? '<th colspan="2" class="c grp">Сума</th>' : ''}</tr>`
+    + `<tr>${money ? '<th class="r">Без пільг, грн</th><th class="r">З пільгами, грн</th>' : ''}</tr></thead>`;
+  let body = '';
+  if (!rep.list.length) body = `<tr><td colspan="${ncols}" class="c">—</td></tr>`;
+  else if (!full){
+    body = rep.list.map(D => `<tr><td><b>${esc(nameOfW(D.wid))}</b></td><td class="c">${D.days}</td><td class="c">${nfmt(D.tot.n)}</td>${sm(D.tot)}</tr>`).join('')
+      + `<tr class="tt"><td><b>Разом — ${plN(rep.list.length, ['лікар', 'лікарі', 'лікарів'])}</b></td><td class="c">${rep.days}</td><td class="c">${nfmt(rep.tot.n)}</td>${sm(rep.tot)}</tr>`;
+  } else {
+    body = rep.list.map(D => `<tr class="gh"><td colspan="${ncols}"><b>${esc(nameOfW(D.wid))}</b> — ${plN(D.days, WDAY_F)}</td></tr>`
+      + [...D.dates.keys()].sort().map(d => `<tr><td>${isoToUa(d)}</td><td class="c">${D.dates.get(d).n}</td>${sm(D.dates.get(d))}</tr>`).join('')
+      + `<tr class="st"><td><b>Разом — ${plN(D.days, DAY_F)}</b></td><td class="c">${nfmt(D.tot.n)}</td>${sm(D.tot)}</tr>`).join('')
+      + `<tr class="tt"><td><b>Загалом — ${plN(rep.days, DAY_F)}</b></td><td class="c">${nfmt(rep.tot.n)}</td>${sm(rep.tot)}</tr>`;
+  }
+  box.innerHTML = `<div class="rp-wrap"><table class="rp-t">${head}<tbody>${body}</tbody></table></div>`
+    + (rep.list.length ? '' : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Даних не знайдено за заданими критеріями</b></div></div>')
+    + docNotes(rep).map(n => `<div class="al al-i" style="margin:8px 0 0"><span class="al-icon"><span>i</span></span><div><b>${esc(n.h)}</b> ${esc(n.t)}</div></div>`).join('');
+}
+function rpDocModel(){
+  const rep = docReport(rp.data), money = can('jSums'), full = rp.detail === 'full', dash = (v) => (v ? nfmt(v) : '—');
+  const sums = (g, b) => money ? [{ t: dash(g.base), v: g.base, ...(b ? { b: true } : {}) }, { t: dash(g.after), v: g.after, ...(b ? { b: true } : {}) }] : [];
+  const cnt = (n, b) => ({ t: dash(n), v: n, c: 1, ...(b ? { b: true } : {}) });
+  const rows = [];
+  if (!rep.list.length) rows.push({ k: 'r', cells: [{ t: '—' }, ...(full ? [] : [{ t: '—', c: 1 }]), { t: '—', c: 1 }, ...(money ? [{ t: '—' }, { t: '—' }] : [])] });
+  else if (!full){
+    rep.list.forEach(D => rows.push({ k: 'r', cells: [{ t: nameOfW(D.wid), wid: D.wid, b: true }, cnt(D.days), cnt(D.tot.n), ...sums(D.tot)] }));
+    rows.push({ k: 'tt', cells: [{ t: `Разом — ${plN(rep.list.length, ['лікар', 'лікарі', 'лікарів'])}`, b: true }, cnt(rep.days, 1), cnt(rep.tot.n, 1), ...sums(rep.tot, 1)] });
+  } else {
+    rep.list.forEach(D => {
+      rows.push({ k: 'gh', wid: D.wid, cells: [{ t: `${nameOfW(D.wid)} — ${plN(D.days, WDAY_F)}`, b: true, span: 2 + (money ? 2 : 0) }] });
+      [...D.dates.keys()].sort().forEach(d => rows.push({ k: 'r', cells: [{ t: isoToUa(d) }, cnt(D.dates.get(d).n), ...sums(D.dates.get(d))] }));
+      rows.push({ k: 'st', cells: [{ t: `Разом — ${plN(D.days, DAY_F)}`, b: true }, cnt(D.tot.n, 1), ...sums(D.tot, 1)] });
+    });
+    rows.push({ k: 'tt', cells: [{ t: `Загалом — ${plN(rep.days, DAY_F)}`, b: true }, cnt(rep.tot.n, 1), ...sums(rep.tot, 1)] });
+  }
+  return { rep, leaf: money ? ['Без пільг, грн', 'З пільгами, грн'] : [], groups: money ? [['Сума', 2]] : [], rows, full, lead: full ? ['Дата', 'Описи'] : ['Лікар', 'Днів', 'Описи'], notes: docNotes(rep), empty: !rep.list.length, sel: 'усі лікарі' };
+}
 function rpDraw(){
-  const box = $('rpBody'); if (!box || rp.cur !== 'rLab') return;
+  const box = $('rpBody'); if (!box || (rp.cur !== 'rLab' && rp.cur !== 'rDoc')) return;
   if (rp.loading){ box.innerHTML = '<div class="rp-ph"><span class="spin dk"></span></div>'; return; }
   if (rp.err){ box.innerHTML = `<div class="al al-e" style="margin:0"><span class="al-icon">✕</span><div><b>Не вдалося завантажити звіт</b>${esc(rp.err)}. Перевірте з'єднання й право «Дані» в Журналі.</div></div>`; return; }
   if (!rp.data){ box.innerHTML = '<div class="rp-ph">Тут з\'явиться звіт після натискання «Показати звіт».<br><span>Дані з бази ще не завантажувались.</span></div>'; return; }
+  if (rp.cur === 'rDoc') return rpDrawDoc(box);
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay;
   const cm = rp.cols.main, ce = rp.cols.extra;
   const mainSpan = cm ? (money ? 3 : 1) : 0, exSpan = ce ? (money ? 2 : 1) : 0, paySpan = pay ? 2 : 0;
@@ -2011,7 +2065,7 @@ function rpDraw(){
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
 const MON_ABBR = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
 const MON_FULL_G = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
-const RP_CODE = { rLab: 'Labor' };
+const RP_CODE = { rLab: 'Labor', rDoc: 'Doc' };
 /* період у назві файлу: 2026 · IV · Вер · 02Вер · 05-20Вер · 05Вер-20Жов */
 function rpPeriodToken(a, b){
   const [ya, ma, da] = a.split('-').map(Number), [yb, mb, dbb] = b.split('-').map(Number), last = (y, m) => new Date(y, m, 0).getDate();
@@ -2037,6 +2091,7 @@ function rpFileBase(){
 const PX = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /* модель друкованої таблиці: однакова з екранною (вигляд, критерії, стовпці), але без кольорів; нулі → «—» */
 function rpPrintModel(){
+  if (rp.cur === 'rDoc') return rpDocModel();
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay, cm = rp.cols.main, ce = rp.cols.extra, full = rp.detail === 'full';
   const dash = (v) => (v ? nfmt(v) : '—');
   const num = (g) => [...(cm ? [dash(g.n), ...(money ? [dash(g.base), dash(g.after)] : [])] : []), ...(ce ? [dash(g.exN), ...(money ? [dash(g.exSum)] : [])] : []), ...(pay ? [dash(g.cashless), dash(g.cash)] : [])];
@@ -2096,7 +2151,7 @@ function rpPrintHtml(m, doc){
   const { a, b } = rp.data, base = rpFileBase(), wd = rpWidths(m), fac = settings?.facilityName || '', adr = settings?.facilityAddress || '';
   const ini = (fac.split(/\s+/).filter(Boolean).map(x => x[0]).join('').slice(0, 2) || 'КТ').toUpperCase(), td = new Date(), tds = `${p2(td.getDate())}.${p2(td.getMonth() + 1)}.${td.getFullYear()}`;
   const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b);
-  const sel = rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти';
+  const sel = m.sel || (rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти');
   const mk = (wid) => m.notes.map((x, i) => x.wid === wid ? ` *${i + 1}` : '').join('');   // зірочки приміток біля комірки, яку вони пояснюють
   const cols = m.lead.length + m.leaf.length, TWp = wd.orient === 'landscape' ? 267 : 180, cw = wd.mm.slice(0, cols).map(x => x * (TWp - 8) / wd.mm.slice(0, cols).reduce((s, y) => s + y, 0));   // ті самі ширини, що й у .docx: від поля до поля, пропорційно
   const th1 = `<tr><th rowspan="2" class="nn"></th>${m.lead.map(h => `<th rowspan="2" class="l">${PX(h)}</th>`).join('')}${m.groups.map(g => `<th colspan="${g[1]}" class="g">${PX(g[0])}</th>`).join('')}</tr><tr>${m.leaf.map(h => `<th class="r">${PX(h)}</th>`).join('')}</tr>`;
@@ -2105,7 +2160,7 @@ function rpPrintHtml(m, doc){
     if (r.k === 'gh') return `<tr class="gh"><td class="nn"></td><td colspan="${cols}"><b>${PX(r.cells[0].t)}${mk(r.wid)}</b></td></tr>`;
     const nn = r.k === 'r' && !m.empty ? ++n : '';
     const skip = m.full && r.k === 'r' && !m.empty && r.cells.length === 1 + m.leaf.length ? 1 : 0;   // рядок без комірки «Зміна» (її об'єднано з рядком вище)
-    return `<tr class="${r.k}"><td class="nn">${nn}</td>${r.cells.map((c, i) => { const idx = i ? i + skip : 0, al = idx < 2 ? (c.c ? 'c' : 'l') : 'r'; return `<td class="${al}${c.b ? ' b' : ''}"${c.rs ? ` rowspan="${c.rs}"` : ''}>${PX(c.t)}${c.wid ? mk(c.wid) : ''}${c.sub ? `<div class="sb">${PX(c.sub)}</div>` : ''}</td>`; }).join('')}</tr>`;
+    return `<tr class="${r.k}"><td class="nn">${nn}</td>${r.cells.map((c, i) => { const idx = i ? i + skip : 0, al = idx < m.lead.length ? (c.c ? 'c' : 'l') : 'r'; return `<td class="${al}${c.b ? ' b' : ''}"${c.rs ? ` rowspan="${c.rs}"` : ''}>${PX(c.t)}${c.wid ? mk(c.wid) : ''}${c.sub ? `<div class="sb">${PX(c.sub)}</div>` : ''}</td>`; }).join('')}</tr>`;
   }).join('');
   const notes = m.notes.map((x, i) => `<div class="nt ${x.crit ? 'cr' : ''}">*${i + 1} <b>${PX(x.h)}</b> ${x.crit && x.h.startsWith('Чергування') ? x.t : PX(x.t)}</div>`).join('');
   const mb = `font:8pt Arsenal,Arial,sans-serif;color:#6B7B78`;
@@ -2157,7 +2212,7 @@ function rpDocx(m){
   const { a, b } = rp.data, base = rpFileBase(), wd = rpWidths(m), land = wd.orient === 'landscape', TW = land ? 267 : 180;
   const fac = settings?.facilityName || '', adr = settings?.facilityAddress || '', ini = (fac.split(/\s+/).filter(Boolean).map(x => x[0]).join('').slice(0, 2) || 'КТ').toUpperCase();
   const td = new Date(), tds = `${p2(td.getDate())}.${p2(td.getMonth() + 1)}.${td.getFullYear()}`;
-  const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b), sel = rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти';
+  const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b), sel = m.sel || (rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти');
   const mk = (wid) => m.notes.map((x, i) => x.wid === wid ? ` *${i + 1}` : '').join('');
   const GREY = '6B7B78', RED = '7A1F1F';
   const rPr = (o = {}) => `<w:rPr><w:rFonts w:ascii="Arsenal" w:hAnsi="Arsenal" w:cs="Arsenal" w:eastAsia="Arsenal"/>${o.b ? '<w:b/><w:bCs/>' : ''}<w:color w:val="${o.c || '000000'}"/><w:sz w:val="${o.sz || 18}"/><w:szCs w:val="${o.sz || 18}"/></w:rPr>`;
@@ -2224,7 +2279,7 @@ function rpDocx(m){
 function rpXlsx(m){
   const { a, b } = rp.data, base = rpFileBase();
   const fac = settings?.facilityName || '', adr = settings?.facilityAddress || '', td = new Date(), tds = `${p2(td.getDate())}.${p2(td.getMonth() + 1)}.${td.getFullYear()}`;
-  const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b), sel = rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти';
+  const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b), sel = m.sel || (rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти');
   const mk = (wid) => m.notes.map((x, i) => x.wid === wid ? ` *${i + 1}` : '').join('');
   const GREY = 'FF6B7B78', RED = 'FF7A1F1F', LINE = 'FFD9DEDE', BLK = 'FF000000';
   const nLead = m.lead.length, nCols = nLead + m.leaf.length, NC = nCols + 1;
@@ -2284,15 +2339,15 @@ function rpXlsx(m){
         if (cells.length === 1 + m.leaf.length) cells.splice(1, 0, { t: curTp, c: 1 }); else if (cells[1]) curTp = cells[1].t;
       }
       cells.forEach((c, i) => {
-        const isNum = col - 1 >= nLead, txt = c.t + (c.wid ? mk(c.wid) : '') + (c.sub ? ' · ' + c.sub : '');
+        const isNum = col - 1 >= nLead || (typeof c.v === 'number' && !c.sub), ha = col - 1 >= nLead ? 'right' : 'center', txt = c.t + (c.wid ? mk(c.wid) : '') + (c.sub ? ' · ' + c.sub : '');
         const bold = !!c.b || tot;
-        if (isNum && typeof c.v === 'number' && c.v !== 0 && !tot){ out.push(cN(col, rr, c.v, sty({ b: bold, h: 'right', nf: 1, bd }))); track(col, money(c.v)); }
+        if (isNum && typeof c.v === 'number' && c.v !== 0 && !tot){ out.push(cN(col, rr, c.v, sty({ b: bold, h: ha, nf: 1, bd }))); track(col, money(c.v)); }
         else if (isNum && tot && typeof c.v === 'number' && c.v !== 0){
           let f = null;
           if (r.k === 'st' && blockFirst) f = `SUM(${L(col)}${blockFirst}:${L(col)}${rr - 1})`;
           else if (r.k === 'tt') f = m.full ? `SUM(${stRows.map(x => `${L(col)}${x}`).join(',')})` : `SUM(${L(col)}${firstData}:${L(col)}${lastData})`;
-          out.push(f ? cF(col, rr, f, c.v, sty({ b: 1, h: 'right', nf: 1, bd })) : cN(col, rr, c.v, sty({ b: 1, h: 'right', nf: 1, bd }))); track(col, money(c.v));
-        } else if (isNum){ out.push(cT(col, rr, '—', sty({ b: bold, h: 'right', bd }))); }
+          out.push(f ? cF(col, rr, f, c.v, sty({ b: 1, h: ha, nf: 1, bd })) : cN(col, rr, c.v, sty({ b: 1, h: ha, nf: 1, bd }))); track(col, money(c.v));
+        } else if (isNum){ out.push(cT(col, rr, '—', sty({ b: bold, h: ha, bd }))); }
         else if (c.sub){ const main = c.t + (c.wid ? mk(c.wid) : ''); out.push(cR(col, rr, [{ t: main, b: bold }, { t: ' · ' + c.sub, sz: 8, c: GREY }], sty({ h: 'left', bd }))); track(col, main + ' ' + c.sub); }
         else { out.push(cT(col, rr, txt, sty({ b: bold, h: c.c ? 'center' : 'left', bd }))); track(col, txt); }
         col++; ci++;
