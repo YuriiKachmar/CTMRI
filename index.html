@@ -349,13 +349,14 @@
   .rp-leg{font-size:11px;color:var(--muted);margin-top:10px}.rp-hint{font-size:11px;color:var(--muted);margin-top:8px}
   .rp-foot{display:flex;gap:10px;align-items:center;margin-top:18px}.rp-ex{margin-left:auto;display:flex;gap:10px}.rp-foot .b[disabled]{opacity:.45;cursor:not-allowed}
   .pp{display:flex;padding:5px;border-radius:14px;background:var(--bg);box-shadow:var(--in);height:48px;position:relative;width:460px;max-width:100%;min-width:0}
-  .pp-b{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 6px;overflow:hidden;border-radius:11px;font-size:var(--t-sm);color:var(--muted);cursor:pointer}
+  .pp-b{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 6px;overflow:hidden;border-radius:11px;font-size:var(--t-body);color:var(--muted);cursor:pointer}
   .pp-b.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
   .pp-b.on .pp-m{color:var(--green)}
   .pp-m,.pp-d{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pp-m{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;line-height:1.15}
-  .pp-d{font-size:10px;font-weight:400;color:var(--muted);line-height:1.2}
-  .pp-date{font-size:15px;letter-spacing:.2px;text-transform:none}
+  .pp-m{font-size:var(--t-body);font-weight:400;line-height:1.15}   /* неактивні — як .tab у каркасі */
+  .pp-b.on .pp-m{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}   /* як .tm */
+  .pp-d{font-size:11px;font-weight:400;color:var(--muted);line-height:1.2}
+  .pp-date,.pp-b.on .pp-date{font-size:15px;letter-spacing:.2px;text-transform:none}
   .pp-confirm{display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:5;min-width:132px;height:38px;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:none;border-radius:var(--r12);background:var(--btn-main);color:#fff;white-space:nowrap;cursor:pointer;padding:0 8px;box-sizing:border-box;box-shadow:-3px -3px 7px var(--lite),4px 4px 9px var(--dark);animation:ppPulse 1.8s ease-in-out infinite;font-family:inherit}
   .pp-confirm .pp-confirm-lbl{font-size:var(--t-cap);font-weight:600;opacity:.9}
   .pp-confirm .pp-confirm-month{font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px}
@@ -559,7 +560,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 12:20 · вікно звіту за каркасом</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 12:40 · панель періоду за каркасом</div>
   </div>
 </div>
 <div id="modals"></div>
