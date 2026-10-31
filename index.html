@@ -556,7 +556,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 11:40 · справжній .docx</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 12:00 · орієнтація за шириною</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -2059,18 +2059,31 @@ function rpPrintModel(){
   }
   return { rep, leaf, groups, rows, full, lead: [full ? 'Дата' : 'Лаборант', full ? 'Зміна' : 'Змін'], notes: rpNotes(rep, a, b), empty: !rep.list.length };
 }
-/* ширина стовпців: max(заголовок, найдовше значення) · ~1.75 мм/символ + 4 мм; «№» — 8 мм; ≤170 мм портрет, ≤267 альбомна, далі — стискаємо відступи */
+/* ширина стовпців (export_template §2): max(заголовок, найширше значення) + ~4 мм відступів; «№» — 8 мм окремо й у сумі НЕ бере участі.
+   Ширину тексту міряємо справжнім шрифтом Arsenal (canvas), як автопідбір у Excel. Сума ≤170 мм → A4 портрет, ≤267 → альбомна, далі — звужуємо відступи */
+let rpFontOk = false, rpFontP = null;
+function rpFontReady(){
+  return rpFontP || (rpFontP = (async () => {
+    try {
+      const u = (f) => new URL('fonts/' + f, document.baseURI).href;
+      const faces = [new FontFace('Arsenal', `url(${u('Arsenal-Regular.woff')})`, { weight: '400' }), new FontFace('Arsenal', `url(${u('Arsenal-Bold.woff')})`, { weight: '700' })];
+      for (const f of faces) document.fonts.add(await f.load());
+      return (rpFontOk = true);
+    } catch (e){ return (rpFontOk = false); }
+  })());
+}
 function rpWidths(m){
-  const heads = [...m.lead, ...m.leaf], w = heads.map(h => String(h).length);
+  const cv = rpWidths.cv || (rpWidths.cv = document.createElement('canvas').getContext('2d'));
+  const tw = (s, bold, pt = 9) => rpFontOk ? (cv.font = `${bold ? 700 : 400} ${pt * 4 / 3}px Arsenal`, cv.measureText(String(s)).width * 0.26458) : String(s).length * 1.75 * pt / 9;   // мм (запасний варіант — 1.75 мм/символ)
+  const heads = [...m.lead, ...m.leaf], w = heads.map(h => tw(h, true));
   for (const r of m.rows) if (r.k !== 'gh'){
     let ci = 0;
     for (const c of r.cells){
-      const lens = Math.max(...String(c.t).split('\n').map(x => x.length), c.sub ? c.sub.length * .8 : 0);
-      if (!r.rs && !c.rs) w[ci] = Math.max(w[ci], lens); else if (c.rs) w[ci] = Math.max(w[ci], lens);
+      w[ci] = Math.max(w[ci], ...String(c.t).split('\n').map(x => tw(x, c.b || r.k === 'st' || r.k === 'tt')), c.sub ? tw(c.sub, false, 8) : 0);
       ci++;
     }
   }
-  const mm = w.map(l => l * 1.75 + 4), sum = mm.reduce((s, x) => s + x, 0) + 8;
+  const mm = w.map(x => Math.max(8, x + 4)), sum = mm.reduce((s, x) => s + x, 0);   // без «№»
   return { sum, mm, orient: sum <= 170 ? 'portrait' : 'landscape', squeeze: sum > 267 };
 }
 function rpPrintHtml(m, doc){
@@ -2200,8 +2213,9 @@ function rpDocx(m){
   ];
   return { name: base, blob: zipStore(files, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') };
 }
-function rpExport(kind){
+async function rpExport(kind){
   if (!rp.data) return toast('i', 'Спершу покажіть звіт', 'Експортується те, що відображено на екрані.');
+  await rpFontReady();
   if (kind === 'doc'){
     const dx = rpDocx(rpPrintModel()); rp.last = { kind, name: dx.name };
     const a = document.createElement('a'); a.href = URL.createObjectURL(dx.blob); a.download = dx.name + '.docx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
