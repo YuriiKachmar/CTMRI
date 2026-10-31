@@ -1762,7 +1762,7 @@ function rpOpen(){
       <span class="rp-chip" data-c="main">Основні послуги</span><span class="rp-chip" data-c="extra">Додаткові послуги</span>${pay ? '<span class="rp-chip" data-c="pay">Оплата</span>' : ''}</div></div>
     <div class="rp-act"><button class="b pri" id="rpGo"></button></div>
     <div id="rpBody"></div>
-    <div class="rp-foot"><button class="b" id="rpClose">Закрити</button><span class="rp-ex"><button class="b" id="rpPdf" disabled>📄 PDF</button><button class="b" id="rpXls" disabled title="Експорт у XLSX — наступним кроком">📊 XLS</button><button class="b" id="rpDoc" disabled>📝 DOC</button></span></div></div>`;
+    <div class="rp-foot"><button class="b" id="rpClose">Закрити</button><span class="rp-ex"><button class="b" id="rpPdf" disabled>📄 PDF</button><button class="b" id="rpXls" disabled>📊 XLS</button><button class="b" id="rpDoc" disabled>📝 DOC</button></span></div></div>`;
   const sel = $('rpLab');
   sel.innerHTML = '<option value="">Усі лаборанти</option>' + dir.workers.filter(w => w.role === 'Лаборант' && !w.mergedInto).sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk')).map(w => `<option value="${esc(w.id)}">${esc(shortName(w))}${w.status === 'inactive' ? ' (не працює)' : ''}</option>`).join('');
   sel.value = rp.lab;
@@ -1776,7 +1776,7 @@ function rpOpen(){
   $('rpX').onclick = back; $('rpClose').onclick = back;
   $('rpL').onclick = () => { rpShiftMonth(-1); rp.data = null; rpPanel(); rpDraw(); sync(); };   // ліва — багаторазово на місяць назад (і скидає довільний період)
   $('rpM').onclick = () => { const p = rp.per; if (p.custom){ p.custom = null; } else if (p.onLeft) rpShiftMonth(1); else return; rp.data = null; rpPanel(); rpDraw(); sync(); };
-  $('rpR').onclick = openRpPeriod; $('rpPdf').onclick = () => rpExport('pdf'); $('rpDoc').onclick = () => rpExport('doc');
+  $('rpR').onclick = openRpPeriod; $('rpPdf').onclick = () => rpExport('pdf'); $('rpDoc').onclick = () => rpExport('doc'); $('rpXls').onclick = () => rpExport('xls');
   $('rpDet').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.detail = s.dataset.v; sync(); rpDraw(); } };
   $('rpCols').onclick = (e) => { const c = e.target.closest('[data-c]'); if (c){ rp.cols[c.dataset.c] = !rp.cols[c.dataset.c]; sync(); rpDraw(); } };
   sel.onchange = () => { rp.lab = sel.value; rpDraw(); };
@@ -2036,26 +2036,28 @@ function rpPrintModel(){
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay, cm = rp.cols.main, ce = rp.cols.extra, full = rp.detail === 'full';
   const dash = (v) => (v ? nfmt(v) : '—');
   const num = (g) => [...(cm ? [dash(g.n), ...(money ? [dash(g.base), dash(g.after)] : [])] : []), ...(ce ? [dash(g.exN), ...(money ? [dash(g.exSum)] : [])] : []), ...(pay ? [dash(g.cashless), dash(g.cash)] : [])];
+  const numRaw = (g) => [...(cm ? [g.n, ...(money ? [g.base, g.after] : [])] : []), ...(ce ? [g.exN, ...(money ? [g.exSum] : [])] : []), ...(pay ? [g.cashless, g.cash] : [])];
+  const numc = (g, b) => { const rw = numRaw(g); return num(g).map((t, i) => ({ t, v: rw[i], ...(b ? { b: true } : {}) })); };   // t — текст для друку, v — число для XLSX
   const leaf = [...(cm ? ['К-сть', ...(money ? ['Без пільг, грн', 'З пільгами, грн'] : [])] : []), ...(ce ? ['К-сть', ...(money ? ['Сума, грн'] : [])] : []), ...(pay ? ['Безготівка', 'Готівка'] : [])];
   const groups = [...(cm ? [['Основні послуги', money ? 3 : 1]] : []), ...(ce ? [['Додаткові', money ? 2 : 1]] : []), ...(pay ? [['Оплата, грн', 2]] : [])];
   const tps = (types) => Object.entries(types).sort((x, y) => x[0].localeCompare(y[0], 'uk')).map(([t, n]) => `${t} ${n}`).join(', ');
   const rows = [];
   if (!rep.list.length) rows.push({ k: 'r', cells: [{ t: '—' }, { t: '—' }, ...leaf.map(() => ({ t: '—' }))] });
   else if (!full){
-    rep.list.forEach(L => rows.push({ k: 'r', cells: [{ t: nameOfW(L.wid), wid: L.wid, b: true, sub: labSchedText(L.wid, a, b) }, { t: `${L.count} (${tps(L.types)})`, c: 1 }, ...num(L.tot).map(t => ({ t }))] }));
+    rep.list.forEach(L => rows.push({ k: 'r', cells: [{ t: nameOfW(L.wid), wid: L.wid, b: true, sub: labSchedText(L.wid, a, b) }, { t: `${L.count} (${tps(L.types)})`, c: 1 }, ...numc(L.tot)] }));
   } else {
     rep.list.forEach(L => {
       rows.push({ k: 'gh', wid: L.wid, cells: [{ t: `${nameOfW(L.wid)} · ${labSchedText(L.wid, a, b)}`, b: true, span: 2 + leaf.length }] });
       for (const s of L.shifts){
         const ds = [...s.dates.keys()].sort();
-        ds.forEach((d, i) => rows.push({ k: 'r', cells: [{ t: isoToUa(d) + (ds.length > 1 ? (i ? ' ◣' : ' ◤') : '') }, ...(i ? [] : [{ t: s.tp + (s.out ? ' ⚠' : ''), c: 1, rs: ds.length }]), ...num(s.dates.get(d)).map(t => ({ t }))] }));
+        ds.forEach((d, i) => rows.push({ k: 'r', cells: [{ t: isoToUa(d) + (ds.length > 1 ? (i ? ' ◣' : ' ◤') : '') }, ...(i ? [] : [{ t: s.tp + (s.out ? ' ⚠' : ''), c: 1, rs: ds.length }]), ...numc(s.dates.get(d))] }));
       }
-      rows.push({ k: 'st', cells: [{ t: `Разом — ${plN(L.count, ['зміна', 'зміни', 'змін'])}`, b: true }, { t: tps(L.types), c: 1, b: true }, ...num(L.tot).map(t => ({ t, b: true }))] });
+      rows.push({ k: 'st', cells: [{ t: `Разом — ${plN(L.count, ['зміна', 'зміни', 'змін'])}`, b: true }, { t: tps(L.types), c: 1, b: true }, ...numc(L.tot, true)] });
     });
   }
   if (rep.list.length && !rp.lab){
     const n = rep.list.reduce((s, L) => s + L.count, 0), types = {}; rep.list.forEach(L => Object.entries(L.types).forEach(([t, c]) => { types[t] = (types[t] || 0) + c; }));
-    rows.push({ k: 'tt', cells: [{ t: full ? `Разом усі — ${plN(n, ['зміна', 'зміни', 'змін'])}` : `Разом — ${plN(rep.list.length, ['лаборант', 'лаборанти', 'лаборантів'])}`, b: true }, { t: full ? tps(types) : `${n} (${tps(types)})`, c: 1, b: true }, ...num(sumAgg(rep.list.map(L => L.tot))).map(t => ({ t, b: true }))] });
+    rows.push({ k: 'tt', cells: [{ t: full ? `Разом усі — ${plN(n, ['зміна', 'зміни', 'змін'])}` : `Разом — ${plN(rep.list.length, ['лаборант', 'лаборанти', 'лаборантів'])}`, b: true }, { t: full ? tps(types) : `${n} (${tps(types)})`, c: 1, b: true }, ...numc(sumAgg(rep.list.map(L => L.tot)), true)] });
   }
   return { rep, leaf, groups, rows, full, lead: [full ? 'Дата' : 'Лаборант', full ? 'Зміна' : 'Змін'], notes: rpNotes(rep, a, b), empty: !rep.list.length };
 }
@@ -2213,9 +2215,119 @@ function rpDocx(m){
   ];
   return { name: base, blob: zipStore(files, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') };
 }
+
+/* ── XLSX без бібліотек (export_template §4 і CT_MRI_ТЕСТ_zvit_xlsx.xlsx): один аркуш, Arsenal 11, формули підсумків, друк із повтором шапки ── */
+function rpXlsx(m){
+  const { a, b } = rp.data, base = rpFileBase();
+  const fac = settings?.facilityName || '', adr = settings?.facilityAddress || '', td = new Date(), tds = `${p2(td.getDate())}.${p2(td.getMonth() + 1)}.${td.getFullYear()}`;
+  const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b), sel = rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти';
+  const mk = (wid) => m.notes.map((x, i) => x.wid === wid ? ` *${i + 1}` : '').join('');
+  const GREY = 'FF6B7B78', RED = 'FF7A1F1F', LINE = 'FFD9DEDE', BLK = 'FF000000';
+  const nLead = m.lead.length, nCols = nLead + m.leaf.length, NC = nCols + 1;
+  const L = (i) => { let s = ''; i++; while (i > 0){ const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
+  /* реєстр стилів */
+  const fonts = [], fills = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'], borders = ['<border><left/><right/><top/><bottom/><diagonal/></border>'], xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'];
+  const idx = (arr, x) => { let i = arr.indexOf(x); if (i < 0){ arr.push(x); i = arr.length - 1; } return i; };
+  fonts.push(`<font><sz val="11"/><color rgb="${BLK}"/><name val="Arsenal"/></font>`);
+  const side = (n, s) => s ? `<${n} style="${s[0]}"><color rgb="${s[1]}"/></${n}>` : `<${n}/>`;
+  const sty = (o = {}) => {
+    const f = idx(fonts, `<font>${o.b ? '<b/>' : ''}<sz val="${o.sz || 11}"/><color rgb="${o.c || BLK}"/><name val="Arsenal"/></font>`);
+    const fi = o.fill ? idx(fills, `<fill><patternFill patternType="solid"><fgColor rgb="${o.fill}"/><bgColor indexed="64"/></patternFill></fill>`) : 0;
+    const bo = o.bd ? idx(borders, `<border>${side('left', o.bd.l)}${side('right', o.bd.r)}${side('top', o.bd.t)}${side('bottom', o.bd.bt)}<diagonal/></border>`) : 0;
+    return idx(xfs, `<xf numFmtId="${o.nf ? 3 : 0}" fontId="${f}" fillId="${fi}" borderId="${bo}" xfId="0" applyFont="1"${fi ? ' applyFill="1"' : ''}${bo ? ' applyBorder="1"' : ''}${o.nf ? ' applyNumberFormat="1"' : ''} applyAlignment="1"><alignment horizontal="${o.h || 'left'}" vertical="center"/></xf>`);
+  };
+  const thin = ['thin', LINE], med = ['medium', BLK], thinB = ['thin', BLK];
+  const rows = []; let R = 0; const cellsOf = (r) => rows[r - 1];
+  const esc2 = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const cT = (col, r, t, s) => `<c r="${L(col)}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${esc2(t)}</t></is></c>`;
+  const cN = (col, r, v, s) => `<c r="${L(col)}${r}" s="${s}"><v>${v}</v></c>`;
+  const cF = (col, r, f, v, s) => `<c r="${L(col)}${r}" s="${s}"><f>${f}</f><v>${v}</v></c>`;
+  const cE = (col, r, s) => `<c r="${L(col)}${r}" s="${s}"/>`;
+  const push = (cells, ht) => { R++; rows.push({ r: R, cells: cells(R), ht }); return R; };
+  const merges = [];
+  /* шапка документа */
+  push((r) => [cT(0, r, fac, sty({ b: 1, sz: 14, h: 'center' })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, r, sty({ h: 'center' })))], 18); merges.push(`A${R}:${L(NC - 1)}${R}`);
+  push((r) => [cT(0, r, title, sty({ b: 1, sz: 13, h: 'center' })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, r, sty({ h: 'center' })))], 17); merges.push(`A${R}:${L(NC - 1)}${R}`);
+  push((r) => [cT(0, r, `${per} · Вибірка даних по: ${sel}${adr ? ' · ' + adr : ''}`, sty({ sz: 10, c: GREY, h: 'center' })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, r, sty({ h: 'center' })))], 15); merges.push(`A${R}:${L(NC - 1)}${R}`);
+  push(() => []);
+  /* шапка таблиці: рядок груп + рядок стовпців */
+  const hf = { b: 1, c: 'FFFFFFFF', fill: 'FF1E6B4F' };
+  const hr1 = R + 1, hr2 = R + 2;
+  push((r) => { const o = [cE(0, r, sty({ ...hf, h: 'center' })), ...m.lead.map((x, i) => cT(1 + i, r, x, sty({ ...hf })))]; let c = 1 + nLead; for (const g of m.groups){ o.push(cT(c, r, g[0], sty({ ...hf, h: 'center' }))); for (let k = 1; k < g[1]; k++) o.push(cE(c + k, r, sty({ ...hf, h: 'center' }))); if (g[1] > 1) merges.push(`${L(c)}${r}:${L(c + g[1] - 1)}${r}`); c += g[1]; } return o; });
+  push((r) => [cE(0, r, sty({ ...hf, bd: { bt: med } })), ...m.lead.map((x, i) => cE(1 + i, r, sty({ ...hf, bd: { bt: med } }))), ...m.leaf.map((x, i) => cT(1 + nLead + i, r, x, sty({ ...hf, h: 'left', bd: { bt: med } })))]);
+  merges.push(`A${hr1}:A${hr2}`); m.lead.forEach((x, i) => merges.push(`${L(1 + i)}${hr1}:${L(1 + i)}${hr2}`));
+  /* тіло */
+  let n = 0, blockFirst = 0, lastData = 0, firstData = 0; const stRows = [], dataRows = []; let curTp = '';
+  const colW = [4, ...[...m.lead, ...m.leaf].map(x => String(x).length)];
+  const track = (col, t) => { colW[col] = Math.max(colW[col] || 0, String(t).length); };
+  const money = (v) => nfmt(v);
+  for (const r of m.rows){
+    if (r.k === 'gh'){
+      const t = r.cells[0].t + mk(r.wid);
+      push((rr) => [cT(0, rr, t, sty({ b: 1, bd: { bt: thin } })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, rr, sty({ bd: { bt: thin } })))]); merges.push(`A${R}:${L(NC - 1)}${R}`); blockFirst = R + 1; continue;
+    }
+    const tot = r.k === 'st' || r.k === 'tt', bd = tot ? { l: thin, r: thin, t: thinB, bt: med } : { l: thin, r: thin, bt: thin };
+    const full = m.full;
+    push((rr) => {
+      const out = []; const num = r.k === 'r' && !m.empty ? ++n : null;
+      out.push(num ? cN(0, rr, num, sty({ c: GREY, h: 'center', bd })) : cE(0, rr, sty({ bd })));
+      let col = 1, ci = 0;
+      const cells = [...r.cells];
+      // у «Повному» вигляді клітинка «Зміна» об’єднана вертикально лише для друку — в Excel повторюємо значення в кожному рядку
+      if (full && r.k === 'r'){
+        if (cells.length === 1 + m.leaf.length) cells.splice(1, 0, { t: curTp, c: 1 }); else if (cells[1]) curTp = cells[1].t;
+      }
+      cells.forEach((c, i) => {
+        const isNum = col - 1 >= nLead, txt = c.t + (c.wid ? mk(c.wid) : '') + (c.sub ? ' · ' + c.sub : '');
+        const bold = !!c.b || tot;
+        if (isNum && typeof c.v === 'number' && c.v !== 0 && !tot){ out.push(cN(col, rr, c.v, sty({ b: bold, h: 'right', nf: 1, bd }))); track(col, money(c.v)); }
+        else if (isNum && tot && typeof c.v === 'number' && c.v !== 0){
+          let f = null;
+          if (r.k === 'st' && blockFirst) f = `SUM(${L(col)}${blockFirst}:${L(col)}${rr - 1})`;
+          else if (r.k === 'tt') f = m.full ? stRows.map(x => `${L(col)}${x}`).join('+') : `SUM(${L(col)}${firstData}:${L(col)}${lastData})`;
+          out.push(f ? cF(col, rr, f, c.v, sty({ b: 1, h: 'right', nf: 1, bd })) : cN(col, rr, c.v, sty({ b: 1, h: 'right', nf: 1, bd }))); track(col, money(c.v));
+        } else if (isNum){ out.push(cT(col, rr, '—', sty({ b: bold, h: 'right', bd }))); }
+        else { out.push(cT(col, rr, txt, sty({ b: bold, h: c.c ? 'center' : 'left', bd }))); track(col, txt); }
+        col++; ci++;
+      });
+      while (col < NC){ out.push(cE(col, rr, sty({ bd }))); col++; }
+      return out;
+    });
+    if (r.k === 'r'){ if (!firstData) firstData = R; lastData = R; if (m.full && r.cells.length !== 1 + m.leaf.length && r.cells[1]) curTp = r.cells[1].t; }
+    if (r.k === 'st') stRows.push(R);
+  }
+  /* примітки й підвал */
+  push(() => []);
+  if (m.empty) push((rr) => [cT(0, rr, 'Даних не знайдено за заданими критеріями', sty({ sz: 11 }))]);
+  m.notes.forEach((x, i) => push((rr) => [cT(0, rr, `*${i + 1} ${x.h} ${x.crit && x.h.startsWith('Чергування') ? (() => { const d = document.createElement('div'); d.innerHTML = x.t; return d.textContent; })() : x.t}`, sty({ sz: 9, c: x.crit ? RED : GREY }))]));
+  push(() => []);
+  push((rr) => [cT(0, rr, `Дата формування: ${tds}`, sty({ sz: 9, c: GREY }))]);
+  /* ширини: «№» = 4; решта — найдовше значення + 2; понад 267 мм — стискаємо самі стовпці */
+  const WID = colW.map((x, i) => i === 0 ? 4 : Math.min(60, x + 2)), sumW = WID.slice(1).reduce((s, x) => s + x, 0), mmX = sumW * 1.9 + 8, k = mmX > 267 ? 267 / mmX : 1;   // 1 од. ширини Excel ≈ 1.9 мм при 11 пт; орієнтація — за тим самим правилом суми, але за шириною саме Excel-стовпців
+  const cols = `<cols>${WID.map((x, i) => `<col min="${i + 1}" max="${i + 1}" width="${(i === 0 ? x : Math.max(6, x * k)).toFixed(2)}" customWidth="1"/>`).join('')}</cols>`;
+  const sheetName = title.replace(/[:\\/?*\[\]]/g, '').slice(0, 31);
+  const lastRow = R;
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${L(NC - 1)}${lastRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="${hr2}" topLeftCell="A${hr2 + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols}<sheetData>${rows.map(r => `<row r="${r.r}"${r.ht ? ` ht="${r.ht}" customHeight="1"` : ''}>${r.cells.join('')}</row>`).join('')}</sheetData><mergeCells count="${merges.length}">${merges.map(x => `<mergeCell ref="${x}"/>`).join('')}</mergeCells><pageMargins left="0.7874" right="0.3937" top="0.5906" bottom="0.7874" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="${mmX <= 170 + 8 ? 'portrait' : 'landscape'}" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;RСторінка &amp;P з &amp;N</oddFooter></headerFooter></worksheet>`;
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="${fonts.length}">${fonts.join('')}</fonts><fills count="${fills.length}">${fills.join('')}</fills><borders count="${borders.length}">${borders.join('')}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const wb = `${XH}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${RT}"><sheets><sheet name="${esc2(sheetName)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'${esc2(sheetName)}'!$${hr1}:$${hr2}</definedName></definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`;
+  const files = [
+    ['[Content_Types].xml', `${XH}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
+    ['_rels/.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml', wb],
+    ['xl/_rels/workbook.xml.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${RT}/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml', styles], ['xl/worksheets/sheet1.xml', sheet]
+  ];
+  return { name: base, blob: zipStore(files, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') };
+}
 async function rpExport(kind){
   if (!rp.data) return toast('i', 'Спершу покажіть звіт', 'Експортується те, що відображено на екрані.');
   await rpFontReady();
+  if (kind === 'xls'){
+    const xx = rpXlsx(rpPrintModel()); rp.last = { kind, name: xx.name };
+    const a = document.createElement('a'); a.href = URL.createObjectURL(xx.blob); a.download = xx.name + '.xlsx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    return;
+  }
   if (kind === 'doc'){
     const dx = rpDocx(rpPrintModel()); rp.last = { kind, name: dx.name };
     const a = document.createElement('a'); a.href = URL.createObjectURL(dx.blob); a.download = dx.name + '.docx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
@@ -2230,7 +2342,7 @@ async function rpExport(kind){
   (d.fonts && d.fonts.ready ? d.fonts.ready.catch(() => {}) : Promise.resolve()).then(() => setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e){ toast('e', 'Не вдалося відкрити друк', e.message || ''); done(); } }, 200));
 }
 function rpSyncExport(){
-  for (const id of ['rpPdf', 'rpDoc']){ const b = $(id); if (b){ b.disabled = !rp.data; b.title = rp.data ? '' : 'Спершу покажіть звіт'; } }
+  for (const id of ['rpPdf', 'rpXls', 'rpDoc']){ const b = $(id); if (b){ b.disabled = !rp.data; b.title = rp.data ? '' : 'Спершу покажіть звіт'; } }
 }
 
 $('mbServ').onclick = openServicesWin;
