@@ -345,6 +345,7 @@
   .rp-t th:first-child,.rp-t td:first-child{border-left:none}.rp-t td.c,.rp-t th.c{text-align:center}.rp-t td.r,.rp-t th.r{text-align:right}.rp-t th.l{text-align:left}
   .rp-t th.grp{border-bottom:2px solid var(--line)}
   .rp-t tr.gh td{background:rgba(30,107,79,.08);font-size:12.5px;border-left:none}.rp-t tr.st td{border-top:1px solid var(--line);border-bottom:2px solid var(--ink);font-weight:700}.rp-t tr.tt td{border-bottom:2px solid var(--ink);font-weight:800}
+  .rp-t td.pend{color:var(--warn);font-weight:800}
   .rp-t tr.xs td{background:rgba(214,238,221,.35)}.rp-t .sm{font-size:11px;color:var(--muted);font-weight:400}
   .rp-leg{font-size:11px;color:var(--muted);margin-top:10px}.rp-hint{font-size:11px;color:var(--muted);margin-top:8px}
   .rp-foot{display:flex;gap:10px;align-items:center;margin-top:18px}.rp-ex{margin-left:auto;display:flex;gap:10px}.rp-foot .b[disabled]{opacity:.45;cursor:not-allowed}
@@ -560,7 +561,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 01:30 · звіт по лікарях</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 01:50 · лікарі: не описано</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1889,7 +1890,7 @@ async function rpLoad(){
 const TP_NAME = { 'Д': 'денна', 'Н': 'нічна', 'Доба': 'добова' };
 const tpCls = (l) => ({ 'Д': 'sd', 'Н': 'sn', 'Доба': 's24' }[l] || 'sx');
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return iso2(d.getFullYear(), d.getMonth(), d.getDate()); };
-const newAgg = () => ({ n: 0, base: 0, after: 0, exN: 0, exSum: 0, cashless: 0, cash: 0 });
+const newAgg = () => ({ pend: 0, n: 0, base: 0, after: 0, exN: 0, exSum: 0, cashless: 0, cash: 0 });
 function addAgg(g, r){
   g.n++; g.base += Number(r.servicePrice) || 0; g.after += Number(r.servicePriceAfterDiscount) || 0;
   g.exN += (r.extras || []).length; g.exSum += Number(r.extrasTotal) || 0;
@@ -1966,31 +1967,31 @@ function rpNotes(rep, a, b){
 function docReport(data){
   const docs = new Map(); let nodoc = 0;
   for (const r of data.recs){
-    if (!r.described) continue;
     if (!r.describerId){ nodoc++; continue; }
     const wid = wNorm(r.describerId), D = docs.get(wid) || { wid, dates: new Map() }; docs.set(wid, D);
-    const g = D.dates.get(r.date) || newAgg(); D.dates.set(r.date, g); addAgg(g, r);
+    const g = D.dates.get(r.date) || newAgg(); D.dates.set(r.date, g);
+    if (r.described) addAgg(g, r); else g.pend++;   // призначений лікар, але відмітки «описано» ще немає — інформація для керівника
   }
   const list = [...docs.values()].map(D => ({ ...D, tot: sumAgg([...D.dates.values()]), days: D.dates.size })).sort((x, y) => nameOfW(x.wid).localeCompare(nameOfW(y.wid), 'uk'));
   return { list, nodoc, days: list.reduce((s, D) => s + D.days, 0), tot: sumAgg(list.map(D => D.tot)) };
 }
 const DAY_F = ['день', 'дні', 'днів'], WDAY_F = ['робочий день', 'робочі дні', 'робочих днів'];
-const docNotes = (rep) => rep.nodoc ? [{ crit: false, h: 'Без лікаря:', t: `${plN(rep.nodoc, ['описаний запис', 'описані записи', 'описаних записів'])} без вказаного лікаря — у звіт не потрапили.` }] : [];
+const docNotes = (rep) => rep.nodoc ? [{ crit: false, h: 'Без лікаря:', t: `${plN(rep.nodoc, ['запис', 'записи', 'записів'])} без призначеного лікаря («Лікар (описує)») — у звіт не потрапили.` }] : [];
 function rpDrawDoc(box){
   const rep = docReport(rp.data), money = can('jSums'), full = rp.detail === 'full', sm = (g) => money ? `<td class="r">${nfmt(g.base)}</td><td class="r">${nfmt(g.after)}</td>` : '';
-  const ncols = (full ? 2 : 3) + (money ? 2 : 0);
-  const head = `<thead><tr><th rowspan="2" class="l">${full ? 'Дата' : 'Лікар'}</th>${full ? '' : '<th rowspan="2" class="c">Днів</th>'}<th rowspan="2" class="c">Описи</th>${money ? '<th colspan="2" class="c grp">Сума</th>' : ''}</tr>`
+  const ncols = (full ? 3 : 4) + (money ? 2 : 0), pd = (g) => `<td class="c${g.pend ? ' pend' : ''}">${nfmt(g.pend)}</td>`;
+  const head = `<thead><tr><th rowspan="2" class="l">${full ? 'Дата' : 'Лікар'}</th>${full ? '' : '<th rowspan="2" class="c">Днів</th>'}<th rowspan="2" class="c">Описи</th><th rowspan="2" class="c">Не описано</th>${money ? '<th colspan="2" class="c grp">Сума</th>' : ''}</tr>`
     + `<tr>${money ? '<th class="r">Без пільг, грн</th><th class="r">З пільгами, грн</th>' : ''}</tr></thead>`;
   let body = '';
   if (!rep.list.length) body = `<tr><td colspan="${ncols}" class="c">—</td></tr>`;
   else if (!full){
-    body = rep.list.map(D => `<tr><td><b>${esc(nameOfW(D.wid))}</b></td><td class="c">${D.days}</td><td class="c">${nfmt(D.tot.n)}</td>${sm(D.tot)}</tr>`).join('')
-      + `<tr class="tt"><td><b>Разом — ${plN(rep.list.length, ['лікар', 'лікарі', 'лікарів'])}</b></td><td class="c">${rep.days}</td><td class="c">${nfmt(rep.tot.n)}</td>${sm(rep.tot)}</tr>`;
+    body = rep.list.map(D => `<tr><td><b>${esc(nameOfW(D.wid))}</b></td><td class="c">${D.days}</td><td class="c">${nfmt(D.tot.n)}</td>${pd(D.tot)}${sm(D.tot)}</tr>`).join('')
+      + `<tr class="tt"><td><b>Разом — ${plN(rep.list.length, ['лікар', 'лікарі', 'лікарів'])}</b></td><td class="c">${rep.days}</td><td class="c">${nfmt(rep.tot.n)}</td>${pd(rep.tot)}${sm(rep.tot)}</tr>`;
   } else {
     body = rep.list.map(D => `<tr class="gh"><td colspan="${ncols}"><b>${esc(nameOfW(D.wid))}</b> — ${plN(D.days, WDAY_F)}</td></tr>`
-      + [...D.dates.keys()].sort().map(d => `<tr><td>${isoToUa(d)}</td><td class="c">${D.dates.get(d).n}</td>${sm(D.dates.get(d))}</tr>`).join('')
-      + `<tr class="st"><td><b>Разом — ${plN(D.days, DAY_F)}</b></td><td class="c">${nfmt(D.tot.n)}</td>${sm(D.tot)}</tr>`).join('')
-      + `<tr class="tt"><td><b>Загалом — ${plN(rep.days, DAY_F)}</b></td><td class="c">${nfmt(rep.tot.n)}</td>${sm(rep.tot)}</tr>`;
+      + [...D.dates.keys()].sort().map(d => `<tr><td>${isoToUa(d)}</td><td class="c">${D.dates.get(d).n}</td>${pd(D.dates.get(d))}${sm(D.dates.get(d))}</tr>`).join('')
+      + `<tr class="st"><td><b>Разом — ${plN(D.days, DAY_F)}</b></td><td class="c">${nfmt(D.tot.n)}</td>${pd(D.tot)}${sm(D.tot)}</tr>`).join('')
+      + `<tr class="tt"><td><b>Загалом — ${plN(rep.days, DAY_F)}</b></td><td class="c">${nfmt(rep.tot.n)}</td>${pd(rep.tot)}${sm(rep.tot)}</tr>`;
   }
   box.innerHTML = `<div class="rp-wrap"><table class="rp-t">${head}<tbody>${body}</tbody></table></div>`
     + (rep.list.length ? '' : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Даних не знайдено за заданими критеріями</b></div></div>')
@@ -1999,21 +2000,21 @@ function rpDrawDoc(box){
 function rpDocModel(){
   const rep = docReport(rp.data), money = can('jSums'), full = rp.detail === 'full', dash = (v) => (v ? nfmt(v) : '—');
   const sums = (g, b) => money ? [{ t: dash(g.base), v: g.base, ...(b ? { b: true } : {}) }, { t: dash(g.after), v: g.after, ...(b ? { b: true } : {}) }] : [];
-  const cnt = (n, b) => ({ t: dash(n), v: n, c: 1, ...(b ? { b: true } : {}) });
+  const cnt = (n, b) => ({ t: dash(n), v: n, c: 1, ...(b ? { b: true } : {}) }), cn2 = (g, b) => [cnt(g.n, b), cnt(g.pend, b)];
   const rows = [];
-  if (!rep.list.length) rows.push({ k: 'r', cells: [{ t: '—' }, ...(full ? [] : [{ t: '—', c: 1 }]), { t: '—', c: 1 }, ...(money ? [{ t: '—' }, { t: '—' }] : [])] });
+  if (!rep.list.length) rows.push({ k: 'r', cells: [{ t: '—' }, ...(full ? [] : [{ t: '—', c: 1 }]), { t: '—', c: 1 }, { t: '—', c: 1 }, ...(money ? [{ t: '—' }, { t: '—' }] : [])] });
   else if (!full){
-    rep.list.forEach(D => rows.push({ k: 'r', cells: [{ t: nameOfW(D.wid), wid: D.wid, b: true }, cnt(D.days), cnt(D.tot.n), ...sums(D.tot)] }));
-    rows.push({ k: 'tt', cells: [{ t: `Разом — ${plN(rep.list.length, ['лікар', 'лікарі', 'лікарів'])}`, b: true }, cnt(rep.days, 1), cnt(rep.tot.n, 1), ...sums(rep.tot, 1)] });
+    rep.list.forEach(D => rows.push({ k: 'r', cells: [{ t: nameOfW(D.wid), wid: D.wid, b: true }, cnt(D.days), ...cn2(D.tot), ...sums(D.tot)] }));
+    rows.push({ k: 'tt', cells: [{ t: `Разом — ${plN(rep.list.length, ['лікар', 'лікарі', 'лікарів'])}`, b: true }, cnt(rep.days, 1), ...cn2(rep.tot, 1), ...sums(rep.tot, 1)] });
   } else {
     rep.list.forEach(D => {
-      rows.push({ k: 'gh', wid: D.wid, cells: [{ t: `${nameOfW(D.wid)} — ${plN(D.days, WDAY_F)}`, b: true, span: 2 + (money ? 2 : 0) }] });
-      [...D.dates.keys()].sort().forEach(d => rows.push({ k: 'r', cells: [{ t: isoToUa(d) }, cnt(D.dates.get(d).n), ...sums(D.dates.get(d))] }));
-      rows.push({ k: 'st', cells: [{ t: `Разом — ${plN(D.days, DAY_F)}`, b: true }, cnt(D.tot.n, 1), ...sums(D.tot, 1)] });
+      rows.push({ k: 'gh', wid: D.wid, cells: [{ t: `${nameOfW(D.wid)} — ${plN(D.days, WDAY_F)}`, b: true, span: 3 + (money ? 2 : 0) }] });
+      [...D.dates.keys()].sort().forEach(d => rows.push({ k: 'r', cells: [{ t: isoToUa(d) }, ...cn2(D.dates.get(d)), ...sums(D.dates.get(d))] }));
+      rows.push({ k: 'st', cells: [{ t: `Разом — ${plN(D.days, DAY_F)}`, b: true }, ...cn2(D.tot, 1), ...sums(D.tot, 1)] });
     });
-    rows.push({ k: 'tt', cells: [{ t: `Загалом — ${plN(rep.days, DAY_F)}`, b: true }, cnt(rep.tot.n, 1), ...sums(rep.tot, 1)] });
+    rows.push({ k: 'tt', cells: [{ t: `Загалом — ${plN(rep.days, DAY_F)}`, b: true }, ...cn2(rep.tot, 1), ...sums(rep.tot, 1)] });
   }
-  return { rep, leaf: money ? ['Без пільг, грн', 'З пільгами, грн'] : [], groups: money ? [['Сума', 2]] : [], rows, full, lead: full ? ['Дата', 'Описи'] : ['Лікар', 'Днів', 'Описи'], notes: docNotes(rep), empty: !rep.list.length, sel: 'усі лікарі' };
+  return { rep, leaf: money ? ['Без пільг, грн', 'З пільгами, грн'] : [], groups: money ? [['Сума', 2]] : [], rows, full, lead: full ? ['Дата', 'Описи', 'Не описано'] : ['Лікар', 'Днів', 'Описи', 'Не описано'], notes: docNotes(rep), empty: !rep.list.length, sel: 'усі лікарі' };
 }
 function rpDraw(){
   const box = $('rpBody'); if (!box || (rp.cur !== 'rLab' && rp.cur !== 'rDoc')) return;
