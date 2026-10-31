@@ -560,7 +560,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 12:55 · XLSX: лише період жирним</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 13:10 · XLSX: підпис не жирний</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -2293,7 +2293,7 @@ function rpXlsx(m){
           else if (r.k === 'tt') f = m.full ? `SUM(${stRows.map(x => `${L(col)}${x}`).join(',')})` : `SUM(${L(col)}${firstData}:${L(col)}${lastData})`;
           out.push(f ? cF(col, rr, f, c.v, sty({ b: 1, h: 'right', nf: 1, bd })) : cN(col, rr, c.v, sty({ b: 1, h: 'right', nf: 1, bd }))); track(col, money(c.v));
         } else if (isNum){ out.push(cT(col, rr, '—', sty({ b: bold, h: 'right', bd }))); }
-        else if (c.sub){ const main = c.t + (c.wid ? mk(c.wid) : ''); out.push(cR(col, rr, [{ t: main, b: bold }, { t: ' · ' + c.sub, sz: 8, c: GREY }], sty({ b: bold, h: 'left', bd }))); track(col, main + ' ' + c.sub); }
+        else if (c.sub){ const main = c.t + (c.wid ? mk(c.wid) : ''); out.push(cR(col, rr, [{ t: main, b: bold }, { t: ' · ' + c.sub, sz: 8, c: GREY }], sty({ h: 'left', bd }))); track(col, main + ' ' + c.sub); }
         else { out.push(cT(col, rr, txt, sty({ b: bold, h: c.c ? 'center' : 'left', bd }))); track(col, txt); }
         col++; ci++;
       });
