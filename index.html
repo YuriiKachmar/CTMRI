@@ -560,7 +560,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 13:10 · XLSX: підпис не жирний</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 13:30 · XLSX: підпис у групах</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -2051,7 +2051,7 @@ function rpPrintModel(){
     rep.list.forEach(L => rows.push({ k: 'r', cells: [{ t: nameOfW(L.wid), wid: L.wid, b: true, sub: labSchedText(L.wid, a, b) }, { t: `${L.count} (${tps(L.types)})`, c: 1 }, ...numc(L.tot)] }));
   } else {
     rep.list.forEach(L => {
-      rows.push({ k: 'gh', wid: L.wid, cells: [{ t: `${nameOfW(L.wid)} · ${labSchedText(L.wid, a, b)}`, b: true, span: 2 + leaf.length }] });
+      rows.push({ k: 'gh', wid: L.wid, cells: [{ t: `${nameOfW(L.wid)} · ${labSchedText(L.wid, a, b)}`, nm: nameOfW(L.wid), sc: labSchedText(L.wid, a, b), b: true, span: 2 + leaf.length }] });
       for (const s of L.shifts){
         const ds = [...s.dates.keys()].sort();
         ds.forEach((d, i) => rows.push({ k: 'r', cells: [{ t: isoToUa(d) + (ds.length > 1 ? (i ? ' ◣' : ' ◤') : '') }, ...(i ? [] : [{ t: s.tp + (s.out ? ' ⚠' : ''), c: 1, rs: ds.length }]), ...numc(s.dates.get(d))] }));
@@ -2269,8 +2269,8 @@ function rpXlsx(m){
   const money = (v) => nfmt(v);
   for (const r of m.rows){
     if (r.k === 'gh'){
-      const t = r.cells[0].t + mk(r.wid);
-      push((rr) => [cT(0, rr, t, sty({ b: 1, bd: { bt: thin } })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, rr, sty({ bd: { bt: thin } })))]); merges.push(`A${R}:${L(NC - 1)}${R}`); blockFirst = R + 1; continue;
+      const c0 = r.cells[0], t = c0.t + mk(r.wid);
+      push((rr) => [c0.nm ? cR(0, rr, [{ t: c0.nm, b: 1 }, { t: ' · ' + c0.sc, sz: 8, c: GREY }, { t: mk(r.wid), b: 1 }], sty({ bd: { bt: thin } })) : cT(0, rr, t, sty({ b: 1, bd: { bt: thin } })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, rr, sty({ bd: { bt: thin } })))]); merges.push(`A${R}:${L(NC - 1)}${R}`); blockFirst = R + 1; continue;
     }
     const tot = r.k === 'st' || r.k === 'tt', bd = tot ? { l: thin, r: thin, t: thinB, bt: med } : { l: thin, r: thin, bt: thin };
     const full = m.full;
