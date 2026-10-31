@@ -2284,7 +2284,7 @@ function rpXlsx(m){
         else if (isNum && tot && typeof c.v === 'number' && c.v !== 0){
           let f = null;
           if (r.k === 'st' && blockFirst) f = `SUM(${L(col)}${blockFirst}:${L(col)}${rr - 1})`;
-          else if (r.k === 'tt') f = m.full ? stRows.map(x => `${L(col)}${x}`).join('+') : `SUM(${L(col)}${firstData}:${L(col)}${lastData})`;
+          else if (r.k === 'tt') f = m.full ? `SUM(${stRows.map(x => `${L(col)}${x}`).join(',')})` : `SUM(${L(col)}${firstData}:${L(col)}${lastData})`;
           out.push(f ? cF(col, rr, f, c.v, sty({ b: 1, h: 'right', nf: 1, bd })) : cN(col, rr, c.v, sty({ b: 1, h: 'right', nf: 1, bd }))); track(col, money(c.v));
         } else if (isNum){ out.push(cT(col, rr, '—', sty({ b: bold, h: 'right', bd }))); }
         else { out.push(cT(col, rr, txt, sty({ b: bold, h: c.c ? 'center' : 'left', bd }))); track(col, txt); }
