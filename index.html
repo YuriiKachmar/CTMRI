@@ -556,7 +556,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 02:10 · токени типографіки</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 02:30 · напис довільного періоду</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1789,10 +1789,16 @@ function rpShiftMonth(step){
   rp.per = rpMonthPer(d.getFullYear(), d.getMonth(), false); rp.per.onLeft = !rpIsCurMonth(rp.per);
 }
 const rpMonthRng = (p) => `01.${p2(p.m + 1)}.${p.y} – ${new Date(p.y, p.m + 1, 0).getDate()}.${p2(p.m + 1)}.${p.y}`;
+const ROM = ['', 'I', 'II', 'III', 'IV'], PRESET_NAME = { '7': 'Останні 7 днів', '30': 'Останні 30 днів', all: 'Увесь час' };
+function rpCustomLabel(c){   // напис на кнопці «Довільний період»: що саме обрано у вікні
+  if (c.kind === 'q'){ if (c.ql === 1 && c.qh === 4) return `${c.y} рік`; return c.ql === c.qh ? `${ROM[c.ql]} квартал` : `${ROM[c.ql]}–${ROM[c.qh]} квартали`; }
+  if (c.kind === 'preset') return PRESET_NAME[c.preset] || 'Довільний';
+  return 'Довільний';
+}
 function rpPanel(){
   if (!$('rpL')) return;
   const c = ppCell, p = rp.per, [a, b] = rpRange(), rng = `${isoToUa(a)} – ${isoToUa(b)}`;
-  if (p.custom) ppSet('rp', { L: { h: c('Попередній місяць', '← назад') }, M: { h: c(MON_NAME[p.m], rpMonthRng(p)) }, R: { on: true, h: c('Довільний', rng) } });
+  if (p.custom) ppSet('rp', { L: { h: c('Попередній місяць', '← назад') }, M: { h: c(MON_NAME[p.m], rpMonthRng(p)) }, R: { on: true, h: c(rpCustomLabel(p.custom), rng) } });
   else if (!p.onLeft) ppSet('rp', { L: { h: c('Попередній місяць', '← назад') }, M: { on: true, h: c(MON_NAME[p.m], rng) }, R: { h: c('Довільний період', 'вибрати дати') } });
   else ppSet('rp', { L: { on: true, h: c(MON_NAME[p.m], rng) }, M: { h: c('Наступний місяць', 'вперед →') }, R: { h: c('Довільний період', 'вибрати дати') } });
 }
@@ -1819,13 +1825,14 @@ function openRpPeriod(){
     e.style.display = 'none';
     s.textContent = `${isoToUa(f)} – ${isoToUa(t)} · ${plN(Math.round((new Date(t) - new Date(f)) / 86400000) + 1, ['день', 'дні', 'днів'])}`;
   };
-  const cy = new Date().getFullYear(); let yv = +(a.slice(0, 4)) || cy, y0 = Math.min(yv, cy - 5);
+  const cy = new Date().getFullYear(), pc = rp.per.custom; let yv = (pc && pc.kind === 'q' ? pc.y : +(a.slice(0, 4))) || cy, y0 = Math.min(yv, cy - 5);
   const yDraw = () => { $('rpYv').textContent = yv; $('rpYp').disabled = yv <= y0; $('rpYn').disabled = yv >= cy; };
   rpEarliest().then(d => { if (d) y0 = Math.min(+d.slice(0, 4), yv); yDraw(); }).catch(() => {});
   /* кілька кварталів поспіль: суцільний діапазон [lo, hi]; 4 квартали = весь рік. Не суміжний квартал починає вибір заново */
-  let ql = 0, qh = 0;
+  let ql = 0, qh = 0, sel = pc ? { kind: pc.kind, preset: pc.preset, y: pc.y, ql: pc.ql, qh: pc.qh } : { kind: 'manual' };   // sel — що обрано (для напису на кнопці й відновлення при повторному відкритті)
+  if (pc && pc.kind === 'q'){ ql = pc.ql; qh = pc.qh; }
   const qDraw = () => { [...$('rpQq').children].forEach(x => x.classList.toggle('on', ql && +x.dataset.qq >= ql && +x.dataset.qq <= qh)); };
-  const qSet = () => { qDraw(); if (!ql) return; act(null); $('rpF').value = iso2(yv, (ql - 1) * 3, 1); const m2 = qh * 3 - 1; $('rpT').value = iso2(yv, m2, new Date(yv, m2 + 1, 0).getDate()); upd(); };
+  const qSet = () => { qDraw(); if (!ql) return; act(null); sel = { kind: 'q', y: yv, ql, qh }; $('rpF').value = iso2(yv, (ql - 1) * 3, 1); const m2 = qh * 3 - 1; $('rpT').value = iso2(yv, m2, new Date(yv, m2 + 1, 0).getDate()); upd(); };
   const qq = (el) => { if (!el){ ql = qh = 0; qDraw(); } };
   const qClick = (q) => {
     if (!ql || q < ql - 1 || q > qh + 1) { ql = qh = q; }
@@ -1841,12 +1848,14 @@ function openRpPeriod(){
   $('rpYn').onclick = () => { yv++; yDraw(); qSet(); };
   $('rpQq').onclick = (e) => { const k = e.target.closest('[data-qq]'); if (k) qClick(+k.dataset.qq); };
   yDraw();
-  const act = (el) => { [...$('rpQ').children].forEach(x => x.classList.toggle('on', x === el)); };
+  const act = (el) => { [...$('rpQ').children].forEach(x => x.classList.toggle('on', x === el)); if (!el) sel = { kind: 'manual' }; };   // знімає позначку пресета; qSet одразу ставить kind:'q'
+  if (pc && pc.kind === 'preset') act([...$('rpQ').children].find(x => x.dataset.q === pc.preset));
+  qDraw();
   ov.addEventListener('input', (e) => { if (e.target.closest('#rpF,#rpT')){ act(null); qq(null); upd(); } });   // ручна зміна дати вимикає пресет
   ov.addEventListener('click', async (e) => {
     const k = e.target.closest('[data-q]');
     if (k){
-      act(k); qq(null);
+      act(k); qq(null); sel = { kind: 'preset', preset: k.dataset.q };
       if (k.dataset.q === 'all'){
         try { $('rpF').value = (await rpEarliest()) || td; } catch (err){ toast('e', 'Не вдалося визначити першу дату', err.code || ''); $('rpF').value = td; }
       } else $('rpF').value = addD(td, 1 - quick[k.dataset.q]);
@@ -1855,7 +1864,7 @@ function openRpPeriod(){
     if (e.target.closest('#rpApply')){
       const f = $('rpF').value, t = $('rpT').value;
       if (!f || !t || t < f){ $('rpE').style.display = 'flex'; return; }
-      rp.per.custom = { from: f, to: t }; rp.data = null; closeWin(ov); rpPanel(); rpDraw(); $('rpGo').innerHTML = '📊 Показати звіт'; rpSyncExport();
+      rp.per.custom = { from: f, to: t, ...sel }; rp.data = null; closeWin(ov); rpPanel(); rpDraw(); $('rpGo').innerHTML = '📊 Показати звіт'; rpSyncExport();
     }
   });
   upd();
