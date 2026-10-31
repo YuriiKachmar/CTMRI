@@ -328,12 +328,15 @@
   .rp-tile{padding:16px;border-radius:var(--r16);background:var(--bg);box-shadow:var(--up);cursor:pointer}.rp-tile:active{box-shadow:var(--in)}
   .rp-ic{font-size:var(--t-h1);margin-bottom:6px}.rp-tn{font-size:var(--t-body);font-weight:800;color:var(--ink)}.rp-td{font-size:11.5px;color:var(--muted);margin-top:3px}
   .rp-win{max-width:1500px}.rp-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.rp-top .win-x{position:static}
-  .rp-card{padding:14px 16px;border-radius:14px;background:var(--bg);box-shadow:var(--up);margin-bottom:16px}
-  .rp-cl{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .rp-card{padding:14px 16px;border-radius:var(--r16);background:var(--card);box-shadow:var(--up);margin-bottom:16px}
+  .rp-cl{font-size:11.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
   .rp-yr{display:flex;align-items:center;justify-content:center;gap:14px;margin:4px 0 10px}.rp-yr b{min-width:60px;text-align:center;font-size:16px}
-  .rp-row{display:flex;align-items:center;gap:12px}.rp-row label{font-size:var(--t-sm);color:var(--muted);min-width:70px}.rp-row .in{max-width:280px}
-  .rp-chips{display:flex;flex-wrap:wrap;gap:8px}.rp-chip{padding:7px 14px;border-radius:10px;background:var(--bg);box-shadow:var(--bump);font-size:var(--t-sm);font-weight:700;color:var(--muted);cursor:pointer}
-  .rp-chip.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .rp-row{display:flex;align-items:center;gap:12px}.rp-row label{font-size:var(--t-sm);color:var(--muted);min-width:70px}.rp-row .in{max-width:280px;font-size:var(--t-body);padding:13px 15px;border-radius:var(--r12);background:var(--tile);font-weight:400}
+  .rp-chips{display:flex;flex-wrap:wrap;gap:10px}.rp-chip{padding:11px 18px;border-radius:var(--r20);background:var(--card);box-shadow:var(--bump);font-size:13px;color:var(--ink);cursor:pointer}   /* як .chips у zvit_karkas */
+  .rp-chip.on{background:var(--soft);color:var(--green);font-weight:700;box-shadow:var(--in-on)}
+  .rp-seg{gap:14px;padding:0;background:none;box-shadow:none}.rp-seg span{padding:15px 8px;border-radius:var(--r12);font-size:var(--t-body);font-weight:400;background:var(--card);box-shadow:var(--bump);color:var(--ink)}   /* як .seg у zvit_karkas */
+  .rp-seg span.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
+  #rpGo{width:100%;padding:16px;border-radius:var(--r16);font-size:var(--t-h3)}
   .rp-act{margin-bottom:16px}.rp-ph{padding:26px 10px;text-align:center;color:var(--muted);font-size:13px;border-radius:14px;box-shadow:var(--in);margin-bottom:16px}.rp-ph span{font-size:11px}
   .rp-wrap{border-radius:14px;overflow:auto;box-shadow:var(--in);padding:0}
   .rp-t th{background:var(--green);color:#fff;font-size:var(--t-cap);font-weight:700;text-transform:uppercase;letter-spacing:.2px;border-left:1px solid rgba(255,255,255,.25)!important;border-bottom:1px solid rgba(255,255,255,.25)!important}
@@ -342,7 +345,7 @@
   .rp-t th:first-child,.rp-t td:first-child{border-left:none}.rp-t td.c,.rp-t th.c{text-align:center}.rp-t td.r,.rp-t th.r{text-align:right}.rp-t th.l{text-align:left}
   .rp-t th.grp{border-bottom:2px solid var(--line)}
   .rp-t tr.gh td{background:rgba(30,107,79,.08);font-size:12.5px;border-left:none}.rp-t tr.st td{border-top:1px solid var(--line);border-bottom:2px solid var(--ink);font-weight:700}.rp-t tr.tt td{border-bottom:2px solid var(--ink);font-weight:800}
-  .rp-t tr.xs td{background:rgba(214,238,221,.35)}.rp-t .sm{font-size:10.5px;color:var(--muted);font-weight:400}
+  .rp-t tr.xs td{background:rgba(214,238,221,.35)}.rp-t .sm{font-size:11px;color:var(--muted);font-weight:400}
   .rp-leg{font-size:11px;color:var(--muted);margin-top:10px}.rp-hint{font-size:11px;color:var(--muted);margin-top:8px}
   .rp-foot{display:flex;gap:10px;align-items:center;margin-top:18px}.rp-ex{margin-left:auto;display:flex;gap:10px}.rp-foot .b[disabled]{opacity:.45;cursor:not-allowed}
   .pp{display:flex;padding:5px;border-radius:14px;background:var(--bg);box-shadow:var(--in);height:48px;position:relative;width:460px;max-width:100%;min-width:0}
