@@ -2092,7 +2092,7 @@ function rpPrintHtml(m, doc){
   const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b);
   const sel = rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти';
   const mk = (wid) => m.notes.map((x, i) => x.wid === wid ? ` *${i + 1}` : '').join('');   // зірочки приміток біля комірки, яку вони пояснюють
-  const cols = m.lead.length + m.leaf.length;
+  const cols = m.lead.length + m.leaf.length, TWp = wd.orient === 'landscape' ? 267 : 180, cw = wd.mm.slice(0, cols).map(x => x * (TWp - 8) / wd.mm.slice(0, cols).reduce((s, y) => s + y, 0));   // ті самі ширини, що й у .docx: від поля до поля, пропорційно
   const th1 = `<tr><th rowspan="2" class="nn"></th>${m.lead.map(h => `<th rowspan="2" class="l">${PX(h)}</th>`).join('')}${m.groups.map(g => `<th colspan="${g[1]}" class="g">${PX(g[0])}</th>`).join('')}</tr><tr>${m.leaf.map(h => `<th class="r">${PX(h)}</th>`).join('')}</tr>`;
   let n = 0;
   const body = m.rows.map(r => {
@@ -2110,7 +2110,7 @@ function rpPrintHtml(m, doc){
 .fn{font-size:13pt;font-weight:700}.fa{color:#6B7B78}
 .rt{display:flex;justify-content:center;align-items:center;position:relative;font-size:13pt;font-weight:700}.bd{position:absolute;right:0;font-size:9pt;border:.5pt solid #000;padding:0 2mm}
 .pr{text-align:center;font-size:11pt;font-weight:700;margin-top:1mm}.sl{text-align:center;font-weight:400;margin-top:1mm}
-table{width:100%;border-collapse:collapse;margin-top:5mm;${wd.squeeze ? '' : ''}}thead{display:table-header-group}tr{page-break-inside:avoid}
+table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:5mm;${wd.squeeze ? '' : ''}}thead{display:table-header-group}tr{page-break-inside:avoid}
 th,td{border-bottom:.5pt solid #000;border-left:.3pt solid #777;padding:0 ${wd.squeeze ? '.8mm' : '2mm'};vertical-align:middle;white-space:nowrap}
 thead tr:first-child th{border-top:1.1pt solid #000}th{font-weight:700;border-bottom:1.1pt solid #000;text-align:center}th.l{text-align:left}th.r{text-align:right}th.g{border-bottom:.5pt solid #000}
 td.l{text-align:left}td.c{text-align:center}td.r{text-align:right}td.b,.b{font-weight:700}.sb{font-weight:400;color:#6B7B78;font-size:8pt}
@@ -2120,7 +2120,7 @@ tr.st td{border-top:.5pt solid #000;border-bottom:1.1pt solid #000}tr.tt td{bord
 .sg{margin:14mm auto 0;border-top:.5pt solid #000;width:60mm}${doc ? '.ft{margin-top:8mm;color:#6B7B78;font-size:8pt}' : ''}`;
   const inner = `<div class="hd"><div class="lg">${PX(ini)}</div><div><div class="fn">${PX(fac)}</div><div class="fa">${PX(adr)}</div></div></div>
     <div class="rt">${PX(title)}<span class="bd">${m.full ? 'Повний' : 'Стислий'}</span></div><div class="pr">${PX(per)}</div><div class="sl"><span class="fa">Вибірка даних по:</span> ${PX(sel)}</div>
-    <table><thead>${th1}</thead><tbody>${body}</tbody></table>${m.empty ? '<div class="em">ⓘ Даних не знайдено за заданими критеріями</div>' : ''}${notes}${doc ? '<div class="sg"></div>' : ''}${doc ? `<div class="ft">Дата формування: ${tds}</div>` : ''}`;
+    <table><colgroup><col style="width:8mm">${cw.map(x => `<col style="width:${x.toFixed(2)}mm">`).join('')}</colgroup><thead>${th1}</thead><tbody>${body}</tbody></table>${m.empty ? '<div class="em">ⓘ Даних не знайдено за заданими критеріями</div>' : ''}${notes}${doc ? '<div class="sg"></div>' : ''}${doc ? `<div class="ft">Дата формування: ${tds}</div>` : ''}`;
   const head = `<meta charset="utf-8"><title>${PX(base)}</title><style>${FONT_FACE()}${css}</style>`;
   if (!doc) return { name: base, html: `<!doctype html><html lang="uk"><head>${head}</head><body>${inner}</body></html>`, orient: wd.orient };
   const land = wd.orient === 'landscape';
