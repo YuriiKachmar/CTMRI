@@ -2248,7 +2248,7 @@ function rpXlsx(m){
   /* шапка документа */
   push((r) => [cT(0, r, fac, sty({ b: 1, sz: 14, h: 'center' })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, r, sty({ h: 'center' })))], 18); merges.push(`A${R}:${L(NC - 1)}${R}`);
   push((r) => [cT(0, r, title, sty({ b: 1, sz: 13, h: 'center' })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, r, sty({ h: 'center' })))], 17); merges.push(`A${R}:${L(NC - 1)}${R}`);
-  push((r) => [cT(0, r, `${per} · Вибірка даних по: ${sel}${adr ? ' · ' + adr : ''}`, sty({ sz: 10, c: GREY, h: 'center' })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, r, sty({ h: 'center' })))], 15); merges.push(`A${R}:${L(NC - 1)}${R}`);
+  push((r) => [cT(0, r, `${per} · Вибірка даних по: ${sel}${adr ? ' · ' + adr : ''}`, sty({ b: 1, sz: 10, c: GREY, h: 'center' })), ...Array.from({ length: NC - 1 }, (_, i) => cE(i + 1, r, sty({ h: 'center' })))], 15); merges.push(`A${R}:${L(NC - 1)}${R}`);
   push(() => []);
   /* шапка таблиці: рядок груп + рядок стовпців */
   const hf = { b: 1, c: 'FFFFFFFF', fill: 'FF1E6B4F' };
