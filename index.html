@@ -556,7 +556,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 02:50 · шрифт Arsenal</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 31.10.2026 03:20 · друк за шаблоном</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1949,11 +1949,11 @@ function rpNotes(rep, a, b){
   for (const L of rep.list){
     if (L.outs.length){
       const ds = L.outs.map(o => o.date).sort(), win = L.outs.some(o => o.inDay) && L.outs.some(o => !o.inDay) ? 'іншої зміни' : (L.outs[0].inDay ? 'денної зміни' : 'нічної зміни');
-      notes.push({ crit: true, h: `${nameOfW(L.wid)}, ${dmy(ds[0])}${ds[ds.length - 1] !== ds[0] ? '–' + dmy(ds[ds.length - 1]) : ''}:`, t: `графік ${L.outs[0].sch}, але ${plN(L.outs.length, ['запис', 'записи', 'записів'])} зроблено поза його вікном — у вікні ${win}. Причину визначає адміністратор. Понаднормові система не нараховує.` });
+      notes.push({ wid: L.wid, crit: true, h: `${nameOfW(L.wid)}, ${dmy(ds[0])}${ds[ds.length - 1] !== ds[0] ? '–' + dmy(ds[ds.length - 1]) : ''}:`, t: `графік ${L.outs[0].sch}, але ${plN(L.outs.length, ['запис', 'записи', 'записів'])} зроблено поза його вікном — у вікні ${win}. Причину визначає адміністратор. Понаднормові система не нараховує.` });
     }
     const ps = (workerBy(L.wid)?.shifts || []).filter(p => !p.excluded && p.start > a && p.start <= b);
-    if (ps.length) notes.push({ crit: false, h: `${nameOfW(L.wid)}:`, t: `графік змінено ${dmy(ps[0].start)} (${labSchedText(L.wid, a, b)}). Зміни пораховані окремо: ${Object.entries(L.types).map(([t, n]) => t + ' ' + n).join(', ')}.` });
-    if (L.nosch) notes.push({ crit: false, h: `${nameOfW(L.wid)}:`, t: `на дату ${plN(L.nosch, ['запису', 'записів', 'записів'])} графік не заданий — зміну визначено за календарною датою (тип «—»).` });
+    if (ps.length) notes.push({ wid: L.wid, crit: false, h: `${nameOfW(L.wid)}:`, t: `графік змінено ${dmy(ps[0].start)} (${labSchedText(L.wid, a, b)}). Зміни пораховані окремо: ${Object.entries(L.types).map(([t, n]) => t + ' ' + n).join(', ')}.` });
+    if (L.nosch) notes.push({ wid: L.wid, crit: false, h: `${nameOfW(L.wid)}:`, t: `на дату ${plN(L.nosch, ['запису', 'записів', 'записів'])} графік не заданий — зміну визначено за календарною датою (тип «—»).` });
   }
   if (rep.nod.length) notes.push({ crit: true, h: 'Чергування без записів у журналі', t: `(з календаря): ${rep.nod.map(n => `${esc(nameOfW(n.wid))} — ${dmy(n.iso)}`).join(' · ')}. Імовірно, не було пацієнтів. Ці дні не входять у підсумок змін вище — рішення про оплату ухвалює адміністратор.` });
   return notes;
@@ -2042,10 +2042,10 @@ function rpPrintModel(){
   const rows = [];
   if (!rep.list.length) rows.push({ k: 'r', cells: [{ t: '—' }, { t: '—' }, ...leaf.map(() => ({ t: '—' }))] });
   else if (!full){
-    rep.list.forEach(L => rows.push({ k: 'r', cells: [{ t: nameOfW(L.wid), b: true, sub: labSchedText(L.wid, a, b) }, { t: `${L.count} (${tps(L.types)})`, c: 1 }, ...num(L.tot).map(t => ({ t }))] }));
+    rep.list.forEach(L => rows.push({ k: 'r', cells: [{ t: nameOfW(L.wid), wid: L.wid, b: true, sub: labSchedText(L.wid, a, b) }, { t: `${L.count} (${tps(L.types)})`, c: 1 }, ...num(L.tot).map(t => ({ t }))] }));
   } else {
     rep.list.forEach(L => {
-      rows.push({ k: 'gh', cells: [{ t: `${nameOfW(L.wid)} · ${labSchedText(L.wid, a, b)}`, b: true, span: 2 + leaf.length }] });
+      rows.push({ k: 'gh', wid: L.wid, cells: [{ t: `${nameOfW(L.wid)} · ${labSchedText(L.wid, a, b)}`, b: true, span: 2 + leaf.length }] });
       for (const s of L.shifts){
         const ds = [...s.dates.keys()].sort();
         ds.forEach((d, i) => rows.push({ k: 'r', cells: [{ t: isoToUa(d) + (ds.length > 1 ? (i ? ' ◣' : ' ◤') : '') }, ...(i ? [] : [{ t: s.tp + (s.out ? ' ⚠' : ''), c: 1, rs: ds.length }]), ...num(s.dates.get(d)).map(t => ({ t }))] }));
@@ -2077,35 +2077,37 @@ function rpPrintHtml(m, doc){
   const { a, b } = rp.data, base = rpFileBase(), wd = rpWidths(m), fac = settings?.facilityName || '', adr = settings?.facilityAddress || '';
   const ini = (fac.split(/\s+/).filter(Boolean).map(x => x[0]).join('').slice(0, 2) || 'КТ').toUpperCase(), td = new Date(), tds = `${p2(td.getDate())}.${p2(td.getMonth() + 1)}.${td.getFullYear()}`;
   const name = REPORTS.find(r => r[0] === rp.cur)[1], title = `Звіт ${name.toLowerCase()}`, per = rpPeriodTitle(a, b);
-  const sel = rp.lab ? `Вибірка даних по: лаборант — ${nameOfW(rp.lab)}` : '';
+  const sel = rp.lab ? `лаборант — ${nameOfW(rp.lab)}` : 'усі лаборанти';
+  const mk = (wid) => m.notes.map((x, i) => x.wid === wid ? ` *${i + 1}` : '').join('');   // зірочки приміток біля комірки, яку вони пояснюють
   const cols = m.lead.length + m.leaf.length;
   const th1 = `<tr><th rowspan="2" class="nn"></th>${m.lead.map(h => `<th rowspan="2" class="l">${PX(h)}</th>`).join('')}${m.groups.map(g => `<th colspan="${g[1]}" class="g">${PX(g[0])}</th>`).join('')}</tr><tr>${m.leaf.map(h => `<th class="r">${PX(h)}</th>`).join('')}</tr>`;
   let n = 0;
   const body = m.rows.map(r => {
-    if (r.k === 'gh') return `<tr class="gh"><td class="nn"></td><td colspan="${cols}"><b>${PX(r.cells[0].t)}</b></td></tr>`;
+    if (r.k === 'gh') return `<tr class="gh"><td class="nn"></td><td colspan="${cols}"><b>${PX(r.cells[0].t)}${mk(r.wid)}</b></td></tr>`;
     const nn = r.k === 'r' && !m.empty ? ++n : '';
     const skip = m.full && r.k === 'r' && !m.empty && r.cells.length === 1 + m.leaf.length ? 1 : 0;   // рядок без комірки «Зміна» (її об'єднано з рядком вище)
-    return `<tr class="${r.k}"><td class="nn">${nn}</td>${r.cells.map((c, i) => { const idx = i ? i + skip : 0, al = idx < 2 ? (c.c ? 'c' : 'l') : 'r'; return `<td class="${al}${c.b ? ' b' : ''}"${c.rs ? ` rowspan="${c.rs}"` : ''}>${PX(c.t)}${c.sub ? `<div class="sb">${PX(c.sub)}</div>` : ''}</td>`; }).join('')}</tr>`;
+    return `<tr class="${r.k}"><td class="nn">${nn}</td>${r.cells.map((c, i) => { const idx = i ? i + skip : 0, al = idx < 2 ? (c.c ? 'c' : 'l') : 'r'; return `<td class="${al}${c.b ? ' b' : ''}"${c.rs ? ` rowspan="${c.rs}"` : ''}>${PX(c.t)}${c.wid ? mk(c.wid) : ''}${c.sub ? `<div class="sb">${PX(c.sub)}</div>` : ''}</td>`; }).join('')}</tr>`;
   }).join('');
-  const notes = m.notes.map((x, i) => `<div class="nt ${x.crit ? 'cr' : ''}">${i + 1}. <b>${PX(x.h)}</b> ${x.crit && x.h.startsWith('Чергування') ? x.t : PX(x.t)}</div>`).join('');
-  const css = `@page{size:A4 ${wd.orient};margin:15mm 10mm 20mm 20mm;@bottom-right{content:"Сторінка " counter(page) " з " counter(pages);font:8pt Arsenal,Arial,sans-serif;color:#6B7B78}@bottom-left{content:"Дата формування: ${tds}";font:8pt Arsenal,Arial,sans-serif;color:#6B7B78}@top-left{content:"${title.replace(/"/g, '')} · ${per.replace(/"/g, '')}";font:8pt Arsenal,Arial,sans-serif;color:#6B7B78}}
+  const notes = m.notes.map((x, i) => `<div class="nt ${x.crit ? 'cr' : ''}">*${i + 1} <b>${PX(x.h)}</b> ${x.crit && x.h.startsWith('Чергування') ? x.t : PX(x.t)}</div>`).join('');
+  const mb = `font:8pt Arsenal,Arial,sans-serif;color:#6B7B78`;
+  const css = `@page{size:A4 ${wd.orient};margin:15mm 10mm 20mm 20mm;@bottom-right{content:"Сторінка " counter(page) " з " counter(pages);${mb}}@bottom-left{content:"Дата формування: ${tds}";${mb}}@bottom-center{content:"";width:60mm;border-top:.5pt solid #000;margin-bottom:6mm}@top-left{content:"${title.replace(/"/g, '')} · ${per.replace(/"/g, '')}";${mb};vertical-align:bottom;padding-bottom:1.5mm;background:linear-gradient(#6B7B78,#6B7B78) left bottom/40mm .4pt no-repeat}}
 @page :first{@top-left{content:none}}
 *{box-sizing:border-box}body{margin:0;font:9pt/1.5 Arsenal,Arial,sans-serif;color:#000}
-.hd{display:flex;align-items:center;gap:4mm;margin-bottom:5mm}.lg{width:16mm;height:16mm;flex:0 0 16mm;background:#1E6B4F;color:#fff;font-weight:700;font-size:15pt;display:flex;align-items:center;justify-content:center}
+.hd{display:flex;align-items:center;justify-content:center;gap:4mm;margin-bottom:5mm}.lg{width:16mm;height:16mm;flex:0 0 16mm;border-radius:3mm;background:#1E6B4F;color:#fff;font-weight:700;font-size:15pt;display:flex;align-items:center;justify-content:center}
 .fn{font-size:13pt;font-weight:700}.fa{color:#6B7B78}
 .rt{display:flex;justify-content:center;align-items:center;position:relative;font-size:13pt;font-weight:700}.bd{position:absolute;right:0;font-size:9pt;border:.5pt solid #000;padding:0 2mm}
 .pr{text-align:center;font-size:11pt;font-weight:700;margin-top:1mm}.sl{text-align:center;font-weight:400;margin-top:1mm}
 table{width:100%;border-collapse:collapse;margin-top:5mm;${wd.squeeze ? '' : ''}}thead{display:table-header-group}tr{page-break-inside:avoid}
 th,td{border-bottom:.5pt solid #000;border-left:.3pt solid #777;padding:0 ${wd.squeeze ? '.8mm' : '2mm'};vertical-align:middle;white-space:nowrap}
-th{font-weight:700;border-bottom:1.1pt solid #000;text-align:center}th.l{text-align:left}th.r{text-align:right}th.g{border-bottom:.5pt solid #000}
+thead tr:first-child th{border-top:1.1pt solid #000}th{font-weight:700;border-bottom:1.1pt solid #000;text-align:center}th.l{text-align:left}th.r{text-align:right}th.g{border-bottom:.5pt solid #000}
 td.l{text-align:left}td.c{text-align:center}td.r{text-align:right}td.b,.b{font-weight:700}.sb{font-weight:400;color:#6B7B78;font-size:8pt}
 .nn{width:8mm;min-width:8mm;border-left:none!important;color:#6B7B78;font-size:8pt;text-align:center;font-weight:400}
 tr.st td{border-top:.5pt solid #000;border-bottom:1.1pt solid #000}tr.tt td{border-top:.5pt solid #000;border-bottom:1.1pt solid #000}tr.gh td{border-bottom:.5pt solid #000}
 .nt{margin-top:2mm;color:#6B7B78;font-size:8.5pt}.nt.cr{color:#7A1F1F}.em{margin-top:4mm;border:.5pt solid #000;padding:1.5mm 3mm}
-.sg{margin-top:14mm;border-top:.5pt solid #000;width:60mm}${doc ? '.ft{margin-top:8mm;color:#6B7B78;font-size:8pt}' : ''}`;
+.sg{margin:14mm auto 0;border-top:.5pt solid #000;width:60mm}${doc ? '.ft{margin-top:8mm;color:#6B7B78;font-size:8pt}' : ''}`;
   const inner = `<div class="hd"><div class="lg">${PX(ini)}</div><div><div class="fn">${PX(fac)}</div><div class="fa">${PX(adr)}</div></div></div>
-    <div class="rt">${PX(title)}<span class="bd">${m.full ? 'Повний' : 'Стислий'}</span></div><div class="pr">${PX(per)}</div>${sel ? `<div class="sl">${PX(sel)}</div>` : ''}
-    <table><thead>${th1}</thead><tbody>${body}</tbody></table>${m.empty ? '<div class="em">ⓘ Даних не знайдено за заданими критеріями</div>' : ''}${notes}<div class="sg"></div>${doc ? `<div class="ft">Дата формування: ${tds}</div>` : ''}`;
+    <div class="rt">${PX(title)}<span class="bd">${m.full ? 'Повний' : 'Стислий'}</span></div><div class="pr">${PX(per)}</div><div class="sl"><span class="fa">Вибірка даних по:</span> ${PX(sel)}</div>
+    <table><thead>${th1}</thead><tbody>${body}</tbody></table>${m.empty ? '<div class="em">ⓘ Даних не знайдено за заданими критеріями</div>' : ''}${notes}${doc ? '<div class="sg"></div>' : ''}${doc ? `<div class="ft">Дата формування: ${tds}</div>` : ''}`;
   const head = `<meta charset="utf-8"><title>${PX(base)}</title><style>${FONT_FACE()}${css}</style>`;
   if (!doc) return { name: base, html: `<!doctype html><html lang="uk"><head>${head}</head><body>${inner}</body></html>`, orient: wd.orient };
   const land = wd.orient === 'landscape';
