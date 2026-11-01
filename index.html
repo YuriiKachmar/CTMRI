@@ -103,7 +103,9 @@
   .ph-add-btn:active{background:var(--soft)}
   .week{display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
   .wd{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
-  .dn{font-size:10.5px;font-weight:800;color:var(--green)}
+  .dn{font-size:10.5px;font-weight:800;color:var(--green)}.dn .d-f{display:none}
+  @media (min-width:860px){.dn .d-s{display:none}.dn .d-f{display:inline}}
+  .wd.closed .wt::-webkit-calendar-picker-indicator,.wd.full .wt::-webkit-calendar-picker-indicator{opacity:.3}   /* значок годинника тьмяніє разом із полем */
   .wt{width:100%;padding:8px 3px;border:none;border-radius:var(--r12);background:var(--tile);box-shadow:var(--in);color:var(--ink);font-size:11px;font-weight:700;text-align:center;-webkit-appearance:none;min-width:0;font-family:inherit}   /* поле вводу — втоплене (як .fld у каркасі); кнопки лишаються опуклими */
   .off{width:100%;text-align:center;padding:7px 3px;border-radius:9px;background:var(--bg);box-shadow:var(--bump);font-size:var(--t-cap);color:var(--muted);cursor:pointer}
   .wd.closed .wt{box-shadow:none;background:transparent;pointer-events:none;color:var(--ph)}
@@ -565,7 +567,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 00:10 · години — втоплені поля</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 00:40 · назви днів</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1358,7 +1360,7 @@ function renderStaff(){
   sheetRerender = renderStaff;
   const sh = $('sheet'), isBoss = profile?.role === 'Керівник', edit = canEditDirs();
   const sched = settings?.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
-  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}"><span class="dn">${DAYS[i]}</span><span class="dob" ${isBoss ? 'data-dob' : ''}>ДОБА</span><input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}><span class="off" ${isBoss ? 'data-off' : ''}>вихідний</span></div>`).join('');
+  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}">${dnHtml(i)}<span class="dob" ${isBoss ? 'data-dob' : ''}>ДОБА</span><input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}><span class="off" ${isBoss ? 'data-off' : ''}>вихідний</span></div>`).join('');
   const role = staffTab === 'lab' ? 'Лаборант' : 'Лікар';
   const list = dir.workers.filter(w => w.role === role && !w.mergedInto).sort(sortWorkers);
   const rows = list.map(w => {
@@ -3261,7 +3263,8 @@ function ptDraw(){
 }
 
 /* ═══ МАЙСТЕР ПЕРШОГО ЗАПУСКУ (pershyi_pusk_v2.html) ═══ */
-const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'], DAYS_FULL = ['Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота','Неділя'];
+const dnHtml = (i) => `<span class="dn"><span class="d-s">${DAYS[i]}</span><span class="d-f">${DAYS_FULL[i]}</span></span>`;   // вузький екран — скорочено, широкий — повна назва
 const DEFAULT_WEEK = [['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['09:00','15:00',0],['09:00','15:00',1]];
 let wizStep = 1;
 let wiz = {};        // накопичені дані кроків
@@ -3272,7 +3275,7 @@ const midOf = (f) => { const [h, m] = f.split(':'); return String((Number(h) + 1
 function renderWizard(){
   wizStep = 1; wiz = {}; shiftMode = 'day'; dobaFrom = null;
   const weekHtml = DAYS.map((d, i) => `
-    <div class="wd ${DEFAULT_WEEK[i][2] ? 'closed' : ''}" data-d="${i}"><span class="dn">${d}</span><span class="dob">ДОБА</span>
+    <div class="wd ${DEFAULT_WEEK[i][2] ? 'closed' : ''}" data-d="${i}">${dnHtml(i)}<span class="dob">ДОБА</span>
       <input class="wt" type="time" value="${DEFAULT_WEEK[i][0]}" data-k="from">
       <input class="wt" type="time" value="${DEFAULT_WEEK[i][1]}" data-k="to">
       <span class="off">вихідний</span></div>`).join('');
