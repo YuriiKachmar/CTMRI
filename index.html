@@ -270,7 +270,8 @@
 
   /* ── Працівники: графік закладу, рядки, змінний графік ── */
   .week.locked .off{cursor:default}
-  .wd .all{display:none;font-size:11px;font-weight:700;color:var(--green);padding:16px 0}.wd.full .all{display:block}.wd.full .wt{display:none}   /* «доба»: години не задаються */
+  /* «доба» і «вихідний» однаково роблять години фоновими; кнопки лишаються на місці */
+  .wd.full .wt{box-shadow:none;background:transparent;pointer-events:none;color:var(--ph)}
   .dob{width:100%;text-align:center;padding:7px 3px;border-radius:9px;background:var(--bg);box-shadow:var(--bump);font-size:var(--t-cap);color:var(--muted);cursor:pointer}
   .wd.full .dob{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}.week.locked .dob{cursor:default}
   .sh.sx{background:#eee;color:var(--muted)}
@@ -564,7 +565,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 23:30 · доба для кожного дня</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 23:50 · ДОБА вгорі</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1357,7 +1358,7 @@ function renderStaff(){
   sheetRerender = renderStaff;
   const sh = $('sheet'), isBoss = profile?.role === 'Керівник', edit = canEditDirs();
   const sched = settings?.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
-  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}"><span class="dn">${DAYS[i]}</span><input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}><span class="all">цілодобово</span><span class="dob" ${isBoss ? 'data-dob' : ''}>доба</span><span class="off" ${isBoss ? 'data-off' : ''}>вихідний</span></div>`).join('');
+  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}"><span class="dn">${DAYS[i]}</span><span class="dob" ${isBoss ? 'data-dob' : ''}>ДОБА</span><input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}><span class="off" ${isBoss ? 'data-off' : ''}>вихідний</span></div>`).join('');
   const role = staffTab === 'lab' ? 'Лаборант' : 'Лікар';
   const list = dir.workers.filter(w => w.role === role && !w.mergedInto).sort(sortWorkers);
   const rows = list.map(w => {
@@ -3271,10 +3272,10 @@ const midOf = (f) => { const [h, m] = f.split(':'); return String((Number(h) + 1
 function renderWizard(){
   wizStep = 1; wiz = {}; shiftMode = 'day'; dobaFrom = null;
   const weekHtml = DAYS.map((d, i) => `
-    <div class="wd ${DEFAULT_WEEK[i][2] ? 'closed' : ''}" data-d="${i}"><span class="dn">${d}</span>
+    <div class="wd ${DEFAULT_WEEK[i][2] ? 'closed' : ''}" data-d="${i}"><span class="dn">${d}</span><span class="dob">ДОБА</span>
       <input class="wt" type="time" value="${DEFAULT_WEEK[i][0]}" data-k="from">
       <input class="wt" type="time" value="${DEFAULT_WEEK[i][1]}" data-k="to">
-      <span class="all">цілодобово</span><span class="dob">доба</span><span class="off">вихідний</span></div>`).join('');
+      <span class="off">вихідний</span></div>`).join('');
   $('wizard').innerHTML = `
     <h1>Дії при першому пуску програми</h1>
     <p class="lead">Що адміністратор має налаштувати перед початком роботи. <b>Кожен крок можна пропустити</b> — тоді застосовуються значення за замовчуванням.</p>
