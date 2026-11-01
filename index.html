@@ -270,6 +270,7 @@
 
   /* ── Працівники: графік закладу, рядки, змінний графік ── */
   .week.locked .off{cursor:default}
+  .wd .all{display:none;font-size:11px;font-weight:700;color:var(--green);padding:16px 0}.week.h24 .all{display:block}.week.h24 .wt{display:none}.week.h24 .wd.closed .all{color:var(--ph)}   /* цілодобово: години не задаються, лишаються вихідні */
   .fm-seg{max-width:360px}.fm-seg.locked{opacity:.6;pointer-events:none}   /* як .seg у каркасі; лише Керівник змінює */
   .sh.sx{background:#eee;color:var(--muted)}
   .rowc .wsh{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px}
@@ -562,7 +563,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 22:40 · режим закладу</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 23:05 · цілодобово з вихідними</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1355,7 +1356,7 @@ function renderStaff(){
   sheetRerender = renderStaff;
   const sh = $('sheet'), isBoss = profile?.role === 'Керівник', edit = canEditDirs();
   const sched = settings?.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
-  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : ''}"><span class="dn">${DAYS[i]}</span><input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}><span class="off" ${isBoss ? 'data-off' : ''}>вихідний</span></div>`).join('');
+  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : ''}"><span class="dn">${DAYS[i]}</span><input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}><span class="all">цілодобово</span><span class="off" ${isBoss ? 'data-off' : ''}>вихідний</span></div>`).join('');
   const role = staffTab === 'lab' ? 'Лаборант' : 'Лікар';
   const list = dir.workers.filter(w => w.role === role && !w.mergedInto).sort(sortWorkers);
   const rows = list.map(w => {
@@ -1366,7 +1367,8 @@ function renderStaff(){
   sh.innerHTML = `
     <div class="sect" style="margin-top:12px"><div class="sect-h"><div class="sect-t">Графік закладу</div></div>
       <div class="seg fm-seg ${isBoss ? '' : 'locked'}" id="facMode"><span data-m="schedule" class="${is24() ? '' : 'on'}">За графіком</span><span data-m="24h" class="${is24() ? 'on' : ''}">Цілодобово</span></div>
-      ${is24() ? '<div class="al al-i" style="margin:8px 0 0"><span class="al-icon">i</span><div>Заклад працює <b>цілодобово</b>: години по днях не потрібні, вихідних немає. Початок зміни (передачу зміни) задають окремо — вікна змін.</div></div>' : `<div class="week ${isBoss ? '' : 'locked'}" style="margin-top:8px">${week}</div>`}
+      ${is24() ? '<div class="al al-i" style="margin:8px 0 0"><span class="al-icon">i</span><div>Заклад працює <b>цілодобово</b>: години по днях не задаються. Якщо в якийсь день заклад не працює — позначте його «вихідний». Початок зміни (передачу зміни) задають окремо — вікна змін.</div></div>' : ''}
+      <div class="week ${is24() ? 'h24' : ''} ${isBoss ? '' : 'locked'}" style="margin-top:8px">${week}</div>
       <div class="al al-i" style="margin:6px 0 0"><span class="al-icon">i</span><div>Змінювати години й позначати вихідні може лише <strong>Керівник</strong> — без винятків, навіть для Адміністратора. Решта бачать графік у режимі перегляду.</div></div></div>
     <div class="sect"><div class="sect-h"><div class="sect-t">Працівники</div></div>
       <div class="tabs2"><span class="tab2 ${staffTab === 'lab' ? 'on' : ''}" data-wt="lab">Лаборанти</span><span class="tab2 ${staffTab === 'doc' ? 'on' : ''}" data-wt="doc">Лікарі</span></div>
@@ -1627,7 +1629,7 @@ function calDraw(){
   const chip = (it, g, iso) => `<div class="slot fl${it.nodata ? ' nodata' : ''}${it.der ? ' der' : ''}" data-g="${g}" data-wid="${esc(it.wid)}" data-der="${it.der ? 1 : 0}" title="${esc(nm(it.wid))}${it.der ? ' — вносив записи в журнал' : it.nodata ? ' — чергував, але записів немає' : ''}">${calBadge(it.wid, iso)}<span>${esc(workerBy(it.wid)?.lastName || '—')}</span></div>`;
   let h = '<div class="cell out"></div>'.repeat(lead);
   for (const c of out){
-    h += `<div class="cell${c.iso < td ? ' past' : ''}${c.iso === td ? ' today' : ''}${!is24() && sched[c.wd]?.off ? ' rest' : ''}" data-iso="${c.iso}">
+    h += `<div class="cell${c.iso < td ? ' past' : ''}${c.iso === td ? ' today' : ''}${sched[c.wd]?.off ? ' rest' : ''}" data-iso="${c.iso}">
       <div class="grp lab">${c.labs.map(i => chip(i, 'lab', c.iso)).join('')}${ed && c.iso >= td ? '<div class="slot add" data-g="lab" title="Додати лаборанта">+</div>' : ''}</div>
       <div class="dnum">${c.d}</div>
       <div class="grp doc">${c.docs.map(i => chip(i, 'doc', c.iso)).join('')}${ed && c.iso >= td ? '<div class="slot add" data-g="doc" title="Додати лікаря">+</div>' : ''}</div></div>`;
@@ -3114,7 +3116,7 @@ function openDayPicker(){
     let h = '<div class="dm-d pale"></div>'.repeat(lead);
     for (let d = 1; d <= last; d++){
       const iso = `${y}-${p2(m + 1)}-${p2(d)}`, wd = (new Date(y, m, d).getDay() + 6) % 7;
-      h += `<div class="dm-d ${!is24() && sched[wd]?.off ? 'off' : ''} ${iso === td ? 'today' : ''}" data-d="${iso}">${d}</div>`;
+      h += `<div class="dm-d ${sched[wd]?.off ? 'off' : ''} ${iso === td ? 'today' : ''}" data-d="${iso}">${d}</div>`;
     }
     ov.querySelector('[data-g]').innerHTML = h;
   };
@@ -3284,7 +3286,7 @@ function renderWizard(){
     <div class="wd ${DEFAULT_WEEK[i][2] ? 'closed' : ''}" data-d="${i}"><span class="dn">${d}</span>
       <input class="wt" type="time" value="${DEFAULT_WEEK[i][0]}" data-k="from">
       <input class="wt" type="time" value="${DEFAULT_WEEK[i][1]}" data-k="to">
-      <span class="off">вихідний</span></div>`).join('');
+      <span class="all">цілодобово</span><span class="off">вихідний</span></div>`).join('');
   $('wizard').innerHTML = `
     <h1>Дії при першому пуску програми</h1>
     <p class="lead">Що адміністратор має налаштувати перед початком роботи. <b>Кожен крок можна пропустити</b> — тоді застосовуються значення за замовчуванням.</p>
@@ -3304,7 +3306,7 @@ function renderWizard(){
     <div class="wcard" data-step="2"><div class="step"><div class="n">2</div><div class="st">
       <b>Задати графік закладу</b><p>Коли заклад працює: 7 днів тижня, години роботи або вихідний. Якщо заклад працює цілодобово — оберіть відповідний режим.</p>
       <div class="seg fm-seg" id="wFacMode"><span data-m="schedule" class="on">За графіком</span><span data-m="24h">Цілодобово</span></div>
-      <div class="al al-i flat" id="w24note" style="display:none;margin-top:8px"><span class="al-icon">i</span><div>Години по днях не потрібні. Початок зміни (передачу зміни) задайте на кроці 3.</div></div>
+      <div class="al al-i flat" id="w24note" style="display:none;margin-top:8px"><span class="al-icon">i</span><div>Години по днях не задаються — за потреби позначте вихідні дні. Початок зміни (передачу зміни) задайте на кроці 3.</div></div>
       <div class="week" id="week" style="margin-top:8px">${weekHtml}</div>
       <p class="hint">Ці вихідні позначаються в <b>календарі чергувань</b>. Вносити чергування в них однаково можна — деякі заклади працюють цілодобово.</p>
     </div></div></div>
@@ -3350,7 +3352,7 @@ function renderWizard(){
   for (const s of $('wFacMode').children) s.onclick = () => {
     for (const x of $('wFacMode').children) x.classList.toggle('on', x === s);
     const is24h = s.dataset.m === '24h';
-    $('week').style.display = is24h ? 'none' : ''; $('w24note').style.display = is24h ? '' : 'none';
+    $('week').classList.toggle('h24', is24h); $('w24note').style.display = is24h ? '' : 'none';
     if (wizStep === 3) computeShifts(true);
   };
   /* вихідні */
