@@ -570,7 +570,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 02:10 · доба 00:00–24:00</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 03:05 · зміна: доба за тривалістю, новий період без помилки</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1342,13 +1342,18 @@ const fmtDur = (min) => Math.floor(min / 60) + ' год' + (min % 60 ? ' ' + (mi
 /* Тип зміни обчислюється з годин; еталон — shiftWindows з налаштувань (окремо від щоденного графіку закладу), допуск ±60 хв */
 function classifyShift(f, t){
   const w = settings?.shiftWindows || {}, dFrom = w.dayFrom || '08:00', dTo = w.dayTo || '20:00', TOL = 60;
-  if (f === t) return { cls: 's24', label: 'Доба' };
-  const from = toMin(f), dur = (toMin(t) - from + 1440) % 1440;
-  const dS = Math.abs(from - toMin(dFrom)), dE = Math.abs(from - toMin(dTo)), dD = Math.abs(dur - 720);
-  if (dS <= TOL && dD <= TOL) return { cls: 'sd', label: 'Д' };
-  if (dE <= TOL && dD <= TOL) return { cls: 'sn', label: 'Н' };
+  const from = toMin(f);
+  let dur = (toMin(t) - from + 1440) % 1440; if (dur === 0) dur = 1440;
+  const circ = (a, b) => { const d = Math.abs(a - b) % 1440; return Math.min(d, 1440 - d); };   // відстань по колу доби: 23:55 і 00:00 — 5 хв
+  if (dur >= 1440 - TOL) return { cls: 's24', label: 'Доба', dur, note: dur < 1440 ? `Тривалість ${fmtDur(dur)} — зараховано як «Доба» (допуск — 60 хв).` : null };
+  const dS = circ(from, toMin(dFrom)), dE = circ(from, toMin(dTo)), dD = Math.abs(dur - 720);
+  if (dS <= TOL && dD <= TOL) return { cls: 'sd', label: 'Д', dur };
+  if (dE <= TOL && dD <= TOL) return { cls: 'sn', label: 'Н', dur };
   const near = dS <= dE ? { ref: `денної (${dFrom})`, diff: dS } : { ref: `нічної (${dTo})`, diff: dE };
-  return { cls: 'sx', label: 'Нетиповий', note: `Тривалість ${fmtDur(dur)}. Найближче до ${near.ref} зміни, але початок відхиляється на ${near.diff} хв (допуск — 60 хв)` + (dD > TOL ? `, і тривалість теж поза допуском (${dD} хв від еталонних 12 год)` : '') + '. Позначено «Нетиповий» — перевірте години або залиште як є.' };
+  const parts = [];
+  if (near.diff > TOL) parts.push(`початок ${near.diff} хв від початку ${near.ref} зміни`);
+  if (dD > TOL) parts.push(`від еталонних 12 год відрізняється на ${fmtDur(dD)}`);
+  return { cls: 'sx', label: 'Нетиповий', dur, note: `Тривалість ${fmtDur(dur)}: ${parts.join('; ')} (допуск — 60 хв). Позначено «Нетиповий» — перевірте години або залиште як є.` };
 }
 const currentShift = (w) => { const t = todayISO(); return [...(w.shifts || [])].reverse().find(p => !p.excluded && p.start <= t && (!p.end || p.end >= t)) || null; };
 const ST_TEXT = {
@@ -1564,10 +1569,10 @@ function openWorkerForm(id, newRole){
     }
   });
   ov.querySelector('[data-padd]').addEventListener('click', () => {
-    const last = periods[periods.length - 1];
-    if (last && !last.excluded){
-      if (!last.end){ last.end = today; last.note = { t: 'i', x: 'Автоматично позначено завершеним при додаванні нового робочого часу.' }; }
-      else if (today <= last.end){ last.note = { t: 'w', x: 'Новий період не може починатися раніше за закриття попереднього — він завершується не раніше сьогодні. Перевірте дати.' }; draw(); return; }
+    const live = periods.filter(p => !p.excluded), last = live[live.length - 1];
+    if (last){
+      if (last.start >= today){ toast('w', 'Новий графік з сьогодні неможливий', 'Поточний період почався ' + isoToUa(last.start) + '. Змініть його години або дату «з».'); return; }
+      if (!last.end || last.end >= today){ last.end = addDays(today, -1); last.note = { t: 'i', x: `Завершено ${isoToUa(last.end)} — новий графік діє з ${isoToUa(today)}.` }; }
     }
     periods.push({ from: '08:00', to: '20:00', start: today, end: '', excluded: false, note: null }); draw();
     per.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
