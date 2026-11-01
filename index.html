@@ -570,7 +570,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 01:40 · ДОБА+години в смузі</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 02:10 · доба 00:00–24:00</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1394,7 +1394,7 @@ const pill2 = (st) => st === 'inactive' ? '<span class="pill gray">не акти
 
 /* Графік закладу: зберігається одразу при зміні (settings/main.schedule), лише Керівник */
 function weekChanged(){
-  const wk = [...$('sheet').querySelectorAll('.week .wd')].map(wd => { const [a, b] = wd.querySelectorAll('.wt'); return { from: a.value, to: b.value, off: wd.classList.contains('closed'), full: wd.classList.contains('full') }; });
+  const wk = [...$('sheet').querySelectorAll('.week .wd')].map(wd => { const [a, b] = wd.querySelectorAll('.wt'); return { from: dayVal(a), to: dayVal(b), off: wd.classList.contains('closed'), full: wd.classList.contains('full') }; });
   if (wk.some(d => !d.off && !d.full && (!d.from || !d.to))){ toast('e', 'Некоректний час', 'Вкажіть години для кожного робочого дня.'); return renderStaff(); }
   if (wk.every(d => d.off)){
     confirmWin({ type: 'w', title: 'Усі 7 днів позначено вихідними.', details: 'Заклад не працюватиме взагалі — усі записи в журналі потраплятимуть поза вікном.', action: 'Зберегти все одно', onOk: () => saveWeek(wk), onCancel: renderStaff });
@@ -3269,9 +3269,20 @@ function ptDraw(){
 const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'], DAYS_FULL = ['Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота','Неділя'];
 const dayState = (d) => d.off ? 'off' : d.full ? 'full' : 'h';
 /* день: смуга [ДОБА · початок · кінець] + окрема кнопка «Вихідний» внизу. Стан «Години» — коли не вибрано ні ДОБА, ні Вихідний (поля годин підсвічені) */
-const dayCtl = (st, from, to, dis, fa = '', ta = '') => `<div class="dseg"><span data-st="full" class="${st === 'full' ? 'on' : ''}">ДОБА</span><input class="wt" type="time" value="${esc(from)}" ${fa} ${dis ? 'disabled' : ''}><input class="wt" type="time" value="${esc(to)}" ${ta} ${dis ? 'disabled' : ''}></div><span class="off ${st === 'off' ? 'on' : ''}" data-st="off">Вихідний</span>`;
+const dayInp = (st, v, dis, attr, shown) => st === 'full'
+  ? `<input class="wt" type="text" readonly value="${shown}" data-v="${esc(v)}" ${attr} ${dis ? 'disabled' : ''}>`   // «доба»: поле показує 00:00 / 24:00, а власні години зберігаються в data-v
+  : `<input class="wt" type="time" value="${esc(v)}" ${attr} ${dis ? 'disabled' : ''}>`;
+const dayCtl = (st, from, to, dis, fa = '', ta = '') => `<div class="dseg"><span data-st="full" class="${st === 'full' ? 'on' : ''}">ДОБА</span>${dayInp(st, from, dis, fa, '00:00')}${dayInp(st, to, dis, ta, '24:00')}</div><span class="off ${st === 'off' ? 'on' : ''}" data-st="off">Вихідний</span>`;
+const dayVal = (inp) => inp.dataset.v ?? inp.value;   // власні години дня (навіть коли показано 00:00 / 24:00)
 const dayNow = (wd) => wd.classList.contains('full') ? 'full' : wd.classList.contains('closed') ? 'off' : 'h';
-function setDayState(wd, st){ wd.classList.toggle('full', st === 'full'); wd.classList.toggle('closed', st === 'off'); for (const s of wd.querySelectorAll('[data-st]')) s.classList.toggle('on', s.dataset.st === st); }
+function setDayState(wd, st){
+  wd.classList.toggle('full', st === 'full'); wd.classList.toggle('closed', st === 'off');
+  for (const s of wd.querySelectorAll('[data-st]')) s.classList.toggle('on', s.dataset.st === st);
+  [...wd.querySelectorAll('.wt')].forEach((inp, k) => {
+    if (st === 'full' && inp.type === 'time'){ inp.dataset.v = inp.value; inp.type = 'text'; inp.readOnly = true; inp.value = k ? '24:00' : '00:00'; }
+    else if (st !== 'full' && inp.type === 'text'){ inp.type = 'time'; inp.readOnly = false; inp.value = inp.dataset.v || ''; delete inp.dataset.v; }
+  });
+}
 const toggleDay = (wd, st) => setDayState(wd, dayNow(wd) === st ? 'h' : st);   // повторний клік по активному стану повертає «Години»
 function bindDayInputs(week, onSet){
   const act = (e) => { const inp = e.target.closest('.wt'); if (!inp || inp.disabled || week.classList.contains('locked')) return false; const wd = inp.closest('.wd'); if (!wd.classList.contains('full') && !wd.classList.contains('closed')) return false; setDayState(wd, 'h'); onSet(); return inp; };
@@ -3388,7 +3399,7 @@ function collectStep(n){
     wiz.phones = [...$('phoneList').children].map(r => ({ number: r.querySelector('.ph-num').value.trim(), label: r.querySelector('.ph-name').value.trim() })).filter(p => p.number);
   }
   if (n === 2){
-    wiz.schedule = [...$('week').children].map(wd => ({ from: wd.querySelector('[data-k=from]').value, to: wd.querySelector('[data-k=to]').value, off: wd.classList.contains('closed'), full: wd.classList.contains('full') }));
+    wiz.schedule = [...$('week').children].map(wd => ({ from: dayVal(wd.querySelector('[data-k=from]')), to: dayVal(wd.querySelector('[data-k=to]')), off: wd.classList.contains('closed'), full: wd.classList.contains('full') }));
   }
   if (n === 3){
     wiz.shiftMode = shiftMode;
