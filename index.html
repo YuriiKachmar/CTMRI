@@ -271,10 +271,14 @@
   /* ── Працівники: графік закладу, рядки, змінний графік ── */
   /* «доба» і «вихідний» однаково роблять години фоновими; кнопки лишаються на місці */
   .wd.full .wt{box-shadow:none;background:transparent;color:var(--ph);cursor:pointer}
-  /* три стани дня — одна вдавлена смуга (як .seg у каркасі) */
+  /* день: вдавлена смуга [ДОБА · початок · кінець] + кнопка «Вихідний» (як .seg / .btn у каркасі) */
   .dseg{width:100%;display:flex;flex-direction:column;gap:4px;padding:4px;border-radius:var(--r12);background:var(--bg);box-shadow:var(--in)}
-  .dseg span{text-align:center;padding:7px 3px;border-radius:9px;font-size:var(--t-cap);color:var(--muted);cursor:pointer}
-  .dseg span.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}.week.locked .dseg span{cursor:default}
+  .dseg>span{text-align:center;padding:7px 3px;border-radius:9px;font-size:var(--t-cap);color:var(--muted);cursor:pointer}
+  .dseg .wt{background:transparent;box-shadow:none;color:var(--ph);border-radius:9px}
+  .dseg>span.on,.wd:not(.full):not(.closed) .dseg .wt{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}   /* активний стан; «Години» = підсвічені поля */
+  .dseg>span.on{color:var(--green)}
+  .off{width:100%;text-align:center;padding:7px 3px;border-radius:9px;background:var(--bg);box-shadow:var(--bump);font-size:var(--t-cap);color:var(--muted);cursor:pointer}
+  .off.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}.week.locked .off,.week.locked .dseg>span{cursor:default}
   .sh.sx{background:#eee;color:var(--muted)}
   .rowc .wsh{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px}
   .rowc .wt2{font-size:11.5px;color:var(--muted);white-space:nowrap}
@@ -566,7 +570,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 01:10 · стани дня смугою</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 01:40 · ДОБА+години в смузі</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1359,7 +1363,7 @@ function renderStaff(){
   sheetRerender = renderStaff;
   const sh = $('sheet'), isBoss = profile?.role === 'Керівник', edit = canEditDirs();
   const sched = settings?.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
-  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}">${dnHtml(i)}${daySeg(dayState(d))}<input class="wt" type="time" value="${esc(d.from)}" ${isBoss ? '' : 'disabled'}><input class="wt" type="time" value="${esc(d.to)}" ${isBoss ? '' : 'disabled'}></div>`).join('');
+  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}">${dnHtml(i)}${dayCtl(dayState(d), d.from, d.to, !isBoss)}</div>`).join('');
   const role = staffTab === 'lab' ? 'Лаборант' : 'Лікар';
   const list = dir.workers.filter(w => w.role === role && !w.mergedInto).sort(sortWorkers);
   const rows = list.map(w => {
@@ -1381,7 +1385,7 @@ function renderStaff(){
     if (t){ staffTab = t.dataset.wt; renderStaff(); }
     else if (ew) openWorkerForm(ew.dataset.ew, null);
     else if (e.target.closest('[data-aw]')) openWorkerForm(null, role);
-    else if (st && isBoss){ setDayState(st.closest('.wd'), st.dataset.st); weekChanged(); }
+    else if (st && isBoss){ toggleDay(st.closest('.wd'), st.dataset.st); weekChanged(); }
   };
   bindDayInputs(sh.querySelector('.week'), weekChanged);
   sh.onchange = (e) => { if (e.target.closest('.week')) weekChanged(); };
@@ -3264,9 +3268,11 @@ function ptDraw(){
 /* ═══ МАЙСТЕР ПЕРШОГО ЗАПУСКУ (pershyi_pusk_v2.html) ═══ */
 const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'], DAYS_FULL = ['Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота','Неділя'];
 const dayState = (d) => d.off ? 'off' : d.full ? 'full' : 'h';
-const daySeg = (st) => `<div class="dseg">${[['h', 'Години'], ['full', 'ДОБА'], ['off', 'Вихідний']].map(([k, t]) => `<span data-st="${k}" class="${st === k ? 'on' : ''}">${t}</span>`).join('')}</div>`;
+/* день: смуга [ДОБА · початок · кінець] + окрема кнопка «Вихідний» внизу. Стан «Години» — коли не вибрано ні ДОБА, ні Вихідний (поля годин підсвічені) */
+const dayCtl = (st, from, to, dis, fa = '', ta = '') => `<div class="dseg"><span data-st="full" class="${st === 'full' ? 'on' : ''}">ДОБА</span><input class="wt" type="time" value="${esc(from)}" ${fa} ${dis ? 'disabled' : ''}><input class="wt" type="time" value="${esc(to)}" ${ta} ${dis ? 'disabled' : ''}></div><span class="off ${st === 'off' ? 'on' : ''}" data-st="off">Вихідний</span>`;
+const dayNow = (wd) => wd.classList.contains('full') ? 'full' : wd.classList.contains('closed') ? 'off' : 'h';
 function setDayState(wd, st){ wd.classList.toggle('full', st === 'full'); wd.classList.toggle('closed', st === 'off'); for (const s of wd.querySelectorAll('[data-st]')) s.classList.toggle('on', s.dataset.st === st); }
-/* клік або фокус на тьмяному полі годин сам перемикає день на «Години» — мертвих зон немає */
+const toggleDay = (wd, st) => setDayState(wd, dayNow(wd) === st ? 'h' : st);   // повторний клік по активному стану повертає «Години»
 function bindDayInputs(week, onSet){
   const act = (e) => { const inp = e.target.closest('.wt'); if (!inp || inp.disabled || week.classList.contains('locked')) return false; const wd = inp.closest('.wd'); if (!wd.classList.contains('full') && !wd.classList.contains('closed')) return false; setDayState(wd, 'h'); onSet(); return inp; };
   week.addEventListener('pointerdown', (e) => { const inp = act(e); if (inp){ e.preventDefault(); inp.focus(); } });
@@ -3283,9 +3289,7 @@ const midOf = (f) => { const [h, m] = f.split(':'); return String((Number(h) + 1
 function renderWizard(){
   wizStep = 1; wiz = {}; shiftMode = 'day'; dobaFrom = null;
   const weekHtml = DAYS.map((d, i) => `
-    <div class="wd ${DEFAULT_WEEK[i][2] ? 'closed' : ''}" data-d="${i}">${dnHtml(i)}${daySeg(DEFAULT_WEEK[i][2] ? 'off' : 'h')}
-      <input class="wt" type="time" value="${DEFAULT_WEEK[i][0]}" data-k="from">
-      <input class="wt" type="time" value="${DEFAULT_WEEK[i][1]}" data-k="to"></div>`).join('');
+    <div class="wd ${DEFAULT_WEEK[i][2] ? 'closed' : ''}" data-d="${i}">${dnHtml(i)}${dayCtl(DEFAULT_WEEK[i][2] ? 'off' : 'h', DEFAULT_WEEK[i][0], DEFAULT_WEEK[i][1], false, 'data-k="from"', 'data-k="to"')}</div>`).join('');
   $('wizard').innerHTML = `
     <h1>Дії при першому пуску програми</h1>
     <p class="lead">Що адміністратор має налаштувати перед початком роботи. <b>Кожен крок можна пропустити</b> — тоді застосовуються значення за замовчуванням.</p>
@@ -3346,7 +3350,7 @@ function renderWizard(){
   };
   $('phoneAddBtn').onclick = () => addPhone().querySelector('.ph-num').focus();
   /* стани днів: Години / ДОБА / Вихідний */
-  $('week').addEventListener('click', (e) => { const s = e.target.closest('[data-st]'); if (!s) return; setDayState(s.closest('.wd'), s.dataset.st); if (wizStep === 3) computeShifts(true); });
+  $('week').addEventListener('click', (e) => { const s = e.target.closest('[data-st]'); if (!s) return; toggleDay(s.closest('.wd'), s.dataset.st); if (wizStep === 3) computeShifts(true); });
   bindDayInputs($('week'), () => { if (wizStep === 3) computeShifts(true); });
   for (const inp of $('week').querySelectorAll('.wt'))
     inp.onchange = () => { if (wizStep === 3 && inp.closest('.wd').dataset.d === '0') computeShifts(true); };
