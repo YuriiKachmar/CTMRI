@@ -270,6 +270,7 @@
 
   /* ── Працівники: графік закладу, рядки, змінний графік ── */
   .week.locked .off{cursor:default}
+  .fm-seg{max-width:360px}.fm-seg.locked{opacity:.6;pointer-events:none}   /* як .seg у каркасі; лише Керівник змінює */
   .sh.sx{background:#eee;color:var(--muted)}
   .rowc .wsh{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px}
   .rowc .wt2{font-size:11.5px;color:var(--muted);white-space:nowrap}
@@ -561,7 +562,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 01:50 · лікарі: не описано</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 01.11.2026 22:40 · режим закладу</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1364,7 +1365,8 @@ function renderStaff(){
   }).join('');
   sh.innerHTML = `
     <div class="sect" style="margin-top:12px"><div class="sect-h"><div class="sect-t">Графік закладу</div></div>
-      <div class="week ${isBoss ? '' : 'locked'}">${week}</div>
+      <div class="seg fm-seg ${isBoss ? '' : 'locked'}" id="facMode"><span data-m="schedule" class="${is24() ? '' : 'on'}">За графіком</span><span data-m="24h" class="${is24() ? 'on' : ''}">Цілодобово</span></div>
+      ${is24() ? '<div class="al al-i" style="margin:8px 0 0"><span class="al-icon">i</span><div>Заклад працює <b>цілодобово</b>: години по днях не потрібні, вихідних немає. Початок зміни (передачу зміни) задають окремо — вікна змін.</div></div>' : `<div class="week ${isBoss ? '' : 'locked'}" style="margin-top:8px">${week}</div>`}
       <div class="al al-i" style="margin:6px 0 0"><span class="al-icon">i</span><div>Змінювати години й позначати вихідні може лише <strong>Керівник</strong> — без винятків, навіть для Адміністратора. Решта бачать графік у режимі перегляду.</div></div></div>
     <div class="sect"><div class="sect-h"><div class="sect-t">Працівники</div></div>
       <div class="tabs2"><span class="tab2 ${staffTab === 'lab' ? 'on' : ''}" data-wt="lab">Лаборанти</span><span class="tab2 ${staffTab === 'doc' ? 'on' : ''}" data-wt="doc">Лікарі</span></div>
@@ -1377,12 +1379,23 @@ function renderStaff(){
     else if (ew) openWorkerForm(ew.dataset.ew, null);
     else if (e.target.closest('[data-aw]')) openWorkerForm(null, role);
     else if (off){ off.parentElement.classList.toggle('closed'); weekChanged(); }
+    else if (e.target.closest('#facMode [data-m]') && isBoss) setFacMode(e.target.closest('[data-m]').dataset.m);
   };
   sh.onchange = (e) => { if (e.target.closest('.week')) weekChanged(); };
 }
 const pill2 = (st) => st === 'inactive' ? '<span class="pill gray">не активний</span>' : '<span class="pill">активний</span>';
 
 /* Графік закладу: зберігається одразу при зміні (settings/main.schedule), лише Керівник */
+async function setFacMode(m){
+  if ((settings?.facilityMode || 'schedule') === m) return;
+  const before = settings?.facilityMode || 'schedule';
+  try {
+    await setDoc(doc(db, 'settings', 'main'), { facilityMode: m, updatedAt: serverTimestamp() }, { merge: true });
+    settings = { ...(settings || {}), facilityMode: m };
+    audit('update', 'settings', 'main', { facilityMode: before }, { facilityMode: m });
+  } catch (e){ toast('e', 'Не вдалося зберегти режим закладу', e.code || ''); }
+  renderStaff();
+}
 function weekChanged(){
   const wk = [...$('sheet').querySelectorAll('.week .wd')].map(wd => { const [a, b] = wd.querySelectorAll('.wt'); return { from: a.value, to: b.value, off: wd.classList.contains('closed') }; });
   if (wk.some(d => !d.off && (!d.from || !d.to))){ toast('e', 'Некоректний час', 'Вкажіть години для кожного робочого дня.'); return renderStaff(); }
@@ -1614,7 +1627,7 @@ function calDraw(){
   const chip = (it, g, iso) => `<div class="slot fl${it.nodata ? ' nodata' : ''}${it.der ? ' der' : ''}" data-g="${g}" data-wid="${esc(it.wid)}" data-der="${it.der ? 1 : 0}" title="${esc(nm(it.wid))}${it.der ? ' — вносив записи в журнал' : it.nodata ? ' — чергував, але записів немає' : ''}">${calBadge(it.wid, iso)}<span>${esc(workerBy(it.wid)?.lastName || '—')}</span></div>`;
   let h = '<div class="cell out"></div>'.repeat(lead);
   for (const c of out){
-    h += `<div class="cell${c.iso < td ? ' past' : ''}${c.iso === td ? ' today' : ''}${sched[c.wd]?.off ? ' rest' : ''}" data-iso="${c.iso}">
+    h += `<div class="cell${c.iso < td ? ' past' : ''}${c.iso === td ? ' today' : ''}${!is24() && sched[c.wd]?.off ? ' rest' : ''}" data-iso="${c.iso}">
       <div class="grp lab">${c.labs.map(i => chip(i, 'lab', c.iso)).join('')}${ed && c.iso >= td ? '<div class="slot add" data-g="lab" title="Додати лаборанта">+</div>' : ''}</div>
       <div class="dnum">${c.d}</div>
       <div class="grp doc">${c.docs.map(i => chip(i, 'doc', c.iso)).join('')}${ed && c.iso >= td ? '<div class="slot add" data-g="doc" title="Додати лікаря">+</div>' : ''}</div></div>`;
@@ -3101,7 +3114,7 @@ function openDayPicker(){
     let h = '<div class="dm-d pale"></div>'.repeat(lead);
     for (let d = 1; d <= last; d++){
       const iso = `${y}-${p2(m + 1)}-${p2(d)}`, wd = (new Date(y, m, d).getDay() + 6) % 7;
-      h += `<div class="dm-d ${sched[wd]?.off ? 'off' : ''} ${iso === td ? 'today' : ''}" data-d="${iso}">${d}</div>`;
+      h += `<div class="dm-d ${!is24() && sched[wd]?.off ? 'off' : ''} ${iso === td ? 'today' : ''}" data-d="${iso}">${d}</div>`;
     }
     ov.querySelector('[data-g]').innerHTML = h;
   };
@@ -3257,6 +3270,7 @@ function ptDraw(){
 
 /* ═══ МАЙСТЕР ПЕРШОГО ЗАПУСКУ (pershyi_pusk_v2.html) ═══ */
 const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+const is24 = () => settings?.facilityMode === '24h';   // режим закладу: «Цілодобово» — години по днях не задаються, вихідних немає
 const DEFAULT_WEEK = [['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['08:00','20:00',0],['09:00','15:00',0],['09:00','15:00',1]];
 let wizStep = 1;
 let wiz = {};        // накопичені дані кроків
@@ -3288,8 +3302,10 @@ function renderWizard(){
     </div></div></div>
 
     <div class="wcard" data-step="2"><div class="step"><div class="n">2</div><div class="st">
-      <b>Задати графік закладу</b><p>Коли заклад працює: 7 днів тижня, години роботи або вихідний.</p>
-      <div class="week" id="week">${weekHtml}</div>
+      <b>Задати графік закладу</b><p>Коли заклад працює: 7 днів тижня, години роботи або вихідний. Якщо заклад працює цілодобово — оберіть відповідний режим.</p>
+      <div class="seg fm-seg" id="wFacMode"><span data-m="schedule" class="on">За графіком</span><span data-m="24h">Цілодобово</span></div>
+      <div class="al al-i flat" id="w24note" style="display:none;margin-top:8px"><span class="al-icon">i</span><div>Години по днях не потрібні. Початок зміни (передачу зміни) задайте на кроці 3.</div></div>
+      <div class="week" id="week" style="margin-top:8px">${weekHtml}</div>
       <p class="hint">Ці вихідні позначаються в <b>календарі чергувань</b>. Вносити чергування в них однаково можна — деякі заклади працюють цілодобово.</p>
     </div></div></div>
 
@@ -3330,6 +3346,13 @@ function renderWizard(){
     return row;
   };
   $('phoneAddBtn').onclick = () => addPhone().querySelector('.ph-num').focus();
+  /* режим закладу: «Цілодобово» ховає години по днях */
+  for (const s of $('wFacMode').children) s.onclick = () => {
+    for (const x of $('wFacMode').children) x.classList.toggle('on', x === s);
+    const is24h = s.dataset.m === '24h';
+    $('week').style.display = is24h ? 'none' : ''; $('w24note').style.display = is24h ? '' : 'none';
+    if (wizStep === 3) computeShifts(true);
+  };
   /* вихідні */
   for (const wd of $('week').querySelectorAll('.wd'))
     wd.querySelector('.off').onclick = () => { wd.classList.toggle('closed'); if (wizStep === 3) computeShifts(true); };
@@ -3369,6 +3392,7 @@ function collectStep(n){
     wiz.phones = [...$('phoneList').children].map(r => ({ number: r.querySelector('.ph-num').value.trim(), label: r.querySelector('.ph-name').value.trim() })).filter(p => p.number);
   }
   if (n === 2){
+    wiz.facilityMode = $('wFacMode').querySelector('.on').dataset.m;
     wiz.schedule = [...$('week').children].map(wd => ({ from: wd.querySelector('[data-k=from]').value, to: wd.querySelector('[data-k=to]').value, off: wd.classList.contains('closed') }));
   }
   if (n === 3){
@@ -3380,7 +3404,12 @@ function collectStep(n){
 
 /* Поля Денної зміни: понеділок лише ПІДСТАВЛЯЄ початкове значення, далі — редаговані напряму */
 function computeShifts(fromWeek){
-  const mon = $('week').children[0];
+  const mon = $('week').children[0], is24h = $('wFacMode').querySelector('.on').dataset.m === '24h';
+  if (is24h){   // цілодобово: години понеділка нічого не означають — початок зміни за замовчуванням 08:00
+    $('modeBoxText').textContent = 'Заклад працює цілодобово.';
+    if (!$('winDayFrom').dataset.touched){ $('winDayFrom').value = '08:00'; $('winDayTo').value = '20:00'; }
+    return windowEdited(true);
+  }
   const from = mon.querySelector('[data-k=from]').value, to = mon.querySelector('[data-k=to]').value;
   $('modeBoxText').textContent = mon.classList.contains('closed') ? 'Пн — вихідний.' : `Пн ${from}–${to}.`;
   if (!$('winDayFrom').dataset.touched){
@@ -3410,6 +3439,7 @@ async function finishWizard(){
   const data = {
     facilityName: wiz.facilityName ?? '', facilityAddress: wiz.facilityAddress ?? '', facilityEmail: wiz.facilityEmail ?? '', phones: wiz.phones ?? [],
     schedule: wiz.schedule ?? DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] })),
+    facilityMode: wiz.facilityMode ?? 'schedule',
     shiftMode: wiz.shiftMode ?? 'day',
     shiftWindows: wiz.shiftWindows ?? { dayFrom: '08:00', dayTo: '20:00' },
     setupDone: true, updatedAt: serverTimestamp()
