@@ -570,7 +570,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 03:05 · зміна: доба за тривалістю, новий період без помилки</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 02.11.2026 23:40 · графік працівника обов'язковий</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1373,7 +1373,7 @@ function renderStaff(){
   const list = dir.workers.filter(w => w.role === role && !w.mergedInto).sort(sortWorkers);
   const rows = list.map(w => {
     const c = currentShift(w), r = c ? classifyShift(c.from, c.to) : null;
-    const shift = c ? `<span class="sh ${r.cls}">${esc(r.label)}</span><span class="wt2">${esc(c.from)}–${esc(c.to)}</span>` : '<span class="wt2">—</span>';
+    const shift = c ? `<span class="sh ${r.cls}">${esc(r.label)}</span><span class="wt2">${esc(c.from)}–${esc(c.to)}</span>` : '<span class="sh sx" title="Робочий час не задано — відкрийте картку й додайте період">потрібен графік</span>';
     return `<div class="rowc ${w.status === 'inactive' ? 'inact' : ''}"><span class="pen" data-ew="${w.id}" ${edit ? '' : 'style="visibility:hidden"'}>✎</span><span class="nm">${esc(shortName(w))}${w.loginAllowed === false ? ' <span class="sect-sub">· без входу</span>' : ''}</span><span class="wsh">${shift}</span><span class="slot">${pill2(w.status)}</span></div>`;
   }).join('');
   sh.innerHTML = `
@@ -1422,6 +1422,7 @@ function openWorkerForm(id, newRole){
   const orig = (rec?.shifts || []).map(p => ({ ...p }));
   let periods = orig.map(p => ({ ...p, note: null, cls: null }));
   const today = todayISO();
+  if (!rec){ const sw = settings?.shiftWindows || {}; periods = [{ from: sw.dayFrom || '08:00', to: sw.dayTo || '20:00', start: today, end: '', excluded: false, note: { t: 'i', x: 'Години підставлено зі змінних вікон закладу — підтвердьте або змініть.' } }]; }
   const stat = rec?.status === 'inactive' ? 'inactive' : 'active';
   const role = rec?.role || newRole || 'Лаборант';
   const hasAcc = rec ? (rec.hasAccount ?? !!rec.email) : false;   // чи є в працівника обліковий запис для входу
@@ -1475,6 +1476,7 @@ function openWorkerForm(id, newRole){
       out.push({ from: p.from, to: p.to, start: p.start, end: p.end || null, excluded: !!p.excluded });
     }
     const act = out.filter(p => !p.excluded);
+    if ((data.role === 'Лаборант' || data.role === 'Лікар') && !act.length) return ['Вкажіть робочий час працівника', 'Додайте хоча б один період змінного графіку — від нього залежить облік змін і звіти.'];
     if (act.filter(p => !p.end).length > 1) return ['Два відкриті періоди одночасно', 'Спершу закрийте попередній (поставте «по» або «Завершене»).'];
     const sorted = [...act].sort((a, b) => a.start.localeCompare(b.start));
     for (let i = 1; i < sorted.length; i++) if (!sorted[i - 1].end || sorted[i].start <= sorted[i - 1].end) return ['Періоди змінного графіку перетинаються', 'Початок нового періоду має бути пізніше за закриття попереднього.'];
