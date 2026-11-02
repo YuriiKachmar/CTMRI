@@ -286,14 +286,16 @@
   .stexp b{color:var(--ink);font-style:normal}
   .sh-item{border-bottom:1px solid var(--line);padding:10px 2px}
   .sh-item:last-child{border-bottom:none}
-  .sh-line{display:grid;grid-template-columns:44px 104px minmax(130px,1fr) 14px minmax(130px,1fr);align-items:center;gap:9px}
+  .sh-line{display:grid;grid-template-columns:84px 104px minmax(130px,1fr) 14px minmax(130px,1fr);align-items:end;gap:9px}
   .sh-line>*:nth-child(6){grid-column:2 / 4;justify-self:start}
   .sh-line>*:nth-child(7){grid-column:4 / -1;justify-self:end}
   .sh-line .dseg.tw{width:100%;min-width:0}
   .tw .wt{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
-  .tw>span{cursor:pointer}.tw.full>span{color:var(--green)}
-  .tw.mir .wt:last-of-type{background:transparent;box-shadow:none;color:var(--ph);font-weight:600}   /* доба: кінець дорівнює початку — фонове, змінюється початком */
-  .sh-item.excluded .tw>span{cursor:default}
+  .sh-badge.long{min-width:0;width:100%;padding:7px 4px;font-size:10.5px;box-sizing:border-box}
+  .dcell{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .dcap{font-size:var(--t-cap);font-weight:700;color:var(--muted);padding-left:4px;white-space:nowrap}
+  .sh-line>.per-dash{align-self:end;padding-bottom:14px}
+  .sh-line>*:nth-child(1){align-self:center}
   .sh-time2 .tm{width:58px;padding:4px 3px;font-size:10.5px;border:none;border-radius:7px;background:var(--bg);box-shadow:var(--in);color:var(--ink);font-weight:600;font-family:inherit;text-align:center}
   .sh-line .dt{width:100%;min-width:0;padding:10px 8px;font-size:var(--t-sm)}
   .sh-badge{font-size:9px;font-weight:800;padding:4px 8px;border-radius:var(--r8);min-width:38px;text-align:center}
@@ -302,7 +304,7 @@
   .sh-item.excluded input{text-decoration:line-through}
   .sh-item.excluded .per-seg,.sh-item.excluded .per-tag-done{visibility:hidden}
   .sh-item.excluded .per-del{pointer-events:none;box-shadow:none;cursor:default}
-  @media (max-width:560px){.sh-line{grid-template-columns:44px 1fr 14px 1fr}.sh-line>*:nth-child(2){grid-column:2 / -1}.sh-line>*:nth-child(3){grid-column:1 / 3}.sh-line>*:nth-child(4){grid-column:3}.sh-line>*:nth-child(5){grid-column:4}.sh-line>*:nth-child(n+6){grid-column:1 / -1;justify-self:start}}
+  @media (max-width:560px){.sh-line{grid-template-columns:84px 1fr 14px 1fr}.sh-line>*:nth-child(2){grid-column:2 / -1}.sh-line>*:nth-child(3){grid-column:1 / 3}.sh-line>*:nth-child(4){grid-column:3}.sh-line>*:nth-child(5){grid-column:4}.sh-line>*:nth-child(n+6){grid-column:1 / -1;justify-self:start}}
 
 
   /* ── Журнал + форма візиту (main.html, forma_vizytu.html) ── */
@@ -576,7 +578,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 03.11.2026 00:05 · години зміни як у графіку закладу</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 03.11.2026 01:15 · змінний графік: без ДОБА, повні назви, підписи дат</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1361,6 +1363,7 @@ function classifyShift(f, t){
   if (dD > TOL) parts.push(`від еталонних 12 год відрізняється на ${fmtDur(dD)}`);
   return { cls: 'sx', label: 'Нетиповий', dur, note: `Тривалість ${fmtDur(dur)}: ${parts.join('; ')} (допуск — 60 хв). Позначено «Нетиповий» — перевірте години або залиште як є.` };
 }
+const SHIFT_FULL = { sd: 'Денна', sn: 'Нічна', s24: 'Доба', sx: 'Нетипова' };
 const currentShift = (w) => { const t = todayISO(); return [...(w.shifts || [])].reverse().find(p => !p.excluded && p.start <= t && (!p.end || p.end >= t)) || null; };
 const ST_TEXT = {
   active: 'Працівник працює на роботі: він у списках, змінах і звітах. Чи може він користуватись програмою — визначає панель «Доступ» нижче.',
@@ -1436,17 +1439,16 @@ function openWorkerForm(id, newRole){
   const shRow = (p, i) => {
     const r = classifyShift(p.from, p.to), open = !p.end, ro = p.excluded || !open ? 'disabled' : '';
     return `<div class="sh-item${p.excluded ? ' excluded' : ''}" data-row="${i}"><div class="sh-line">
-      <span class="sh-badge ${r.cls}" data-bd>${esc(r.label)}</span>
+      <span class="sh-badge long ${r.cls}" data-bd>${SHIFT_FULL[r.cls]}</span>
       ${twCtl(p, i, ro)}
-      <input class="in dt" type="date" data-pi="${i}" data-pf="start" value="${esc(p.start)}" ${ro}><span class="per-dash">—</span>
-      <input class="in dt" type="date" data-pi="${i}" data-pf="end" value="${esc(p.end || '')}" ${p.excluded ? 'disabled' : ''} ${open ? '' : 'disabled'}>
+      <label class="dcell"><span class="dcap">Діє з</span><input class="in dt" type="date" data-pi="${i}" data-pf="start" value="${esc(p.start)}" ${ro}></label><span class="per-dash">—</span>
+      <label class="dcell"><span class="dcap">Діє по${open ? ' · донині' : ''}</span><input class="in dt" type="date" data-pi="${i}" data-pf="end" value="${esc(p.end || '')}" ${p.excluded ? 'disabled' : ''} ${open ? '' : 'disabled'}></label>
       ${stCtl(p, i)}
       <span class="per-del" ${p.excluded ? '' : `data-pdel="${i}"`}>${p.excluded ? 'Видалено з обліку' : '✕ видалити з обліку'}</span>
     </div><div data-nt>${noteHtml(p, r)}</div></div>`;
   };
   /* години зміни — та сама смуга, що день у графіку закладу (ДОБА зверху + вдавлені поля з іконкою часу), без «Вихідний» */
-  const twCtl = (p, i, ro) => { const dob = classifyShift(p.from, p.to).cls === 's24', mir = p.from === p.to;
-    return `<div class="dseg tw${dob ? ' full' : ''}${mir ? ' mir' : ''}" data-tw><span data-tdoba="${i}" class="${dob ? 'on' : ''}">ДОБА</span><input class="wt" type="time" data-pi="${i}" data-pf="from" value="${esc(p.from)}" ${ro}><input class="wt" type="time" data-pi="${i}" data-pf="to" value="${esc(p.to)}" ${ro || (mir ? 'readonly' : '')}></div>`; };
+  const twCtl = (p, i, ro) => `<div class="dseg tw"><input class="wt" type="time" data-pi="${i}" data-pf="from" value="${esc(p.from)}" ${ro}><input class="wt" type="time" data-pi="${i}" data-pf="to" value="${esc(p.to)}" ${ro}></div>`;
   const stCtl = (p, i) => !p.end ? `<div class="per-seg" data-stc><span class="on">Дійсне</span><span ${p.excluded ? '' : `data-pend="${i}"`}>Завершене</span></div>` : '<span class="per-tag-done" data-stc>Завершене</span>';
   const noteHtml = (p, r) => { const n = p.note || (r.note ? { t: 'w', x: r.note } : null); return n ? `<div class="per-note ${n.t}"><span>${n.t === 'w' ? '⚠' : 'ℹ'}</span><span>${esc(n.x)}</span></div>` : ''; };
 
@@ -1461,7 +1463,7 @@ function openWorkerForm(id, newRole){
     <div class="sect" data-sched><div class="sect-h"><div class="sect-t">Змінний графік (персональний)</div></div>
       <div data-per></div>
       <button type="button" class="per-add" data-padd>+ Додати новий робочий час</button>
-      <div class="stexp">Тип (Д/Н/Доба) обчислюється <b>автоматично</b> з введених годин — не обирається. Еталонні межі (<b>${esc(settings?.shiftWindows?.dayFrom || '08:00')} / ${esc(settings?.shiftWindows?.dayTo || '20:00')}</b>) — окреме налаштування типів змін, <b>не пов'язане</b> з щоденним розкладом закладу. Редагування доступне лише адміністратору.</div></div>
+      <div class="stexp">Тип (Денна / Нічна / Доба / Нетипова) обчислюється <b>автоматично</b> з введених годин — не обирається. Еталонні межі (<b>${esc(settings?.shiftWindows?.dayFrom || '08:00')} / ${esc(settings?.shiftWindows?.dayTo || '20:00')}</b>) — окреме налаштування типів змін, <b>не пов'язане</b> з щоденним розкладом закладу. Редагування доступне лише адміністратору.</div></div>
     <div class="sect"><div class="sect-h"><div class="sect-t">Доступ</div></div>
       <div class="row"><div class="f full"><label>Дозволити користуватись програмою</label>
         <div class="seg" data-allow><span data-v="1" class="${allowInit ? 'on' : ''}">Дозволено</span><span data-v="0" class="${allowInit ? '' : 'on'}">Не дозволено</span></div></div></div>
@@ -1558,28 +1560,14 @@ function openWorkerForm(id, newRole){
     const i = e.target.dataset.pi; if (i == null) return;
     const row = per.querySelector(`[data-row="${i}"]`), p = periods[i], f = e.target.dataset.pf, tpl = document.createElement('div');
     if (f === 'from' || f === 'to'){
-      if (f === 'from' && row.querySelector('[data-tw]').classList.contains('mir')){ p.to = p.from; row.querySelector('[data-pf="to"]').value = p.to; }   // доба: кінець = початок
-      const r = classifyShift(p.from, p.to), bd = row.querySelector('[data-bd]'), tw = row.querySelector('[data-tw]');
-      tw.classList.toggle('full', r.cls === 's24'); tw.classList.toggle('mir', p.from === p.to);
-      tw.querySelector('[data-tdoba]').classList.toggle('on', r.cls === 's24'); row.querySelector('[data-pf="to"]').readOnly = p.from === p.to;
-      bd.className = 'sh-badge ' + r.cls; bd.textContent = r.label;
+      const r = classifyShift(p.from, p.to), bd = row.querySelector('[data-bd]');
+      bd.className = 'sh-badge long ' + r.cls; bd.textContent = SHIFT_FULL[r.cls];
       row.querySelector('[data-nt]').innerHTML = noteHtml({ ...p, note: null }, r);
     }
     if (f === 'end'){ tpl.innerHTML = stCtl(p, i); row.querySelector('[data-stc]').replaceWith(tpl.firstElementChild); }
   });
   per.addEventListener('click', (e) => {
-    const end = e.target.closest('[data-pend]'), del = e.target.closest('[data-pdel]'), db = e.target.closest('[data-tdoba]');
-    if (db && !db.closest('.sh-item').classList.contains('excluded') && !db.closest('.sh-item').querySelector('[data-pf="from"]').disabled){
-      const p = periods[db.dataset.tdoba], row = db.closest('.sh-item');
-      if (p.from === p.to){ p.to = p.prevTo && p.prevTo !== p.from ? p.prevTo : (() => { const m = (toMin(p.from) + 720) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); })(); }   // вимкнути «доба»: повернути попередній кінець (або +12 год)
-      else { p.prevTo = p.to; p.to = p.from; }
-      const r = classifyShift(p.from, p.to), tw = row.querySelector('[data-tw]');
-      tw.classList.toggle('full', r.cls === 's24'); tw.classList.toggle('mir', p.from === p.to); db.classList.toggle('on', r.cls === 's24');
-      const toI = row.querySelector('[data-pf="to"]'); toI.value = p.to; toI.readOnly = p.from === p.to;
-      const bd = row.querySelector('[data-bd]'); bd.className = 'sh-badge ' + r.cls; bd.textContent = r.label;
-      row.querySelector('[data-nt]').innerHTML = noteHtml({ ...p, note: null }, r);
-      return;
-    }
+    const end = e.target.closest('[data-pend]'), del = e.target.closest('[data-pdel]');
     if (end){
       const p = periods[end.dataset.pend];
       if (!p.end) p.end = todayISO();
