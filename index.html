@@ -280,6 +280,7 @@
   .off{width:100%;text-align:center;padding:7px 3px;border-radius:9px;background:var(--bg);box-shadow:var(--bump);font-size:var(--t-cap);color:var(--muted);cursor:pointer}
   .off.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}.week.locked .off,.week.locked .dseg>span{cursor:default}
   .sh.sx{background:#eee;color:var(--muted)}
+  .sh.sno{background:#f6dcdc;color:#a33a3a;white-space:nowrap}
   .rowc .wsh{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px}
   .rowc .wt2{font-size:11.5px;color:var(--muted);white-space:nowrap}
   .stexp{font-size:11.5px;color:var(--muted);font-style:italic;margin-top:8px;line-height:1.45}
@@ -578,7 +579,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 16.11.2026 01:05 · змінний графік: однакова висота дат</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 16.11.2026 01:30 · звіт лабораторії: «Без графіку»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1916,7 +1917,8 @@ async function rpLoad(){
 
 /* ── обчислення: «По лаборантах» (алгоритм вікон змін із alhorytm_cherguvan) ── */
 const TP_NAME = { 'Д': 'денна', 'Н': 'нічна', 'Доба': 'добова' };
-const tpCls = (l) => ({ 'Д': 'sd', 'Н': 'sn', 'Доба': 's24' }[l] || 'sx');
+const NOSCH = 'Без графіку';   // записи працівника, якому на цю дату змінний графік не заданий
+const tpCls = (l) => ({ 'Д': 'sd', 'Н': 'sn', 'Доба': 's24', [NOSCH]: 'sno' }[l] || 'sx');
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return iso2(d.getFullYear(), d.getMonth(), d.getDate()); };
 const newAgg = () => ({ pend: 0, n: 0, base: 0, after: 0, exN: 0, exSum: 0, cashless: 0, cash: 0 });
 function addAgg(g, r){
@@ -1934,7 +1936,7 @@ function labReport(data, filterLab){
     if (filterLab && wid !== filterLab) continue;
     const L = labs.get(wid) || { wid, shifts: new Map(), nosch: 0, outs: [] }; labs.set(wid, L);
     const per = shiftOn(workerBy(wid), r.date);
-    let tp = '—', sd = r.date, out = false, schName = '';
+    let tp = NOSCH, sd = r.date, out = false, schName = '';
     if (per){
       tp = classifyShift(per.from, per.to).label; schName = `${per.from}–${per.to}`;
       const f = toMin(per.from), to = toMin(per.to), t = toMin(r.time || '00:00');
@@ -1986,7 +1988,7 @@ function rpNotes(rep, a, b){
     }
     const ps = (workerBy(L.wid)?.shifts || []).filter(p => !p.excluded && p.start > a && p.start <= b);
     if (ps.length) notes.push({ wid: L.wid, crit: false, h: `${nameOfW(L.wid)}:`, t: `графік змінено ${dmy(ps[0].start)} (${labSchedText(L.wid, a, b)}). Зміни пораховані окремо: ${Object.entries(L.types).map(([t, n]) => t + ' ' + n).join(', ')}.` });
-    if (L.nosch) notes.push({ wid: L.wid, crit: false, h: `${nameOfW(L.wid)}:`, t: `на дату ${plN(L.nosch, ['запису', 'записів', 'записів'])} графік не заданий — зміну визначено за календарною датою (тип «—»).` });
+    if (L.nosch) notes.push({ wid: L.wid, crit: true, h: `${nameOfW(L.wid)}:`, t: `${plN(L.nosch, ['запис', 'записи', 'записів'])} без змінного графіку на дату запису — межі змін невідомі, записи віднесено до «Без графіку» за календарним днем. Задайте працівнику змінний графік (з потрібної дати).` });
   }
   if (rep.nod.length) notes.push({ crit: true, h: 'Чергування без записів у журналі', t: `(з календаря): ${rep.nod.map(n => `${esc(nameOfW(n.wid))} — ${dmy(n.iso)}`).join(' · ')}. Імовірно, не було пацієнтів. Ці дні не входять у підсумок змін вище — рішення про оплату ухвалює адміністратор.` });
   return notes;
