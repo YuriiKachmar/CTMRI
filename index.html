@@ -579,7 +579,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 16.11.2026 01:30 · звіт лабораторії: «Без графіку»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 16.11.2026 02:00 · звіт: записи поза періодами графіку</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1934,7 +1934,7 @@ function labReport(data, filterLab){
   for (const r of data.recs){
     const wid = wNorm(r.labTechId || '');
     if (filterLab && wid !== filterLab) continue;
-    const L = labs.get(wid) || { wid, shifts: new Map(), nosch: 0, outs: [] }; labs.set(wid, L);
+    const L = labs.get(wid) || { wid, shifts: new Map(), nosch: 0, gaps: [], outs: [] }; labs.set(wid, L);
     const per = shiftOn(workerBy(wid), r.date);
     let tp = NOSCH, sd = r.date, out = false, schName = '';
     if (per){
@@ -1942,7 +1942,8 @@ function labReport(data, filterLab){
       const f = toMin(per.from), to = toMin(per.to), t = toMin(r.time || '00:00');
       if (f >= to){ if (t >= f) sd = r.date; else if (t < to) sd = addDays(r.date, -1); else out = true; }   // вікно через північ (нічна, доба)
       else if (!(t >= f && t < to)) out = true;
-    } else L.nosch++;
+    } else if ((workerBy(wid)?.shifts || []).some(x => !x.excluded)) L.gaps.push(r.date);   // графік є, але на цю дату жоден період не діє
+    else L.nosch++;
     const key = sd + '|' + tp;
     const g = L.shifts.get(key) || { sd, tp, dates: new Map(), out: 0 }; L.shifts.set(key, g);
     const dg = g.dates.get(r.date) || newAgg(); g.dates.set(r.date, dg); addAgg(dg, r);
@@ -1988,6 +1989,12 @@ function rpNotes(rep, a, b){
     }
     const ps = (workerBy(L.wid)?.shifts || []).filter(p => !p.excluded && p.start > a && p.start <= b);
     if (ps.length) notes.push({ wid: L.wid, crit: false, h: `${nameOfW(L.wid)}:`, t: `графік змінено ${dmy(ps[0].start)} (${labSchedText(L.wid, a, b)}). Зміни пораховані окремо: ${Object.entries(L.types).map(([t, n]) => t + ' ' + n).join(', ')}.` });
+    if (L.gaps.length){
+      const ps = (workerBy(L.wid)?.shifts || []).filter(x => !x.excluded).sort((x, y) => x.start.localeCompare(y.start)), ds = [...new Set(L.gaps)].sort();
+      const why = ds.map(d => { const before = ps.filter(x => x.end && x.end < d).pop(), after = ps.find(x => x.start > d);
+        return !before ? `${dmy(d)} — раніше за перший період (з ${dmy(ps[0].start)})` : after ? `${dmy(d)} — розрив між ${dmy(before.end)} і ${dmy(after.start)}` : `${dmy(d)} — після завершення графіку ${dmy(before.end)}`; });
+      notes.push({ wid: L.wid, crit: true, h: `${nameOfW(L.wid)}:`, t: `${plN(L.gaps.length, ['запис', 'записи', 'записів'])} на дати поза періодами змінного графіку (${[...new Set(why)].join('; ')}) — віднесено до «Без графіку» за календарним днем. Продовжте або додайте період, щоб дати потрапили в графік.` });
+    }
     if (L.nosch) notes.push({ wid: L.wid, crit: true, h: `${nameOfW(L.wid)}:`, t: `${plN(L.nosch, ['запис', 'записи', 'записів'])} без змінного графіку на дату запису — межі змін невідомі, записи віднесено до «Без графіку» за календарним днем. Задайте працівнику змінний графік (з потрібної дати).` });
   }
   if (rep.nod.length) notes.push({ crit: true, h: 'Чергування без записів у журналі', t: `(з календаря): ${rep.nod.map(n => `${esc(nameOfW(n.wid))} — ${dmy(n.iso)}`).join(' · ')}. Імовірно, не було пацієнтів. Ці дні не входять у підсумок змін вище — рішення про оплату ухвалює адміністратор.` });
