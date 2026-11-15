@@ -295,7 +295,9 @@
   .dcell{display:flex;flex-direction:column;gap:3px;min-width:0}
   .dcap{font-size:var(--t-cap);font-weight:700;color:var(--muted);padding-left:4px;white-space:nowrap}
   .sh-time2 .tm{width:58px;padding:4px 3px;font-size:10.5px;border:none;border-radius:7px;background:var(--bg);box-shadow:var(--in);color:var(--ink);font-weight:600;font-family:inherit;text-align:center}
-  .sh-line .dt{width:100%;min-width:0;padding:10px 8px;font-size:var(--t-sm)}
+  .sh-line .dt{width:100%;min-width:0;height:44px;min-height:44px;box-sizing:border-box;padding:0 10px;font-size:var(--t-sm);line-height:44px;text-align:left;-webkit-appearance:none;appearance:none;display:block}
+  .sh-line .dt::-webkit-date-and-time-value{text-align:left;min-height:1.4em;margin:0}
+  .sh-line .dt::-webkit-datetime-edit{padding:0}
   .sh-badge{font-size:9px;font-weight:800;padding:4px 8px;border-radius:var(--r8);min-width:38px;text-align:center}
   .sh-badge.sd{background:var(--soft);color:var(--green)}.sh-badge.sn{background:#dbe3ec;color:#3b5878}.sh-badge.s24{background:#f3e3c8;color:#8a6011}.sh-badge.sx{background:#eee;color:var(--muted)}
   .sh-item.excluded .sh-line>*{opacity:.45}
@@ -576,7 +578,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 16.11.2026 00:50 · змінний графік: 4 блоки в рядку</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 16.11.2026 01:05 · змінний графік: однакова висота дат</div>
   </div>
 </div>
 <div id="modals"></div>
