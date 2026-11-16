@@ -579,7 +579,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 16.11.2026 02:00 · звіт: записи поза періодами графіку</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 00:45 · графік працівника: попередження про розриви</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1463,6 +1463,7 @@ function openWorkerForm(id, newRole){
       <div class="row"><div class="f full"><label>Статус</label>${seg(stat)}<div class="stexp" data-stexp>${ST_TEXT[stat]}</div></div></div></div>
     <div class="sect" data-sched><div class="sect-h"><div class="sect-t">Змінний графік (персональний)</div></div>
       <div data-per></div>
+      <div data-gaps></div>
       <button type="button" class="per-add" data-padd>+ Додати новий робочий час</button>
       <div class="stexp">Тип (Денна / Нічна / Доба / Нетипова) обчислюється <b>автоматично</b> з введених годин — не обирається. Еталонні межі (<b>${esc(settings?.shiftWindows?.dayFrom || '08:00')} / ${esc(settings?.shiftWindows?.dayTo || '20:00')}</b>) — окреме налаштування типів змін, <b>не пов'язане</b> з щоденним розкладом закладу. Редагування доступне лише адміністратору.</div></div>
     <div class="sect"><div class="sect-h"><div class="sect-t">Доступ</div></div>
@@ -1498,6 +1499,11 @@ function openWorkerForm(id, newRole){
     if (retro && !o._retroOk){
       const go = await new Promise((res) => confirmWin({ type: 'w', title: 'Зміни в минулому.', details: 'Ви змінюєте дати або години періоду, що вже почався. Це може вплинути на сформовані звіти (місячні можуть перестати сходитись із квартальним).', action: 'Зберегти все одно', onOk: () => res(true), onCancel: () => res(false) }));
       if (!go) return ['Збереження скасовано', 'Перевірте дати змінного графіку.'];
+    }
+    const gaps = (data.role === 'Лаборант' || data.role === 'Лікар') ? gapList() : [];
+    if (gaps.length && !o._gapOk){
+      const go = await new Promise((res) => confirmWin({ type: 'w', title: gaps.length > 1 ? 'У змінному графіку є розриви.' : 'У змінному графіку є розрив.', details: gaps.map(gapText).join('; ') + '. Записи за ці дні потраплять у звітах до «Без графіку» (межі змін невідомі).', action: 'Зберегти з розривом', onOk: () => res(true), onCancel: () => res(false) }));
+      if (!go) return ['Збереження скасовано', 'Продовжте попередній період або додайте новий без пропуску.'];
     }
     const allow = o.querySelector('[data-allow] .on').dataset.v === '1';
     const emailIn = val(o, 'email').toLowerCase();
@@ -1536,7 +1542,18 @@ function openWorkerForm(id, newRole){
   }, 680);
 
   const per = ov.querySelector('[data-per]');
-  const draw = () => { per.innerHTML = periods.length ? periods.map(shRow).join('') : '<div class="al al-i" style="margin:0 0 8px"><span class="al-icon">i</span><div><b>Робочого часу ще не задано</b>Додайте перший період — і працівник з\'явиться в зміні.</div></div>'; };
+  /* розриви між періодами: дні, на які жоден період не діє (записи цих днів потраплять у «Без графіку») */
+  const gapList = () => {
+    const act = periods.filter(p => !p.excluded && p.start).sort((a, b) => a.start.localeCompare(b.start)), g = [], nd = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5);
+    for (let i = 1; i < act.length; i++){ const e = act[i - 1].end; if (e && addDays(e, 1) < act[i].start) g.push({ a: addDays(e, 1), b: addDays(act[i].start, -1), n: nd(e, act[i].start) - 1 }); }
+    const last = act[act.length - 1];
+    if (last && last.end && last.end < today) g.push({ a: addDays(last.end, 1), b: null, n: nd(last.end, today) });   // графік закінчився в минулому, нового немає
+    return g;
+  };
+  const gapText = (g) => g.b ? `${isoToUa(g.a)} – ${isoToUa(g.b)} (${plN(g.n, ['день', 'дні', 'днів'])})` : `з ${isoToUa(g.a)} і далі — діючого періоду немає`;
+  const drawGaps = () => { const g = gapList(), box = ov.querySelector('[data-gaps]'); if (!box) return;
+    box.innerHTML = g.length ? `<div class="al al-w" style="margin:6px 0 10px"><span class="al-icon"><span>!</span></span><div><b>${g.length > 1 ? 'Розриви в змінному графіку' : 'Розрив у змінному графіку'}</b>${g.map(gapText).map(esc).join('; ')}. Записи за ці дні потраплять у звітах до «Без графіку». Продовжте попередній період або додайте новий без пропуску.</div></div>` : ''; };
+  const draw = () => { drawGaps(); per.innerHTML = periods.length ? periods.map(shRow).join('') : '<div class="al al-i" style="margin:0 0 8px"><span class="al-icon">i</span><div><b>Робочого часу ще не задано</b>Додайте перший період — і працівник з\'явиться в зміні.</div></div>'; };
   draw();
   const syncRole = () => { ov.querySelector('[data-sched]').hidden = !['Лаборант', 'Лікар'].includes(val(ov, 'role')); };
   ov.querySelector('[data-f="role"]').onchange = syncRole; syncRole();
@@ -1566,6 +1583,7 @@ function openWorkerForm(id, newRole){
       row.querySelector('[data-nt]').innerHTML = noteHtml({ ...p, note: null }, r);
     }
     if (f === 'end'){ tpl.innerHTML = stCtl(p, i); row.querySelector('[data-stc]').replaceWith(tpl.firstElementChild); }
+    if (f === 'start' || f === 'end') drawGaps();
   });
   per.addEventListener('click', (e) => {
     const end = e.target.closest('[data-pend]'), del = e.target.closest('[data-pdel]');
