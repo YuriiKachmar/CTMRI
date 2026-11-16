@@ -579,7 +579,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 01:30 · «Діє по» не раніше «Діє з», мітка «Майбутній»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 02:00 · «Діє по»/«Діє з»: перевірка дат у коді (Safari)</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1578,6 +1578,16 @@ function openWorkerForm(id, newRole){
   per.addEventListener('change', (e) => {
     const i = e.target.dataset.pi; if (i == null) return;
     const row = per.querySelector(`[data-row="${i}"]`), p = periods[i], f = e.target.dataset.pf, tpl = document.createElement('div');
+    /* Safari та частина браузерів не застосовують min у календарі — перевіряємо самі */
+    if (f === 'end' && p.end && p.start && p.end < p.start){
+      toast('w', '«Діє по» раніше за «Діє з»', `Дату скинуто: кінець періоду не може бути раніше за ${isoToUa(p.start)}.`);
+      p.end = ''; e.target.value = ''; return;
+    }
+    if (f === 'start' && p.closes != null && periods[p.closes] && p.start && p.start <= periods[p.closes].start){
+      const min = addDays(periods[p.closes].start, 1);
+      toast('w', 'Новий період не може починатись так рано', `Попередній період почався ${isoToUa(periods[p.closes].start)}. Початок змінено на ${isoToUa(min)}.`);
+      p.start = min; e.target.value = min;
+    }
     if (f === 'from' || f === 'to'){
       const r = classifyShift(p.from, p.to), bd = row.querySelector('[data-bd]');
       bd.className = 'sh-badge long ' + r.cls; bd.textContent = SHIFT_FULL[r.cls];
