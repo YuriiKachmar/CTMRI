@@ -579,7 +579,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 01:10 · графік працівника: майбутня дата «Діє з»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 01:30 · «Діє по» не раніше «Діє з», мітка «Майбутній»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1442,15 +1442,15 @@ function openWorkerForm(id, newRole){
     return `<div class="sh-item${p.excluded ? ' excluded' : ''}" data-row="${i}"><div class="sh-line">
       <span class="sh-badge long ${r.cls}" data-bd>${SHIFT_FULL[r.cls]}</span>
       ${twCtl(p, i, ro)}
-      <div class="dcol"><label class="dcell"><span class="dcap">Діє з</span><input class="in dt" type="date" data-pi="${i}" data-pf="start" value="${esc(p.start)}" ${ro}></label>
-      <label class="dcell"><span class="dcap">Діє по${open ? ' · донині' : ''}</span><input class="in dt" type="date" data-pi="${i}" data-pf="end" value="${esc(p.end || '')}" ${p.excluded ? 'disabled' : ''} ${open ? '' : 'disabled'}></label></div>
+      <div class="dcol"><label class="dcell"><span class="dcap">Діє з</span><input class="in dt" type="date" data-pi="${i}" data-pf="start" ${p.closes != null && periods[p.closes] ? `min="${addDays(periods[p.closes].start, 1)}"` : ''} value="${esc(p.start)}" ${ro}></label>
+      <label class="dcell"><span class="dcap">Діє по${open ? ' · донині' : ''}</span><input class="in dt" type="date" data-pi="${i}" data-pf="end" min="${esc(p.start || '')}" value="${esc(p.end || '')}" ${p.excluded ? 'disabled' : ''} ${open ? '' : 'disabled'}></label></div>
       <div class="stcol">${stCtl(p, i)}
       <span class="per-del" ${p.excluded ? '' : `data-pdel="${i}"`}>${p.excluded ? 'Видалено з обліку' : '✕ видалити з обліку'}</span></div>
     </div><div data-nt>${noteHtml(p, r)}</div></div>`;
   };
   /* години зміни — та сама смуга, що день у графіку закладу (ДОБА зверху + вдавлені поля з іконкою часу), без «Вихідний» */
   const twCtl = (p, i, ro) => `<div class="dseg tw"><input class="wt" type="time" data-pi="${i}" data-pf="from" value="${esc(p.from)}" ${ro}><input class="wt" type="time" data-pi="${i}" data-pf="to" value="${esc(p.to)}" ${ro}></div>`;
-  const stCtl = (p, i) => !p.end ? `<div class="per-seg" data-stc><span class="on">${p.start > today ? 'Майбутній' : 'Дійсне'}</span><span ${p.excluded ? '' : `data-pend="${i}"`}>Завершене</span></div>` : '<span class="per-tag-done" data-stc>Завершене</span>';
+  const stCtl = (p, i) => !p.end ? `<div class="per-seg" data-stc><span class="on">${p.start > today ? 'Майбутній' : 'Дійсне'}</span><span ${p.excluded ? '' : `data-pend="${i}"`}>Завершене</span></div>` : `<span class="per-tag-done" data-stc>${p.start > today ? 'Майбутній' : 'Завершене'}</span>`;
   const noteHtml = (p, r) => { const n = p.note || (r.note ? { t: 'w', x: r.note } : null); return n ? `<div class="per-note ${n.t}"><span>${n.t === 'w' ? '⚠' : 'ℹ'}</span><span>${esc(n.x)}</span></div>` : ''; };
 
   const ov = formWin(rec ? fullName(rec) : (newRole === 'Лікар' ? 'Додати лікаря' : 'Додати лаборанта'), `
@@ -1546,6 +1546,7 @@ function openWorkerForm(id, newRole){
   const gapList = () => {
     const act = periods.filter(p => !p.excluded && p.start).sort((a, b) => a.start.localeCompare(b.start)), g = [], nd = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5);
     for (let i = 1; i < act.length; i++){ const e = act[i - 1].end; if (e && addDays(e, 1) < act[i].start) g.push({ a: addDays(e, 1), b: addDays(act[i].start, -1), n: nd(e, act[i].start) - 1 }); }
+    if (act.length && act[0].start > today) g.unshift({ a: today, b: addDays(act[0].start, -1), n: nd(today, act[0].start) });   // перший період ще не почався — сьогодні діючого немає
     const last = act[act.length - 1];
     if (last && last.end && last.end < today) g.push({ a: addDays(last.end, 1), b: null, n: nd(last.end, today) });   // графік закінчився в минулому, нового немає
     return g;
@@ -1589,6 +1590,7 @@ function openWorkerForm(id, newRole){
       p.note = p.start > today ? { t: 'i', x: `Майбутній графік: почне діяти з ${isoToUa(p.start)}; до цього діє попередній.` } : null;
       draw(); return;
     }
+    if (f === 'start'){ const ei = row.querySelector('[data-pf="end"]'); if (ei) ei.min = p.start || ''; }
     if (f === 'start' || f === 'end') drawGaps();
   });
   per.addEventListener('click', (e) => {
