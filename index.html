@@ -304,6 +304,9 @@
   .sh-item.excluded .sh-line>*{opacity:.45}
   .sh-item.excluded input{text-decoration:line-through}
   .sh-item.excluded .per-seg,.sh-item.excluded .per-tag-done{visibility:hidden}
+  .tw .wt:disabled{background:transparent;box-shadow:none;color:var(--muted);font-weight:600;-webkit-text-fill-color:var(--muted);opacity:1}
+  .sh-line .dt:disabled{opacity:.6;-webkit-text-fill-color:currentColor}
+  .per-del.lk{pointer-events:none;box-shadow:none;cursor:default;color:var(--muted);background:transparent;font-weight:600}
   .sh-item.excluded .per-del{pointer-events:none;box-shadow:none;cursor:default}
   @media (max-width:560px){.sh-line{grid-template-columns:84px 1fr}.sh-line>.dcol,.sh-line>.stcol{grid-column:1 / -1}.stcol{flex-direction:row;flex-wrap:wrap;align-items:center}}
 
@@ -579,7 +582,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 02:00 · «Діє по»/«Діє з»: перевірка дат у коді (Safari)</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 02:40 · минулі періоди графіку: лише Керівник, лічильник записів</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1437,16 +1440,26 @@ function openWorkerForm(id, newRole){
   const role = rec?.role || newRole || 'Лаборант';
   const hasAcc = rec ? (rec.hasAccount ?? !!rec.email) : false;   // чи є в працівника обліковий запис для входу
   const allowInit = rec ? (hasAcc && rec.loginAllowed !== false) : false;   // новий працівник: за замовчуванням «Не дозволено»
+  const isBoss = profile?.role === 'Керівник';
+  const started = (i) => i < orig.length && orig[i].start <= today && !periods[i]?.excluded;   // період, що вже почався (існував до відкриття форми)
+  const locked = (i) => !isBoss && started(i);   // змінювати години й дати періоду, що вже почався, може лише Керівник
+  /* скільки записів журналу спирається на період (для попереджень): записи лаборанта (labTechId) або лікаря (describerId) у діапазоні дат */
+  const countRecs = async (a, b) => {
+    if (!rec || !a || a > today) return 0;
+    const field = val(ov, 'role') === 'Лікар' ? 'describerId' : 'labTechId', me = wNorm(id);
+    const snap = await getDocs(query(collection(db, 'records'), where('date', '>=', a), where('date', '<=', b < today ? b : today)));
+    return snap.docs.filter(d => wNorm(d.data()[field] || '') === me).length;
+  };
   const shRow = (p, i) => {
-    const r = classifyShift(p.from, p.to), open = !p.end, ro = p.excluded || !open ? 'disabled' : '';
+    const r = classifyShift(p.from, p.to), open = !p.end, lk = locked(i), ro = p.excluded || !open ? 'disabled' : '', core = ro || (lk ? 'disabled' : '');
     return `<div class="sh-item${p.excluded ? ' excluded' : ''}" data-row="${i}"><div class="sh-line">
       <span class="sh-badge long ${r.cls}" data-bd>${SHIFT_FULL[r.cls]}</span>
-      ${twCtl(p, i, ro)}
-      <div class="dcol"><label class="dcell"><span class="dcap">Діє з</span><input class="in dt" type="date" data-pi="${i}" data-pf="start" ${p.closes != null && periods[p.closes] ? `min="${addDays(periods[p.closes].start, 1)}"` : ''} value="${esc(p.start)}" ${ro}></label>
+      ${twCtl(p, i, core)}
+      <div class="dcol"><label class="dcell"><span class="dcap">Діє з</span><input class="in dt" type="date" data-pi="${i}" data-pf="start" ${p.closes != null && periods[p.closes] ? `min="${addDays(periods[p.closes].start, 1)}"` : ''} value="${esc(p.start)}" ${core}></label>
       <label class="dcell"><span class="dcap">Діє по${open ? ' · донині' : ''}</span><input class="in dt" type="date" data-pi="${i}" data-pf="end" min="${esc(p.start || '')}" value="${esc(p.end || '')}" ${p.excluded ? 'disabled' : ''} ${open ? '' : 'disabled'}></label></div>
       <div class="stcol">${stCtl(p, i)}
-      <span class="per-del" ${p.excluded ? '' : `data-pdel="${i}"`}>${p.excluded ? 'Видалено з обліку' : '✕ видалити з обліку'}</span></div>
-    </div><div data-nt>${noteHtml(p, r)}</div></div>`;
+      <span class="per-del${lk ? ' lk' : ''}" ${p.excluded || lk ? '' : `data-pdel="${i}"`}>${p.excluded ? 'Видалено з обліку' : lk ? '🔒 видалення — лише Керівник' : '✕ видалити з обліку'}</span></div>
+    </div><div data-nt>${noteHtml(lk && !p.note ? { ...p, note: { t: 'i', x: 'Період уже почався: змінювати його години й дати може лише Керівник. Ви можете завершити його або додати новий.' } } : p, r)}</div></div>`;
   };
   /* години зміни — та сама смуга, що день у графіку закладу (ДОБА зверху + вдавлені поля з іконкою часу), без «Вихідний» */
   const twCtl = (p, i, ro) => `<div class="dseg tw"><input class="wt" type="time" data-pi="${i}" data-pf="from" value="${esc(p.from)}" ${ro}><input class="wt" type="time" data-pi="${i}" data-pf="to" value="${esc(p.to)}" ${ro}></div>`;
@@ -1495,9 +1508,14 @@ function openWorkerForm(id, newRole){
     for (let i = 1; i < sorted.length; i++) if (!sorted[i - 1].end || sorted[i].start <= sorted[i - 1].end) return ['Періоди змінного графіку перетинаються', 'Початок нового періоду має бути пізніше за закриття попереднього.'];
     if (data.role === 'Лаборант' || data.role === 'Лікар') data.shifts = out;
     // попередження про зміни «заднім числом»
-    const retro = periods.some((p, i) => orig[i] ? (p.start !== orig[i].start || p.from !== orig[i].from || p.to !== orig[i].to || (orig[i].end && p.end !== orig[i].end)) && !p.excluded : p.start < today && !p.excluded);
-    if (retro && !o._retroOk){
-      const go = await new Promise((res) => confirmWin({ type: 'w', title: 'Зміни в минулому.', details: 'Ви змінюєте дати або години періоду, що вже почався. Це може вплинути на сформовані звіти (місячні можуть перестати сходитись із квартальним).', action: 'Зберегти все одно', onOk: () => res(true), onCancel: () => res(false) }));
+    if (!isBoss && periods.some((p, i) => locked(i) && (p.start !== orig[i].start || p.from !== orig[i].from || p.to !== orig[i].to))) return ['Змінювати період, що вже почався, може лише Керівник', 'Завершіть цей період або додайте новий.'];
+    const changed = periods.map((p, i) => ({ p, i })).filter(({ p, i }) => !p.excluded && (orig[i] ? (p.start !== orig[i].start || p.from !== orig[i].from || p.to !== orig[i].to || (orig[i].end && p.end !== orig[i].end)) : p.start < today));
+    if (changed.length && !o._retroOk){
+      const lo = changed.map(({ p, i }) => orig[i] && orig[i].start < p.start ? orig[i].start : p.start).sort()[0];
+      const hi = changed.map(({ p, i }) => [p.end || today, orig[i]?.end || today].sort().pop()).sort().pop();
+      let n = 0, failed = false; try { n = await countRecs(lo, hi); } catch (_) { failed = true; }
+      const cnt = failed ? 'Кількість записів порахувати не вдалося — перевірте з\'єднання.' : n > 0 ? `У діапазоні ${isoToUa(lo)} – ${isoToUa(hi)} працівник має ${plN(n, ['запис', 'записи', 'записів'])} у журналі: їхні зміни та звіти за ці дні буде перераховано за новим графіком.` : `У діапазоні ${isoToUa(lo)} – ${isoToUa(hi)} записів цього працівника в журналі немає — звіти не зміняться.`;
+      const go = await new Promise((res) => confirmWin({ type: n > 0 || failed ? 'e' : 'w', title: 'Зміни в минулому.', details: 'Ви змінюєте дати або години періоду, що вже почався. ' + cnt + ' Місячні звіти можуть перестати сходитись із квартальним. Зміну буде записано в журнал змін.', action: 'Зберегти все одно', onOk: () => res(true), onCancel: () => res(false) }));
       if (!go) return ['Збереження скасовано', 'Перевірте дати змінного графіку.'];
     }
     const gaps = (data.role === 'Лаборант' || data.role === 'Лікар') ? gapList() : [];
@@ -1579,6 +1597,10 @@ function openWorkerForm(id, newRole){
     const i = e.target.dataset.pi; if (i == null) return;
     const row = per.querySelector(`[data-row="${i}"]`), p = periods[i], f = e.target.dataset.pf, tpl = document.createElement('div');
     /* Safari та частина браузерів не застосовують min у календарі — перевіряємо самі */
+    if (f === 'end' && p.end && !isBoss && started(+i) && p.end < today){
+      toast('w', 'Закрити період минулою датою може лише Керівник', `Оберіть дату не раніше за сьогодні (${isoToUa(today)}).`);
+      p.end = ''; e.target.value = ''; return;
+    }
     if (f === 'end' && p.end && p.start && p.end < p.start){
       toast('w', '«Діє по» раніше за «Діє з»', `Дату скинуто: кінець періоду не може бути раніше за ${isoToUa(p.start)}.`);
       p.end = ''; e.target.value = ''; return;
@@ -1603,7 +1625,7 @@ function openWorkerForm(id, newRole){
     if (f === 'start'){ const ei = row.querySelector('[data-pf="end"]'); if (ei) ei.min = p.start || ''; }
     if (f === 'start' || f === 'end') drawGaps();
   });
-  per.addEventListener('click', (e) => {
+  per.addEventListener('click', async (e) => {
     const end = e.target.closest('[data-pend]'), del = e.target.closest('[data-pdel]');
     if (end){
       const p = periods[end.dataset.pend];
@@ -1611,9 +1633,10 @@ function openWorkerForm(id, newRole){
       p.note = { t: 'i', x: 'Робочий час позначено завершеним із сьогоднішньою датою «по».' }; draw();
     }
     if (del){
-      const p = periods[del.dataset.pdel], n = visitsInPeriod(p);
-      confirmWin({ type: n > 0 ? 'e' : 'w', title: 'Ви виключаєте цей робочий час з обліку.',
-        details: `${isoToUa(p.start)} – ${p.end ? isoToUa(p.end) : 'донині'}. ` + (n > 0 ? `На нього спирається ${n} записів у журналі.` : 'Записів на цьому періоді немає.'),
+      const p = periods[del.dataset.pdel]; if (locked(+del.dataset.pdel)) return;
+      let n = 0; try { n = await countRecs(p.start, p.end || today); } catch (_) { n = -1; }
+      confirmWin({ type: n !== 0 ? 'e' : 'w', title: 'Ви виключаєте цей робочий час з обліку.',
+        details: `${isoToUa(p.start)} – ${p.end ? isoToUa(p.end) : 'донині'}. ` + (n < 0 ? 'Не вдалося порахувати записи — перевірте з\'єднання; видалення вплине на звіти.' : n > 0 ? `На нього спирається ${plN(n, ['запис', 'записи', 'записів'])} у журналі.` : 'Записів на цьому періоді немає.'),
         action: 'Видалити з обліку',
         onOk: () => { p.excluded = true; p.note = n > 0 ? { t: 'w', x: `Виключено з обліку — ${n} записів більше не враховуються в розрахунку зміни.` } : { t: 'i', x: 'Виключено з обліку — записів на цьому періоді не було.' }; draw(); } });
     }
