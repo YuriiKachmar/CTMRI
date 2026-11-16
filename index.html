@@ -579,7 +579,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 00:45 · графік працівника: попередження про розриви</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 17.11.2026 01:10 · графік працівника: майбутня дата «Діє з»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1450,7 +1450,7 @@ function openWorkerForm(id, newRole){
   };
   /* години зміни — та сама смуга, що день у графіку закладу (ДОБА зверху + вдавлені поля з іконкою часу), без «Вихідний» */
   const twCtl = (p, i, ro) => `<div class="dseg tw"><input class="wt" type="time" data-pi="${i}" data-pf="from" value="${esc(p.from)}" ${ro}><input class="wt" type="time" data-pi="${i}" data-pf="to" value="${esc(p.to)}" ${ro}></div>`;
-  const stCtl = (p, i) => !p.end ? `<div class="per-seg" data-stc><span class="on">Дійсне</span><span ${p.excluded ? '' : `data-pend="${i}"`}>Завершене</span></div>` : '<span class="per-tag-done" data-stc>Завершене</span>';
+  const stCtl = (p, i) => !p.end ? `<div class="per-seg" data-stc><span class="on">${p.start > today ? 'Майбутній' : 'Дійсне'}</span><span ${p.excluded ? '' : `data-pend="${i}"`}>Завершене</span></div>` : '<span class="per-tag-done" data-stc>Завершене</span>';
   const noteHtml = (p, r) => { const n = p.note || (r.note ? { t: 'w', x: r.note } : null); return n ? `<div class="per-note ${n.t}"><span>${n.t === 'w' ? '⚠' : 'ℹ'}</span><span>${esc(n.x)}</span></div>` : ''; };
 
   const ov = formWin(rec ? fullName(rec) : (newRole === 'Лікар' ? 'Додати лікаря' : 'Додати лаборанта'), `
@@ -1583,6 +1583,12 @@ function openWorkerForm(id, newRole){
       row.querySelector('[data-nt]').innerHTML = noteHtml({ ...p, note: null }, r);
     }
     if (f === 'end'){ tpl.innerHTML = stCtl(p, i); row.querySelector('[data-stc]').replaceWith(tpl.firstElementChild); }
+    if (f === 'start' && p.closes != null && periods[p.closes] && p.start){   // «Діє з» нового періоду зсунуто (напр. на майбутню дату) — попередній закривається за день до нього
+      const prev = periods[p.closes];
+      if (p.start > prev.start){ prev.end = addDays(p.start, -1); prev.note = { t: 'i', x: `Завершується ${isoToUa(prev.end)} — новий графік діє з ${isoToUa(p.start)}.` }; }
+      p.note = p.start > today ? { t: 'i', x: `Майбутній графік: почне діяти з ${isoToUa(p.start)}; до цього діє попередній.` } : null;
+      draw(); return;
+    }
     if (f === 'start' || f === 'end') drawGaps();
   });
   per.addEventListener('click', (e) => {
@@ -1603,10 +1609,10 @@ function openWorkerForm(id, newRole){
   ov.querySelector('[data-padd]').addEventListener('click', () => {
     const live = periods.filter(p => !p.excluded), last = live[live.length - 1];
     if (last){
-      if (last.start >= today){ toast('w', 'Новий графік з сьогодні неможливий', 'Поточний період почався ' + isoToUa(last.start) + '. Змініть його години або дату «з».'); return; }
+      if (last.start >= today){ toast('w', 'Новий графік з сьогодні неможливий', 'Останній період почався ' + isoToUa(last.start) + '. Змініть його години або дату «Діє з».'); return; }
       if (!last.end || last.end >= today){ last.end = addDays(today, -1); last.note = { t: 'i', x: `Завершено ${isoToUa(last.end)} — новий графік діє з ${isoToUa(today)}.` }; }
     }
-    periods.push({ from: '08:00', to: '20:00', start: today, end: '', excluded: false, note: null }); draw();
+    periods.push({ from: '08:00', to: '20:00', start: today, end: '', excluded: false, note: null, closes: last ? periods.indexOf(last) : null }); draw();
     per.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 }
