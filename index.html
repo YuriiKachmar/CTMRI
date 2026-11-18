@@ -582,7 +582,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 18.11.2026 · звіт «По пільгах»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 18.11.2026 · звіт «По пацієнтах»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1818,8 +1818,8 @@ const REPORTS = [
   ['rCtor', 'Конструктор', 'Групування + показники + фільтр', '🔎'],
   ['rMgmt', 'Управлінський', 'Зведення загальних показників', '📈']
 ];
-const RP_READY = { rLab: true, rDoc: true, rDisc: true };   // звіти, що вже реалізовані
-const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
+const RP_READY = { rLab: true, rDoc: true, rDisc: true, rPat: true };   // звіти, що вже реалізовані
+const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, pSel: 'all', pInst: '', pSort: 'name', src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
 const rpAllowed = () => REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
 const iso2 = (y, m, d) => `${y}-${p2(m + 1)}-${p2(d)}`;
 const rpMonthPer = (y, m, onLeft) => ({ y, m, onLeft: !!onLeft, custom: null });   // custom: { from, to } — «Довільний період» (поверх обраного місяця, як у period_picker)
@@ -1841,7 +1841,7 @@ function rpHub(){
       : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Немає жодного дозволеного звіту</b>Права надає адміністратор у розділі «Доступи».</div></div>');
   $('sheet').onclick = (e) => {
     const t = e.target.closest('[data-rep]'); if (!t) return;
-    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працюють «По лаборантах», «По лікарях» і «По пільгах»; решта — за зразком.');
+    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працюють «По лаборантах», «По лікарях», «По пільгах» і «По пацієнтах»; решта — за зразком.');
     rp.cur = t.dataset.rep; rp.data = null; rpOpen();
   };
 }
@@ -1849,7 +1849,10 @@ function rpOpen(){
   const name = REPORTS.find(r => r[0] === rp.cur)[1];
   const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
   $('sheet').innerHTML = `<div class="rp-win"><div class="j-actions"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div>${ppMarkup('rp')}<button class="win-x" id="rpX" style="justify-self:end">✕</button></div>
-    <div class="rp-card"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>
+    ${rp.cur === 'rPat' ? `<div class="rp-card"><div class="rp-cl">Вибірка</div><div class="seg rp-seg" id="rpPs"><span data-v="partner">Пацієнти партнера</span><span data-v="all">Усі</span><span data-v="self">Самозвернення</span><span data-v="nopartner">Усі крім партнера</span></div>
+      <div class="rp-row" id="rpPiRow" style="margin-top:14px"><label>Конкретний партнер (необов'язково)</label><select class="in" id="rpPi"></select></div></div>
+    <div class="rp-card"><div class="rp-cl">Сортування</div><div class="seg rp-seg" id="rpSo"><span data-v="name">За прізвищем (А–Я)</span><span data-v="date">За датою</span></div></div>`
+    : `<div class="rp-card"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>`}
     ${rp.cur === 'rLab' ? `<div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
     <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpCols">
       <span class="rp-chip" data-c="main">Основні послуги</span><span class="rp-chip" data-c="extra">Додаткові послуги</span>${pay ? '<span class="rp-chip" data-c="pay">Оплата</span>' : ''}</div></div>` : ''}
@@ -1864,7 +1867,8 @@ function rpOpen(){
   if (sel) sel.innerHTML = '<option value="">Усі лаборанти</option>' + dir.workers.filter(w => w.role === 'Лаборант' && !w.mergedInto).sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk')).map(w => `<option value="${esc(w.id)}">${esc(shortName(w))}${w.status === 'inactive' ? ' (не працює)' : ''}</option>`).join('');
   if (sel) sel.value = rp.lab;
   const sync = () => {
-    [...$('rpDet').children].forEach(s => s.classList.toggle('on', s.dataset.v === rp.detail));
+    if ($('rpDet')) [...$('rpDet').children].forEach(s => s.classList.toggle('on', s.dataset.v === rp.detail));
+    if ($('rpPs')) patCritSync();
     if ($('rpCols')) [...$('rpCols').children].forEach(c => c.classList.toggle('on', !!rp.cols[c.dataset.c]));
     if ($('rpSrc')) discCritSync();
     rpSyncExport();
@@ -1875,9 +1879,14 @@ function rpOpen(){
   $('rpL').onclick = () => { rpShiftMonth(-1); rp.data = null; rpPanel(); rpDraw(); sync(); };   // ліва — багаторазово на місяць назад (і скидає довільний період)
   $('rpM').onclick = () => { const p = rp.per; if (p.custom){ p.custom = null; } else if (p.onLeft) rpShiftMonth(1); else return; rp.data = null; rpPanel(); rpDraw(); sync(); };
   $('rpR').onclick = openRpPeriod; $('rpPdf').onclick = () => rpExport('pdf'); $('rpDoc').onclick = () => rpExport('doc'); $('rpXls').onclick = () => rpExport('xls');
-  $('rpDet').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.detail = s.dataset.v; sync(); rpDraw(); } };
+  if ($('rpDet')) $('rpDet').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.detail = s.dataset.v; sync(); rpDraw(); } };
   if ($('rpCols')) $('rpCols').onclick = (e) => { const c = e.target.closest('[data-c]'); if (c){ rp.cols[c.dataset.c] = !rp.cols[c.dataset.c]; sync(); rpDraw(); } };
   if (sel) sel.onchange = () => { rp.lab = sel.value; rpDraw(); };
+  if ($('rpPs')){
+    $('rpPs').onclick = (e) => { const x = e.target.closest('[data-v]'); if (x){ rp.pSel = x.dataset.v; sync(); rpDraw(); } };
+    $('rpSo').onclick = (e) => { const x = e.target.closest('[data-v]'); if (x){ rp.pSort = x.dataset.v; sync(); rpDraw(); } };
+    $('rpPi').onchange = () => { rp.pInst = $('rpPi').value; rpDraw(); };
+  }
   if ($('rpSrc')){
     $('rpSrc').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.src = s.dataset.v; sync(); rpDraw(); } };
     $('rpPt').onclick = (e) => { const s = e.target.closest('[data-v]'); if (s){ rp.partner = s.dataset.v; sync(); rpDraw(); } };
@@ -2223,6 +2232,63 @@ function rpDiscModel(){
   }
   return { rep, plain: true, grouped: true, leaf: money ? ['грн'] : [], groups: money ? [['Сума знижки', 1]] : [], rows, full, lead: full ? ['Дата', 'Пацієнт', 'Вид пільги'] : ['Установа', 'Кількість'], notes: discNotes(rep), empty: rep.empty, sel: discSel() };
 }
+/* ── «По пацієнтах» (zvit_pacienty): один рядок = одне дослідження; вибірка за скеруванням; підсумок оплачені / неоплачені / за період ── */
+const patPartners = () => dir.institutions.filter(i => (i.partnerships || []).some(x => !x.excluded)).sort((x, y) => String(x.name).localeCompare(String(y.name), 'uk'));
+function patCritSync(){
+  [...$('rpPs').children].forEach(x => x.classList.toggle('on', x.dataset.v === rp.pSel));
+  [...$('rpSo').children].forEach(x => x.classList.toggle('on', x.dataset.v === rp.pSort));
+  $('rpPiRow').style.display = rp.pSel === 'partner' ? '' : 'none';
+  const l = patPartners(); if (rp.pInst && !l.some(i => i.id === rp.pInst)) rp.pInst = '';
+  $('rpPi').innerHTML = '<option value="">— усі партнери —</option>' + l.map(i => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('');
+  $('rpPi').value = rp.pInst;
+}
+function patReport(data){
+  const list = [];
+  for (const r of data.recs){
+    const ref = r.referral || {}, self = !!ref.self, inst = !self && ref.institutionId ? dir.institutions.find(x => x.id === ref.institutionId) : null;
+    const isP = !!inst && partnerOn(inst, r.date);   // партнер на дату візиту
+    if (rp.pSel === 'partner' && (!isP || (rp.pInst && inst.id !== rp.pInst))) continue;
+    if (rp.pSel === 'self' && !self) continue;
+    if (rp.pSel === 'nopartner' && isP) continue;
+    list.push(r);
+  }
+  const nm = (r) => String(r.patientName || '');
+  list.sort(rp.pSort === 'date' ? (a, b) => a.date.localeCompare(b.date) || (a.sequentialNumber || 0) - (b.sequentialNumber || 0)
+    : (a, b) => nm(a).localeCompare(nm(b), 'uk') || a.date.localeCompare(b.date) || (a.sequentialNumber || 0) - (b.sequentialNumber || 0));
+  const blk = () => ({ n: 0, base: 0, after: 0, cashless: 0, cash: 0 }), paid = blk(), unp = blk(), pats = new Set();
+  list.forEach(r => { const g = r.paid ? paid : unp; g.n++; g.base += Number(r.servicePrice) || 0; g.after += Number(r.servicePriceAfterDiscount) || 0;
+    if (r.paid){ const t = Number(r.servicePriceAfterDiscount) || 0; if (r.paymentMethod === 'cash') g.cash += t; else if (r.paymentMethod === 'cashless') g.cashless += t; }
+    pats.add(r.patientId || nm(r)); });
+  return { list, paid, unp, pats: pats.size };
+}
+const patSel = () => ({ all: 'усі пацієнти', self: 'самозвернення', nopartner: 'усі крім партнера' }[rp.pSel] || (rp.pInst ? `пацієнти партнера — ${instNameById(rp.pInst)}` : 'пацієнти партнера'));
+function rpPatModel(){
+  const rep = patReport(rp.data), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money, dash = (v) => (v ? nfmt(v) : '—');
+  const M = (r) => r.paymentMethod === 'cash' ? 'готівка' : r.paymentMethod === 'cashless' ? 'безгот.' : 'оплачено';
+  const rows = [], NL = 4, span = NL;
+  if (!rep.list.length) rows.push({ k: 'r', cells: [{ t: '—' }, { t: '—' }, { t: '—' }, { t: '—' }, ...(money ? [{ t: '—' }, { t: '—' }] : []), ...(pay ? [{ t: '—', txt: 1, h: 'right' }] : [])] });
+  for (const r of rep.list){
+    const un = pay && !r.paid, dp = r.discountSnapshot ? ` · ${r.discountSnapshot.name} −${r.discountSnapshot.percent}%` : ' · без пільги';
+    rows.push({ k: 'r', cells: [{ t: shortPat(r.patientName) }, { t: r.sequentialNumber ? `${r.sequentialNumber}${r.monthlyNumber ? ` · № ${r.monthlyNumber}/міс` : ''}` : '—' }, { t: isoToUa(r.date) }, { t: (r.serviceSnapshot?.name || '') + dp },
+      ...(money ? [{ t: dash(Number(r.servicePrice) || 0), v: Number(r.servicePrice) || 0 }, { t: dash(Number(r.servicePriceAfterDiscount) || 0), v: Number(r.servicePriceAfterDiscount) || 0, g: un }] : []),
+      ...(pay ? [{ t: r.paid ? M(r) : 'не оплачено', txt: 1, h: 'right', g: un }] : [])] });
+  }
+  if (rep.list.length){
+    const sm = (g, lab, b) => ({ k: 'tt', nof: true, cells: [{ t: lab, b: true, span }, ...(money ? [{ t: dash(g.base), v: g.base, b: true }, { t: dash(g.after), v: g.after, b: true }] : []), ...(pay ? [{ t: b ? `безгот. ${nfmt(g.cashless)} · готівка ${nfmt(g.cash)}` : '', txt: 1, h: 'right', b: true }] : [])] });
+    const all = { base: rep.paid.base + rep.unp.base, after: rep.paid.after + rep.unp.after, n: rep.paid.n + rep.unp.n };
+    if (pay){ rows.push(sm(rep.paid, `Оплачено — ${plN(rep.paid.n, ['послуга', 'послуги', 'послуг'])}`, 1)); rows.push(sm(rep.unp, `Не оплачено — ${plN(rep.unp.n, ['послуга', 'послуги', 'послуг'])}`, 0)); }
+    rows.push(sm(all, `Загальна сума за період — ${plN(rep.pats, ['пацієнт', 'пацієнти', 'пацієнтів'])}, ${plN(all.n, ['послуга', 'послуги', 'послуг'])}`, 0));
+  }
+  return { rep, plain: true, nolabel: true, leaf: [...(money ? ['Без пільг', 'З пільгами'] : []), ...(pay ? ['Спосіб'] : [])], groups: [...(money ? [['Сума, грн', 2]] : []), ...(pay ? [['Оплата', 1]] : [])], rows, full: false, lead: ['Пацієнт', '№ запису', 'Дата', 'Послуга / пільга'], notes: [], empty: !rep.list.length, sel: patSel() };
+}
+const shortPat = (n) => patInit(n);
+function rpDrawPat(box){
+  const m = rpPatModel(), nl = m.lead.length, al = (i) => i < nl ? 'l' : 'r';
+  const head = `<thead><tr>${m.lead.map(h => `<th rowspan="2" class="l">${esc(h)}</th>`).join('')}${m.groups.map(g => `<th colspan="${g[1]}" class="c grp">${esc(g[0])}</th>`).join('')}</tr><tr>${m.leaf.map(h => `<th class="r">${esc(h)}</th>`).join('')}</tr></thead>`;
+  const body = m.rows.map(r => { let ci = 0; return `<tr class="${r.k}">${r.cells.map(c => { const a = al(ci); ci += c.span > 1 ? c.span : 1; return `<td class="${a}"${c.span > 1 ? ` colspan="${c.span}"` : ''}${c.g ? ' style="color:var(--muted)"' : ''}>${c.b ? '<b>' : ''}${esc(c.t)}${c.b ? '</b>' : ''}</td>`; }).join('')}</tr>`; }).join('');
+  box.innerHTML = `<div class="rp-wrap"><table class="rp-t">${head}<tbody>${body}</tbody></table></div>`
+    + (m.empty ? '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Даних не знайдено за заданими критеріями</b></div></div>' : '');
+}
 function rpDraw(){
   const box = $('rpBody'); if (!box || !RP_READY[rp.cur]) return;
   if (rp.loading){ box.innerHTML = '<div class="rp-ph"><span class="spin dk"></span></div>'; return; }
@@ -2230,6 +2296,7 @@ function rpDraw(){
   if (!rp.data){ box.innerHTML = '<div class="rp-ph">Тут з\'явиться звіт після натискання «Показати звіт».<br><span>Дані з бази ще не завантажувались.</span></div>'; return; }
   if (rp.cur === 'rDoc') return rpDrawDoc(box);
   if (rp.cur === 'rDisc') return rpDrawDisc(box);
+  if (rp.cur === 'rPat') return rpDrawPat(box);
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay;
   const cm = rp.cols.main, ce = rp.cols.extra;
   const mainSpan = cm ? (money ? 3 : 1) : 0, exSpan = ce ? (money ? 2 : 1) : 0, paySpan = pay ? 2 : 0;
@@ -2274,7 +2341,7 @@ function rpDraw(){
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
 const MON_ABBR = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
 const MON_FULL_G = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
-const RP_CODE = { rLab: 'Labor', rDoc: 'Doc', rDisc: 'Disc' };
+const RP_CODE = { rLab: 'Labor', rDoc: 'Doc', rDisc: 'Disc', rPat: 'Pat' };
 /* період у назві файлу: 2026 · IV · Вер · 02Вер · 05-20Вер · 05Вер-20Жов */
 function rpPeriodToken(a, b){
   const [ya, ma, da] = a.split('-').map(Number), [yb, mb, dbb] = b.split('-').map(Number), last = (y, m) => new Date(y, m, 0).getDate();
@@ -2302,6 +2369,7 @@ const PX = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace
 function rpPrintModel(){
   if (rp.cur === 'rDoc') return rpDocModel();
   if (rp.cur === 'rDisc') return rpDiscModel();
+  if (rp.cur === 'rPat') return rpPatModel();
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay, cm = rp.cols.main, ce = rp.cols.extra, full = rp.detail === 'full';
   const dash = (v) => (v ? nfmt(v) : '—');
   const num = (g) => [...(cm ? [dash(g.n), ...(money ? [dash(g.base), dash(g.after)] : [])] : []), ...(ce ? [dash(g.exN), ...(money ? [dash(g.exSum)] : [])] : []), ...(pay ? [dash(g.cashless), dash(g.cash)] : [])];
@@ -2392,7 +2460,7 @@ tr.st td{border-top:.5pt solid #000;border-bottom:1.1pt solid #000}tr.tt td{bord
 .nt{margin-top:2mm;color:#6B7B78;font-size:8.5pt}.nt.cr{color:#7A1F1F}.em{margin-top:4mm;border:.5pt solid #000;padding:1.5mm 3mm}
 .sg{margin:14mm auto 0;border-top:.5pt solid #000;width:60mm}${doc ? '.ft{margin-top:8mm;color:#6B7B78;font-size:8pt}' : ''}`;
   const inner = `<div class="hd"><div class="lg">${PX(ini)}</div><div><div class="fn">${PX(fac)}</div><div class="fa">${PX(adr)}</div></div></div>
-    <div class="rt">${PX(title)}<span class="bd">${m.full ? 'Повний' : 'Стислий'}</span></div><div class="pr">${PX(per)}</div><div class="sl"><span class="fa">Вибірка даних по:</span> ${PX(sel)}</div>
+    <div class="rt">${PX(title)}${m.nolabel ? '' : `<span class="bd">${m.full ? 'Повний' : 'Стислий'}</span>`}</div><div class="pr">${PX(per)}</div><div class="sl"><span class="fa">Вибірка даних по:</span> ${PX(sel)}</div>
     <table><colgroup><col style="width:8mm">${cw.map(x => `<col style="width:${x.toFixed(2)}mm">`).join('')}</colgroup><thead>${th1}</thead><tbody>${body}</tbody></table>${m.empty ? '<div class="em">ⓘ Даних не знайдено за заданими критеріями</div>' : ''}${notes}${doc ? '<div class="sg"></div>' : ''}${doc ? `<div class="ft">Дата формування: ${tds}</div>` : ''}`;
   const head = `<meta charset="utf-8"><title>${PX(base)}</title><style>${FONT_FACE()}${css}</style>`;
   if (!doc) return { name: base, html: `<!doctype html><html lang="uk"><head>${head}</head><body>${inner}</body></html>`, orient: wd.orient };
@@ -2461,7 +2529,7 @@ function rpDocx(m){
   const table = tbl(W, [row1, row2, ...body]);
   const logoW = 16, nameW = Math.min(TW - 24, Math.max(40, Math.max(fac.length * 2.3, adr.length * 1.7) + 6));
   const head = tbl([logoW, nameW], [tr(tc(logoW, par(run(ini, { b: 1, sz: 30, c: 'FFFFFF' }), { jc: 'center', line: 240 }), { fill: '1E6B4F' }) + tc(nameW, par(run(fac, { b: 1, sz: 26 }), { line: 300 }) + par(run(adr, { c: GREY }), { line: 280 }), { mar: 227 }), { h: 16 })], { center: 1, pad: 0 });
-  const titleRow = tbl([22, TW - 44, 22], [tr(tc(22, par(''), {}) + tc(TW - 44, par(run(title, { b: 1, sz: 26 }), { jc: 'center', line: 300 }), {}) + tc(22, par(run(m.full ? 'Повний' : 'Стислий'), { jc: 'center', line: 300 }), { t: N, bt: N, l: N, r: N }))], { pad: 57 });
+  const titleRow = tbl([22, TW - 44, 22], [tr(tc(22, par(''), {}) + tc(TW - 44, par(run(title, { b: 1, sz: 26 }), { jc: 'center', line: 300 }), {}) + tc(22, m.nolabel ? par('') : par(run(m.full ? 'Повний' : 'Стислий'), { jc: 'center', line: 300 }), m.nolabel ? {} : { t: N, bt: N, l: N, r: N }))], { pad: 57 });
   const plain = (s) => { const d = document.createElement('div'); d.innerHTML = s; return d.textContent; };
   const notes = m.notes.map((x, i) => par(run(`*${i + 1} `, { c: x.crit ? RED : GREY, sz: 17 }) + run(x.h + ' ', { b: 1, c: x.crit ? RED : GREY, sz: 17 }) + run(x.crit && x.h.startsWith('Чергування') ? plain(x.t) : x.t, { c: x.crit ? RED : GREY, sz: 17 }), { before: 60, line: 260 })).join('');
   const box = `<w:pBdr>${['top', 'left', 'bottom', 'right'].map(s => `<w:${s} w:val="single" w:sz="4" w:space="3" w:color="000000"/>`).join('')}</w:pBdr>`;
@@ -2551,17 +2619,18 @@ function rpXlsx(m){
         if (cells.length === 1 + m.leaf.length) cells.splice(1, 0, { t: curTp, c: 1 }); else if (cells[1]) curTp = cells[1].t;
       }
       cells.forEach((c, i) => {
-        const isNum = col - 1 >= nLead || (typeof c.v === 'number' && !c.sub), ha = col - 1 >= nLead ? 'right' : 'center', txt = c.t + (c.wid ? mk(c.wid) : '') + (c.sub ? ' · ' + c.sub : '');
+        const isNum = (col - 1 >= nLead && !c.txt) || (typeof c.v === 'number' && !c.sub), ha = col - 1 >= nLead ? 'right' : 'center', txt = c.t + (c.wid ? mk(c.wid) : '') + (c.sub ? ' · ' + c.sub : '');
         const bold = !!c.b || tot;
         if (isNum && typeof c.v === 'number' && c.v !== 0 && !tot){ out.push(cN(col, rr, c.v, sty({ b: bold, h: ha, nf: 1, bd }))); track(col, money(c.v)); }
         else if (isNum && tot && typeof c.v === 'number' && c.v !== 0){
           let f = null;
-          if (r.k === 'st' && blockFirst) f = `SUM(${L(col)}${blockFirst}:${L(col)}${rr - 1})`;
+          if (r.nof) f = null;
+          else if (r.k === 'st' && blockFirst) f = `SUM(${L(col)}${blockFirst}:${L(col)}${rr - 1})`;
           else if (r.k === 'tt') f = (m.full || m.grouped) ? `SUM(${stRows.map(x => `${L(col)}${x}`).join(',')})` : `SUM(${L(col)}${firstData}:${L(col)}${lastData})`;
           out.push(f ? cF(col, rr, f, c.v, sty({ b: 1, h: ha, nf: 1, bd })) : cN(col, rr, c.v, sty({ b: 1, h: ha, nf: 1, bd }))); track(col, money(c.v));
         } else if (isNum){ out.push(cT(col, rr, '—', sty({ b: bold, h: ha, bd }))); }
         else if (c.sub){ const main = c.t + (c.wid ? mk(c.wid) : ''); out.push(cR(col, rr, [{ t: main, b: bold }, { t: ' · ' + c.sub, sz: 8, c: GREY }], sty({ h: 'left', bd }))); track(col, main + ' ' + c.sub); }
-        else { out.push(cT(col, rr, txt, sty({ b: bold, h: c.c ? 'center' : 'left', bd }))); track(col, txt); }
+        else { out.push(cT(col, rr, txt, sty({ b: bold, h: c.h || (c.c ? 'center' : 'left'), bd }))); track(col, txt); }
         if (c.span > 1){ for (let k = 1; k < c.span; k++) out.push(cE(col + k, rr, sty({ bd }))); merges.push(`${L(col)}${rr}:${L(col + c.span - 1)}${rr}`); col += c.span - 1; }
         col++; ci++;
       });
