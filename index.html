@@ -526,6 +526,10 @@
   .hist tfoot b{color:var(--green);font-size:12.5px}
   .hist tfoot .sub2{font-size:10px;color:var(--muted)}
   .prow-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .pcard.rpc{border-left:none}
+  .pcard.rpc .sect{box-shadow:none;background:none;padding:0}
+  .rpc .hist-wrap{max-height:none;overflow-x:auto}
+  .rpc .hist th,.rpc .hist tfoot td{position:static}
   .hist.rpp{min-width:1180px}
   .hist.rpp tr.g td:nth-child(1),.hist.rpp tr.g td:nth-child(2),.hist.rpp tr.g td:nth-child(3){background-size:218px 100%;background-image:linear-gradient(90deg,var(--g1),var(--g0) 218px)}
   .hist.rpp tr.g td:nth-child(2){background-position:-56px 0}.hist.rpp tr.g td:nth-child(3){background-position:-120px 0}
@@ -588,7 +592,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 19.11.2026 · «По пацієнтах» за справжнім макетом</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 19.11.2026 · картка пацієнта і «Джерело» за макетами</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1856,11 +1860,15 @@ function rpOpen(){
   const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
   $('sheet').innerHTML = `<div class="rp-win"><div class="j-actions"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div>${ppMarkup('rp')}<button class="win-x" id="rpX" style="justify-self:end">✕</button></div>
     ${rp.cur === 'rPat' ? '' : `<div class="rp-card"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>`}
-    ${rp.cur === 'rPat' ? `<div class="srch-lbl">Пошук пацієнта (за прізвищем)</div><form class="srch" id="rpPf"><div class="srch-f"><input id="rpPq" autocomplete="off" placeholder="Прізвище (початок ПІБ) або телефон"><button type="button" class="srch-clear" id="rpPc">✕</button></div><button type="submit">🔍 Пошук</button></form>` : ''}
-    ${rp.cur === 'rDisc' ? `<div class="rp-card"><div class="rp-cl">Джерело</div><div class="seg rp-seg" id="rpSrc"><span data-v="usi">Усі візити</span><span data-v="ust">Лише установи</span><span data-v="self">Лише самоскерування</span></div></div>
-    <div class="rp-card" id="rpInstCrit"><div class="rp-cl">Тип установи</div><div class="rp-chips" id="rpIt"></div>
-      <div class="rp-cl" style="margin-top:14px">Партнерство</div><div class="seg rp-seg" id="rpPt"><span data-v="all">Усі</span><span data-v="yes">Тільки партнери</span><span data-v="no">Крім партнерів</span></div>
-      <div class="rp-row" style="margin-top:14px"><label>Конкретна установа (необов'язково)</label><select class="in" id="rpInst"></select></div></div>` : ''}
+    ${rp.cur === 'rPat' ? `<div class="srch-lbl">Пошук пацієнта (за прізвищем)</div><form class="srch" id="rpPf"><div class="srch-f"><input id="rpPq" autocomplete="off" placeholder="Прізвище (початок ПІБ) або телефон"><button type="button" class="srch-clear" id="rpPc">✕</button></div><button type="submit">🔍 Пошук</button></form><div class="rp-hint" style="margin:-10px 0 14px 2px">Пошук з початку прізвища. Запуск — Enter або кнопка.</div>` : ''}
+    ${rp.cur === 'rLab' ? `<div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
+    <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpCols">
+      <span class="rp-chip" data-c="main">Основні послуги</span><span class="rp-chip" data-c="extra">Додаткові послуги</span>${pay ? '<span class="rp-chip" data-c="pay">Оплата</span>' : ''}</div></div>` : ''}
+    ${rp.cur === 'rDisc' ? `<div class="rp-card"><div class="rp-cl">Джерело</div><div class="seg" id="rpSrc"><span data-v="usi">Усі візити</span><span data-v="ust">Лише установи</span><span data-v="self">Лише самоскерування</span></div>
+      <div class="rp-hint" style="margin-top:8px">«Усі візити» — і установи, і самоскерування разом (самоскерування не має установи взагалі, тож без цього стану воно завжди мовчки випадало б із вибірки). «Лише установи» вмикає критерії нижче; «Лише самоскерування» їх вимикає — не тип установи, окреме джерело.</div></div>
+    <div class="rp-card" id="rpInstCrit"><div class="rp-cl">Тип установи</div><div class="seg" id="rpIt" style="flex-wrap:wrap"></div>
+      <div class="rp-cl" style="margin-top:16px">Партнерство</div><div class="seg" id="rpPt"><span data-v="all">Усі</span><span data-v="yes">Тільки партнери</span><span data-v="no">Крім партнерів</span></div>
+      <div class="rp-cl" style="margin-top:16px">Конкретна установа (необов'язково)</div><select class="in" id="rpInst" style="width:100%;max-width:none"></select></div>` : ''}
     ${rp.cur === 'rPat' ? '' : '<div class="rp-act"><button class="b pri" id="rpGo"></button></div>'}
     <div id="rpBody"></div>
     <div class="rp-foot"><button class="b" id="rpClose">Закрити</button><span class="rp-ex"><button class="b" id="rpPdf" disabled>📄 PDF</button><button class="b" id="rpXls" disabled>📊 XLS</button><button class="b" id="rpDoc" disabled>📝 DOC</button></span></div></div>`;
@@ -2146,7 +2154,7 @@ function discCritSync(){
   $('rpInstCrit').style.display = rp.src === 'ust' ? '' : 'none';
   [...$('rpSrc').children].forEach(x => x.classList.toggle('on', x.dataset.v === rp.src));
   [...$('rpPt').children].forEach(x => x.classList.toggle('on', x.dataset.v === rp.partner));
-  $('rpIt').innerHTML = `<span class="rp-chip" data-t="">Усі</span>` + types.map(t => `<span class="rp-chip" data-t="${esc(t)}">${esc(typeNameById(t))}</span>`).join('');
+  $('rpIt').innerHTML = `<span data-t="">Усі</span>` + types.map(t => `<span data-t="${esc(t)}">${esc(typeNameById(t))}</span>`).join('');
   [...$('rpIt').children].forEach(x => x.classList.toggle('on', x.dataset.t === rp.itype));
   const list = discInstList(); if (rp.inst && !list.some(i => i.id === rp.inst)) rp.inst = '';
   $('rpInst').innerHTML = '<option value="">— усі установи обраного типу/партнерства —</option>' + list.map(i => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('');
@@ -2286,13 +2294,13 @@ function patCard(p, rowsAll, active){
       + xs.map(e => `<tr class="sub${lab ? ' g' : ''}"${lab ? ` style="--g1:${rgba(lab.color, .55)};--g0:${rgba(lab.color, 0)}"` : ''}><td class="sub-srv">↳</td><td></td><td></td><td></td><td></td><td class="sub-srv">${esc(e.name || '')}</td>
         ${money ? `<td class="r m-l">${nfmt(e.price)}</td><td class="r m-r">${nfmt(e.price)}</td>` : ''}<td class="inst">—</td>${pay ? '<td></td><td></td>' : ''}<td></td><td></td></tr>`).join('');
   }).join('');
-  return `<div class="pcard"><div class="prow-h"><div class="pname">${esc(p.name || '')}</div><span class="rp-chip ${active ? 'on' : ''}" data-pid="${esc(p.id)}">${active ? '✓ У звіті' : '✕ у звіті'}</span></div>
+  return `<div class="pcard rpc"><div class="prow-h"><div class="pname">${esc(p.name || '')}</div><span class="rp-chip ${active ? 'on' : ''}" data-pid="${esc(p.id)}">${active ? '✓ У звіті' : '✕ у звіті'}</span></div>
     <div class="prow"><div class="pf"><div class="k">Дата народження</div><div class="v">${esc(isoToUa(p.birthDate) || '—')}</div></div><div class="pf"><div class="k">Телефон</div><div class="v">${esc(p.phone || '—')}</div></div><div class="pf"><div class="k">Адреса</div><div class="v">${esc(p.address || '—')}</div></div></div>
     <div class="sect"><div class="sect-t">Історія візитів та послуг</div><div class="hist-wrap"><table class="hist rpp">
       <colgroup><col style="width:56px"><col style="width:64px"><col style="width:96px"><col style="width:86px"><col style="width:140px"><col>${money ? '<col style="width:90px"><col style="width:90px">' : ''}<col style="width:120px">${pay ? '<col style="width:92px"><col style="width:54px">' : ''}<col style="width:54px"><col style="width:110px"></colgroup>
       <thead><tr><th rowspan="2">№</th><th rowspan="2" class="c">Дата, час</th><th rowspan="2">Розподіл</th><th rowspan="2">№ іст.хв.</th><th rowspan="2">Лікуючий лікар</th><th rowspan="2">Послуга,<br>дод. послуга</th>${money ? '<th colspan="2" class="c m-l m-r">Сума</th>' : ''}<th rowspan="2">Пільга</th>${pay ? '<th rowspan="2">Спосіб оплати</th><th rowspan="2" class="c">Оплата</th>' : ''}<th rowspan="2" class="c">Опис</th><th rowspan="2">Працівники</th></tr>
         ${money ? '<tr><th class="r m-l" style="top:30px">Без пільг</th><th class="r m-r" style="top:30px">З пільгами</th></tr>' : ''}</thead>
-      <tbody>${body || `<tr><td colspan="${nCol}" style="padding:14px 10px"><span class="free">За обраний період візитів немає</span></td></tr>`}</tbody>
+      <tbody>${body || `<tr><td colspan="${nCol}" style="padding:14px 10px"><span class="free">За обраний період візитів немає${rowsAll.length ? ` (усього в пацієнта ${plN(new Set(rowsAll.map(r => r.visitId || r.id)).size, ['візит', 'візити', 'візитів'])} — змініть період)` : ''}</span></td></tr>`}</tbody>
       <tfoot><tr><td colspan="2">Візитів <b>${T.visits}</b></td><td colspan="3"></td><td>Основних послуг <b>${T.main}</b><br>Додаткових послуг <b>${T.ex}</b></td>${money ? `<td class="r m-l"><b>${nfmt(T.base)}</b></td><td class="r m-r"><b>${nfmt(T.after)}</b></td>` : ''}<td colspan="${nCol - 6 - (money ? 2 : 0)}"></td></tr></tfoot></table></div></div></div>`;
 }
 function rpDrawPat(box){
