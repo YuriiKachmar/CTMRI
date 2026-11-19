@@ -597,7 +597,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · «По скеруваннях»: без «Без установи»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · «По скеруваннях»: «від себе»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -2506,7 +2506,7 @@ function rpSvcModel(){
 }
 /* ── «По скеруваннях» (zvit_skeruvannia): розріз Установи / Лікуючі лікарі / Самоскерування. У кожного розрізу власні критерії.
    Спосіб оплати — за полем paymentMethod запису (разом з додатковими послугами, незалежно від «оплачено»); «Оплата» — ✓ N / ✕ M за прапором paid ── */
-const DOC_F = ['лікар', 'лікарі', 'лікарів'], PAT_F = ['пацієнт', 'пацієнти', 'пацієнтів'];
+const DOC_F = ['лікуючий лікар', 'лікуючі лікарі', 'лікуючих лікарів'], PAT_F = ['пацієнт', 'пацієнти', 'пацієнтів'];
 function refCritSync(){
   const types = discTypes(); if (rp.itype && !types.includes(rp.itype)) rp.itype = '';
   const ust = rp.rz === 'ust', full = rp.detail === 'full';
@@ -2530,7 +2530,7 @@ function refPass(r){
   if (rp.rz === 'self') return self ? { self: true, iid: '' } : null;
   if (self) return null;
   if (rp.rz === 'ust'){
-    if (!iid) return null;   // лікар без установи — не в розрізі «Установи»
+    if (!iid) return null;   // лікуючий лікар «від себе» (без установи) — не в розрізі «Установи»
     if (rp.itype || rp.partner !== 'all' || rp.inst){
       if (!inst) return null;
       if (rp.itype && inst.typeId !== rp.itype) return null;
@@ -2547,8 +2547,8 @@ function refPass(r){
 const rAgg = (ls) => { const a = { n: 0, price: 0, net: 0, exs: 0, cl: 0, ch: 0, ok: 0, no: 0 }; ls.forEach(r => { a.n++; a.price += Number(r.servicePrice) || 0; a.net += Number(r.servicePriceAfterDiscount) || 0; a.exs += (r.extras || []).reduce((s, e) => s + (Number(e.price) || 0), 0);
   const t = Number(r.totalAmount) || ((Number(r.servicePriceAfterDiscount) || 0) + (r.extras || []).reduce((s, e) => s + (Number(e.price) || 0), 0)); if (r.paymentMethod === 'cashless') a.cl += t; else if (r.paymentMethod === 'cash') a.ch += t; if (r.paid) a.ok++; else a.no++; });
   ['price', 'net', 'exs', 'cl', 'ch'].forEach(k => { a[k] = r2(a[k]); }); return a; };
-const refInstL = (iid) => iid ? instNameById(iid) : '—';
-const refDocName = (r) => { const ref = r.referral || {}; return dir.doctors.find(d => d.id === ref.doctorId)?.name || ref.doctorName || '(лікаря видалено)'; };
+const refInstL = (iid) => iid ? instNameById(iid) : 'від себе';   // лікуючий лікар скеровує від установи або сам від себе
+const refDocName = (r) => { const ref = r.referral || {}; return dir.doctors.find(d => d.id === ref.doctorId)?.name || ref.doctorName || '(лікуючого лікаря видалено)'; };
 function refReport(data){
   const recs = data.recs.map(r => ({ r, sp: refPass(r) })).filter(x => x.sp).map(x => ({ ...x.sp, r: x.r })), by = (keyF, labF) => { const m = new Map(); recs.forEach(x => { const k = keyF(x); (m.get(k) || m.set(k, { key: k, label: labF(x), ls: [] }).get(k)).ls.push(x.r); }); return [...m.values()].map(g => ({ ...g, a: rAgg(g.ls) })); };
   const noL = (a, b) => (a.key === '\u0001none') - (b.key === '\u0001none');
@@ -2601,7 +2601,7 @@ function rpRefModel(){
     sumSt = true;
   } else if (!full){
     cols = head('Лікуючий лікар / установа', 'Скеровано');
-    rep.dList.forEach(d => d.rows.forEach(g => rows.push(line((g.iid ? `${d.label} — ${g.label}` : d.label), g.a, 'r'))));
+    rep.dList.forEach(d => d.rows.forEach(g => rows.push(line(`${d.label} — ${g.label}`, g.a, 'r'))));
     rows.push(line(`Загалом — ${plN(rep.dList.length, DOC_F)}`, rep.tot, 'tt'));
   } else {
     cols = head('Лікуючий лікар', 'Скеровано'); sumSt = true;
