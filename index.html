@@ -597,7 +597,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 19.11.2026 · звіт «По скеруваннях»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · «По скеруваннях»: без «Без установи»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -2526,10 +2526,11 @@ function refCritSync(){
 }
 /* вибірка запису для обраного розрізу: null — не підходить */
 function refPass(r){
-  const ref = r.referral || {}, self = !!ref.self, iid = self ? '' : (ref.institutionId || ''), inst = iid ? dir.institutions.find(x => x.id === iid) : null;
+  const ref = r.referral || {}, self = !!ref.self || (!ref.doctorId && !ref.institutionId && !ref.doctorName), iid = self ? '' : (ref.institutionId || ''), inst = iid ? dir.institutions.find(x => x.id === iid) : null;   // не від установи і не від лікаря — це самоскерування
   if (rp.rz === 'self') return self ? { self: true, iid: '' } : null;
   if (self) return null;
   if (rp.rz === 'ust'){
+    if (!iid) return null;   // лікар без установи — не в розрізі «Установи»
     if (rp.itype || rp.partner !== 'all' || rp.inst){
       if (!inst) return null;
       if (rp.itype && inst.typeId !== rp.itype) return null;
@@ -2546,15 +2547,15 @@ function refPass(r){
 const rAgg = (ls) => { const a = { n: 0, price: 0, net: 0, exs: 0, cl: 0, ch: 0, ok: 0, no: 0 }; ls.forEach(r => { a.n++; a.price += Number(r.servicePrice) || 0; a.net += Number(r.servicePriceAfterDiscount) || 0; a.exs += (r.extras || []).reduce((s, e) => s + (Number(e.price) || 0), 0);
   const t = Number(r.totalAmount) || ((Number(r.servicePriceAfterDiscount) || 0) + (r.extras || []).reduce((s, e) => s + (Number(e.price) || 0), 0)); if (r.paymentMethod === 'cashless') a.cl += t; else if (r.paymentMethod === 'cash') a.ch += t; if (r.paid) a.ok++; else a.no++; });
   ['price', 'net', 'exs', 'cl', 'ch'].forEach(k => { a[k] = r2(a[k]); }); return a; };
-const refInstL = (iid) => iid ? instNameById(iid) : NOINST_L;
-const refDocName = (r) => { const ref = r.referral || {}; return dir.doctors.find(d => d.id === ref.doctorId)?.name || ref.doctorName || '(лікаря не вказано)'; };
+const refInstL = (iid) => iid ? instNameById(iid) : '—';
+const refDocName = (r) => { const ref = r.referral || {}; return dir.doctors.find(d => d.id === ref.doctorId)?.name || ref.doctorName || '(лікаря видалено)'; };
 function refReport(data){
   const recs = data.recs.map(r => ({ r, sp: refPass(r) })).filter(x => x.sp).map(x => ({ ...x.sp, r: x.r })), by = (keyF, labF) => { const m = new Map(); recs.forEach(x => { const k = keyF(x); (m.get(k) || m.set(k, { key: k, label: labF(x), ls: [] }).get(k)).ls.push(x.r); }); return [...m.values()].map(g => ({ ...g, a: rAgg(g.ls) })); };
   const noL = (a, b) => (a.key === '\u0001none') - (b.key === '\u0001none');
   const insts = by(x => x.iid || '\u0001none', x => refInstL(x.iid)).sort((x, y) => noL(x, y) || y.a.n - x.a.n || x.label.localeCompare(y.label, 'uk'));
   const docs = new Map(); recs.forEach(x => { const ref = x.r.referral || {}, dk = ref.doctorId || 'n:' + (ref.doctorName || ''); const D = docs.get(dk) || { key: dk, label: refDocName(x.r), recs: [] }; docs.set(dk, D); D.recs.push(x); });
   const dList = [...docs.values()].map(D => { const m = new Map(); D.recs.forEach(x => { (m.get(x.iid) || m.set(x.iid, { key: x.iid || '\u0001none', iid: x.iid, label: refInstL(x.iid), ls: [] }).get(x.iid)).ls.push(x.r); });
-    const rows = [...m.values()].map(g => ({ ...g, a: rAgg(g.ls) })).sort((x, y) => noL(x, y) || y.a.n - x.a.n || x.label.localeCompare(y.label, 'uk')); return { ...D, rows, a: rAgg(D.recs.map(x => x.r)) }; }).sort((x, y) => (x.key === 'n:') - (y.key === 'n:') || y.a.n - x.a.n || x.label.localeCompare(y.label, 'uk'));
+    const rows = [...m.values()].map(g => ({ ...g, a: rAgg(g.ls) })).sort((x, y) => noL(x, y) || y.a.n - x.a.n || x.label.localeCompare(y.label, 'uk')); return { ...D, rows, a: rAgg(D.recs.map(x => x.r)) }; }).sort((x, y) => y.a.n - x.a.n || x.label.localeCompare(y.label, 'uk'));
   const pats = by(x => x.r.patientId || 'n:' + x.r.patientName, x => patInit(x.r.patientName)).sort((x, y) => y.a.n - x.a.n || x.label.localeCompare(y.label, 'uk'));
   return { recs, insts, dList, pats, tot: rAgg(recs.map(x => x.r)) };
 }
@@ -2600,8 +2601,8 @@ function rpRefModel(){
     sumSt = true;
   } else if (!full){
     cols = head('Лікуючий лікар / установа', 'Скеровано');
-    rep.dList.forEach(d => d.rows.forEach(g => rows.push(line(`${d.label} — ${g.label}`, g.a, 'r'))));
-    rows.push(line(`Загалом — ${plN(rep.dList.filter(d => d.key !== 'n:').length, DOC_F)}`, rep.tot, 'tt'));
+    rep.dList.forEach(d => d.rows.forEach(g => rows.push(line((g.iid ? `${d.label} — ${g.label}` : d.label), g.a, 'r'))));
+    rows.push(line(`Загалом — ${plN(rep.dList.length, DOC_F)}`, rep.tot, 'tt'));
   } else {
     cols = head('Лікуючий лікар', 'Скеровано'); sumSt = true;
     rep.dList.forEach(d => {
@@ -2609,10 +2610,10 @@ function rpRefModel(){
       d.rows.forEach(g => rows.push(line(g.label, g.a, 'r')));
       rows.push(line(`Разом — ${d.a.n} скеровано`, d.a, 'st'));
     });
-    rows.push(line(`Загалом — ${plN(rep.dList.filter(d => d.key !== 'n:').length, DOC_F)}`, rep.tot, 'tt'));
+    rows.push(line(`Загалом — ${plN(rep.dList.length, DOC_F)}`, rep.tot, 'tt'));
   }
   if (empty){ rows.length = 0; rows.push({ k: 'r', cells: cols.map(() => ({ t: '—' })) }); }
-  const notes = rep.recs.some(x => !x.iid && !x.self) ? [{ h: `«${NOINST_L}»:`, t: 'скерування без вказаної установи показано окремим рядком.' }] : [];
+  const notes = [];
   return { rep, plain: true, grouped: false, sumSt, nolabel: rp.rz === 'self', cols, leaf: [], groups: [], lead: [], rows, full: rp.detail === 'full' && rp.rz !== 'self', notes, empty, sel: refSel() };
 }
 /* екранна таблиця зі стовпців моделі (cols/grp/span; g — колір градієнта комірки) */
