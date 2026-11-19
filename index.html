@@ -600,7 +600,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · чіпи «Показники» — сіткою як у макеті</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · звіт «По оплаті»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1836,8 +1836,8 @@ const REPORTS = [
   ['rCtor', 'Конструктор', 'Групування + показники + фільтр', '🔎'],
   ['rMgmt', 'Управлінський', 'Зведення загальних показників', '📈']
 ];
-const RP_READY = { rLab: true, rDoc: true, rDisc: true, rPat: true, rLbl: true, rSvc: true, rRef: true };   // звіти, що вже реалізовані
-const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, vyd: 'usi', scols: { pat: 1, hist: 1, rz: 1, doc: 1, price: 1, net: 1, disc: 1, pay: 1 }, pq: '', pres: null, pact: null, pmsg: null, ptoo: false, rz: 'ust', vib: 'par', rcols: { dt: 1, doc: 1, pat: 1, rz: 1, hist: 1, svc: 1, sum: 1, ex: 1, exs: 1, pm: 1, pay: 1 }, src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
+const RP_READY = { rLab: true, rDoc: true, rDisc: true, rPat: true, rLbl: true, rSvc: true, rRef: true, rPay: true };   // звіти, що вже реалізовані
+const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, vyd: 'usi', scols: { pat: 1, hist: 1, rz: 1, doc: 1, price: 1, net: 1, disc: 1, pay: 1 }, pq: '', pres: null, pact: null, pmsg: null, ptoo: false, rz: 'ust', vib: 'par', oz: 'ust', pfq: '', rcols: { dt: 1, doc: 1, pat: 1, rz: 1, hist: 1, svc: 1, sum: 1, ex: 1, exs: 1, pm: 1, pay: 1 }, src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
 const rpAllowed = () => REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
 const iso2 = (y, m, d) => `${y}-${p2(m + 1)}-${p2(d)}`;
 const rpMonthPer = (y, m, onLeft) => ({ y, m, onLeft: !!onLeft, custom: null });   // custom: { from, to } — «Довільний період» (поверх обраного місяця, як у period_picker)
@@ -1859,7 +1859,7 @@ function rpHub(){
       : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Немає жодного дозволеного звіту</b>Права надає адміністратор у розділі «Доступи».</div></div>');
   $('sheet').onclick = (e) => {
     const t = e.target.closest('[data-rep]'); if (!t) return;
-    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працюють «По лаборантах», «По лікарях», «По пільгах», «По пацієнтах», «За розподілом», «По послугах» і «По скеруваннях»; решта — за зразком.');
+    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працюють «По лаборантах», «По лікарях», «По пільгах», «По пацієнтах», «За розподілом», «По послугах», «По скеруваннях» і «По оплаті»; решта — за зразком.');
     rp.cur = t.dataset.rep; rp.data = null; rpOpen();
   };
 }
@@ -1867,7 +1867,7 @@ function rpOpen(){
   const name = REPORTS.find(r => r[0] === rp.cur)[1];
   const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
   $('sheet').innerHTML = `<div class="rp-win"><div class="j-actions"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div>${ppMarkup('rp')}<button class="win-x" id="rpX" style="justify-self:end">✕</button></div>
-    ${rp.cur === 'rPat' ? '' : `<div class="rp-card" id="rpDetCard"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>`}
+    ${rp.cur === 'rPat' || rp.cur === 'rPay' ? '' : `<div class="rp-card" id="rpDetCard"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>`}
     ${rp.cur === 'rPat' ? `<div class="srch-lbl">Пошук пацієнта (за прізвищем)</div><form class="srch" id="rpPf"><div class="srch-f"><input id="rpPq" autocomplete="off" placeholder="Прізвище (початок ПІБ) або телефон"><button type="button" class="srch-clear" id="rpPc">✕</button></div><button type="submit">🔍 Пошук</button></form><div class="rp-hint" style="margin:-10px 0 14px 2px">Пошук з початку прізвища. Запуск — Enter або кнопка.</div>` : ''}
     ${rp.cur === 'rLab' ? `<div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
     <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips grid" id="rpCols">
@@ -1879,6 +1879,11 @@ function rpOpen(){
       <div class="rp-cl" style="margin-top:16px">Партнерство</div><div class="seg" id="rpPt"><span data-v="all">Усі</span><span data-v="yes">Тільки партнери</span><span data-v="no">Крім партнерів</span></div>
       <div class="rp-cl" style="margin-top:16px">Конкретна установа (необов'язково)</div><select class="in" id="rpInst" style="width:100%;max-width:none"></select>${rp.cur === 'rSvc' ? '<div class="rp-hint">Обравши конкретну установу — таблиця нижче показує той самий перелік послуг, але лише з даними цієї установи.</div>' : ''}</div>
     ${rp.cur === 'rSvc' ? '<div class="rp-card" id="rpSvCols"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips grid" id="rpSvc"><span class="rp-chip" data-k="pat">Пацієнт</span><span class="rp-chip" data-k="hist">№ іст.хв.</span><span class="rp-chip" data-k="rz">Розподіл</span><span class="rp-chip" data-k="doc">Лікуючий лікар</span><span class="rp-chip" data-k="price">Без пільг</span><span class="rp-chip" data-k="net">З пільгами</span><span class="rp-chip" data-k="disc">Пільга</span><span class="rp-chip" data-k="pay">Гот.-безгот.</span></div></div>' : ''}` : ''}
+    ${rp.cur === 'rPay' ? `<div class="rp-card"><div class="rp-cl">Розріз</div><div class="seg" id="rpOz"><span data-v="ust">🏥 Установа</span><span data-v="pat">👤 Пацієнт</span></div></div>
+    <div class="rp-card" id="rpInstCrit"><div class="rp-cl">Тип установи</div><div class="seg" id="rpIt" style="flex-wrap:wrap"></div>
+      <div class="rp-cl" style="margin-top:16px">Конкретна установа (необов'язково)</div><select class="in" id="rpInst" style="width:100%;max-width:none"></select></div>
+    <div class="rp-card" id="rpPatCrit"><div class="rp-cl">Пошук пацієнта (за прізвищем, необов'язково)</div><form class="srch" id="rpOf" style="margin-bottom:8px"><div class="srch-f"><input id="rpOq" autocomplete="off" placeholder="Усі пацієнти"><button type="button" class="srch-clear" id="rpOc">✕</button></div><button type="submit">🔍 Пошук</button></form><div class="rp-hint">Пошук з початку прізвища. Запуск — Enter або кнопка. За замовчуванням — «Усі пацієнти» (з неоплатами й оплатами за період).</div></div>
+    <div class="rp-card" id="rpDetCard"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>` : ''}
     ${rp.cur === 'rRef' ? `<div class="rp-card"><div class="rp-cl">Розріз</div><div class="seg" id="rpRz"><span data-v="ust">🏥 Установи</span><span data-v="doc">🩺 Лікуючі лікарі</span><span data-v="self">🙋 Самоскерування</span></div></div>
     <div class="rp-card" id="rpInstCrit"><div class="rp-cl">Тип установи</div><div class="seg" id="rpIt" style="flex-wrap:wrap"></div>
       <div class="rp-cl" style="margin-top:16px">Партнерство</div><div class="seg" id="rpPt"><span data-v="all">Усі</span><span data-v="yes">Тільки партнери</span><span data-v="no">Крім партнерів</span></div>
@@ -1897,6 +1902,7 @@ function rpOpen(){
     if ($('rpSrc')) discCritSync();
     if ($('rpVy')) svcCritSync();
     if ($('rpRz')) refCritSync();
+    if ($('rpOz')) payCritSync();
     rpSyncExport();
     if ($('rpGo')){ $('rpGo').innerHTML = rp.loading ? '<span class="spin"></span>' : (rp.data ? '📊 Оновити звіт' : '📊 Показати звіт'); $('rpGo').disabled = rp.loading; }
   };
@@ -1917,6 +1923,14 @@ function rpOpen(){
   if ($('rpVy')){
     $('rpVy').onclick = (e) => { const x = e.target.closest('[data-v]'); if (x){ rp.vyd = x.dataset.v; sync(); rpDraw(); } };
     $('rpSvc').onclick = (e) => { const x = e.target.closest('[data-k]'); if (x){ rp.scols[x.dataset.k] = rp.scols[x.dataset.k] ? 0 : 1; sync(); rpDraw(); } };
+  }
+  if ($('rpOz')){
+    $('rpOz').onclick = (e) => { const x = e.target.closest('[data-v]'); if (x){ rp.oz = x.dataset.v; sync(); rpDraw(); } };
+    $('rpIt').onclick = (e) => { const c = e.target.closest('[data-t]'); if (c){ rp.itype = c.dataset.t; sync(); rpDraw(); } };
+    $('rpInst').onchange = () => { rp.inst = $('rpInst').value; rpDraw(); };
+    $('rpOf').onsubmit = (e) => { e.preventDefault(); rp.pfq = $('rpOq').value.trim(); rpDraw(); };
+    $('rpOc').onclick = () => { $('rpOq').value = ''; rp.pfq = ''; rpDraw(); $('rpOq').focus(); };
+    $('rpOq').value = rp.pfq;
   }
   if ($('rpRz')){
     $('rpRz').onclick = (e) => { const x = e.target.closest('[data-v]'); if (x){ rp.rz = x.dataset.v; sync(); rpDraw(); } };
@@ -2618,14 +2632,85 @@ function rpRefModel(){
   const notes = [];
   return { rep, plain: true, grouped: false, sumSt, nolabel: rp.rz === 'self', cols, leaf: [], groups: [], lead: [], rows, full: rp.detail === 'full' && rp.rz !== 'self', notes, empty, sel: refSel() };
 }
+/* ── «По оплаті» (zvit_oplata): розріз Установа / Пацієнт. Сума (без пільг / з пільгами, разом з дод. послугами);
+   Спосіб оплати — нараховано за способом (paymentMethod); Оплата — фактично оплачені (paid) за способом ── */
+function payCritSync(){
+  const types = discTypes(); if (rp.itype && !types.includes(rp.itype)) rp.itype = '';
+  $('rpInstCrit').style.display = rp.oz === 'ust' ? '' : 'none';
+  $('rpPatCrit').style.display = rp.oz === 'pat' ? '' : 'none';
+  [...$('rpOz').children].forEach(x => x.classList.toggle('on', x.dataset.v === rp.oz));
+  $('rpIt').innerHTML = `<span data-t="">Усі</span>` + types.map(t => `<span data-t="${esc(t)}">${esc(typeNameById(t))}</span>`).join('');
+  [...$('rpIt').children].forEach(x => x.classList.toggle('on', x.dataset.t === rp.itype));
+  const list = dir.institutions.filter(i => !rp.itype || i.typeId === rp.itype).sort((x, y) => String(x.name).localeCompare(String(y.name), 'uk')); if (rp.inst && !list.some(i => i.id === rp.inst)) rp.inst = '';
+  $('rpInst').innerHTML = '<option value="">— усі установи обраного типу —</option>' + list.map(i => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('');
+  $('rpInst').value = rp.inst;
+}
+const oSum = (r) => { const x = (r.extras || []).reduce((s, e) => s + (Number(e.price) || 0), 0); return { price: (Number(r.servicePrice) || 0) + x, net: Number(r.totalAmount) || ((Number(r.servicePriceAfterDiscount) || 0) + x) }; };
+const oAgg = (ls) => { const a = { n: 0, price: 0, net: 0, cl: 0, ch: 0, pcl: 0, pch: 0, nm: 0 }; ls.forEach(r => { const v = oSum(r); a.n++; a.price += v.price; a.net += v.net;
+  if (r.paymentMethod === 'cashless'){ a.cl += v.net; if (r.paid) a.pcl += v.net; } else if (r.paymentMethod === 'cash'){ a.ch += v.net; if (r.paid) a.pch += v.net; } else a.nm += v.net; });
+  ['price', 'net', 'cl', 'ch', 'pcl', 'pch', 'nm'].forEach(k => { a[k] = r2(a[k]); }); return a; };
+const payNarrow = () => rp.oz === 'ust' ? !!(rp.itype || rp.inst) : !!rp.pfq;
+function payReport(data){
+  const q = rp.pfq.toLowerCase(), groups = new Map();
+  for (const r of data.recs){
+    const ref = r.referral || {}, self = !!ref.self || (!ref.doctorId && !ref.institutionId && !ref.doctorName), iid = self ? '' : (ref.institutionId || '');
+    let key, label;
+    if (rp.oz === 'ust'){
+      const inst = iid ? dir.institutions.find(x => x.id === iid) : null;
+      if (rp.inst && iid !== rp.inst) continue;
+      if (rp.itype && inst && inst.typeId !== rp.itype) continue;
+      if (rp.itype && iid && !inst) continue;
+      key = self ? '\u0001self' : iid || '\u0001own'; label = self ? SELF_L : iid ? instNameById(iid) : NOINST_L;   // самоскерування й «від себе» поза типами — видимі завжди
+    } else {
+      const sn = String(r.patientName || '').trim().toLowerCase();
+      if (q && !sn.startsWith(q)) continue;
+      key = r.patientId || 'n:' + sn; label = patInit(r.patientName);
+    }
+    (groups.get(key) || groups.set(key, { key, label, ls: [] }).get(key)).ls.push(r);
+  }
+  const list = [...groups.values()].map(g => {
+    const days = new Map(); g.ls.forEach(r => (days.get(r.date) || days.set(r.date, []).get(r.date)).push(r));
+    return { ...g, a: oAgg(g.ls), days: [...days.keys()].sort().map(d => ({ date: d, a: oAgg(days.get(d)) })) };
+  }).sort((x, y) => y.a.net - x.a.net || x.label.localeCompare(y.label, 'uk'));
+  const all = list.flatMap(g => g.ls);
+  return { list, tot: oAgg(all), nInst: list.filter(g => !g.key.startsWith('\u0001')).length, hasSelf: list.some(g => g.key.startsWith('\u0001')) };
+}
+const paySel = () => rp.oz === 'pat' ? ['розріз: пацієнт', rp.pfq ? `прізвище з «${rp.pfq}»` : 'усі пацієнти'].join(' · ')
+  : ['розріз: установа', rp.itype ? `тип: ${typeNameById(rp.itype)}` : '', rp.inst ? instNameById(rp.inst) : ''].filter(Boolean).join(' · ');
+function rpPayModel(){
+  const rep = payReport(rp.data), full = rp.detail === 'full', D = (v) => nfmt(v), [a0, b0] = rpRange(), narrow = payNarrow();
+  const first = rp.oz === 'ust' ? (full ? 'Дата' : 'Установа') : (full ? 'Дата' : 'Пацієнт');
+  const cols = [{ h: first, al: 'l' }, { h: 'Без пільг', al: 'r', grp: 'Сума' }, { h: 'З пільгами', al: 'r', grp: 'Сума' }, { h: 'Безготівка', al: 'r', grp: 'Спосіб оплати' }, { h: 'Готівка', al: 'r', grp: 'Спосіб оплати' }, { h: 'Безготівка', al: 'r', grp: 'Оплата' }, { h: 'Готівка', al: 'r', grp: 'Оплата' }];
+  const nums = (a, b) => [a.price, a.net, a.cl, a.ch, a.pcl, a.pch].map(v => ({ t: D(v), v, ...(b ? { b: true } : {}) }));
+  const line = (label, a, k) => ({ k, cells: [{ t: label, ...(k !== 'r' ? { b: true } : {}) }, ...nums(a, k !== 'r')] });
+  const rows = [], mo = a0.slice(0, 7) === b0.slice(0, 7) && a0.endsWith('-01') && b0 === `${b0.slice(0, 7)}-${p2(new Date(+b0.slice(0, 4), +b0.slice(5, 7), 0).getDate())}`;
+  const per = mo ? MON_FULL_G[+a0.slice(5, 7) - 1].toLowerCase() : 'за період';
+  const empty = !rep.list.length;
+  rep.list.forEach(g => {
+    if (!full){ rows.push(line(g.label, g.a, 'r')); return; }
+    rows.push({ k: 'gh', cells: [{ t: g.label, b: true, span: cols.length }] });
+    g.days.forEach(d => rows.push(line(isoToUa(d.date), d.a, 'r')));
+    rows.push(line(`Разом — ${g.label}`, g.a, 'st'));
+  });
+  if (!empty && !narrow){
+    const lbl = full ? `Разом — ${per}` : rp.oz === 'ust' ? `Разом — ${plN(rep.nInst, INST_F)}${rep.list.some(g => g.key === '\u0001self') ? ' + самоскерування' : ''}${rep.list.some(g => g.key === '\u0001own') ? ' + від себе' : ''}` : `Разом — ${plN(rep.list.length, PAT_F)}`;
+    rows.push(line(lbl, rep.tot, 'tt'));
+    rows.push({ k: 'tt', cls: 'grand', nof: true, cells: [{ t: 'Загальна сума за період', b: true, span: 3, al: 'r' }, { t: D(rep.tot.net), v: rep.tot.net, b: true, span: 2, al: 'c' }, { t: D(r2(rep.tot.pcl + rep.tot.pch)), v: r2(rep.tot.pcl + rep.tot.pch), b: true, span: 2, al: 'c' }] });
+  }
+  if (empty) rows.push({ k: 'r', cells: cols.map(() => ({ t: '—' })) });
+  const notes = rep.tot.nm ? [{ h: 'Без способу оплати:', t: `${D(rep.tot.nm)} грн нараховано за записами, де спосіб оплати не вказано, — у групах «Спосіб оплати» й «Оплата» їх немає.` }] : [];
+  if (narrow && !empty) notes.push({ h: 'Підсумок приховано:', t: 'вибірку звужено (тип/установа/пошук) — загальний підсумок за період був би оманливим.' });
+  return { rep, plain: true, grouped: false, sumSt: full, nolabel: false, cols, leaf: [], groups: [], lead: [], rows, full, notes, empty, sel: paySel() };
+}
 /* екранна таблиця зі стовпців моделі (cols/grp/span; g — колір градієнта комірки) */
 function rpDrawCols(box, m){
   const al = (i) => ({ l: 'l', c: 'c', r: 'r' }[m.cols[i].al]);
   let r1 = '', r2 = '', i = 0;
   while (i < m.cols.length){ const c = m.cols[i]; if (c.grp){ let k = 0; while (i + k < m.cols.length && m.cols[i + k].grp === c.grp) k++; r1 += `<th colspan="${k}" class="c grp">${esc(c.grp)}</th>`; for (let q = 0; q < k; q++) r2 += `<th class="${al(i + q)}">${esc(m.cols[i + q].h)}</th>`; i += k; } else { r1 += `<th rowspan="2" class="${al(i)}">${esc(c.h)}</th>`; i++; } }
-  const body = m.rows.map(r => { let ci = 0; return `<tr class="${r.k}">${r.cells.map(c => { const a = al(ci); ci += c.span > 1 ? c.span : 1; return `<td class="${a}"${c.span > 1 ? ` colspan="${c.span}"` : ''}${c.g ? ` style="background-image:linear-gradient(90deg,${rgba(c.g, .45)},${rgba(c.g, 0)})"` : ''}>${c.b ? '<b>' : ''}${esc(c.t)}${c.b ? '</b>' : ''}${c.sub ? `<div class="sm">${esc(c.sub)}</div>` : ''}</td>`; }).join('')}</tr>`; }).join('');
+  const body = m.rows.map(r => { let ci = 0; return `<tr class="${r.k}${r.cls ? ' ' + r.cls : ''}">${r.cells.map(c => { const a = c.al ? c.al : al(ci); ci += c.span > 1 ? c.span : 1; return `<td class="${a}"${c.span > 1 ? ` colspan="${c.span}"` : ''}${c.g ? ` style="background-image:linear-gradient(90deg,${rgba(c.g, .45)},${rgba(c.g, 0)})"` : ''}>${c.b ? '<b>' : ''}${esc(c.t)}${c.b ? '</b>' : ''}${c.sub ? `<div class="sm">${esc(c.sub)}</div>` : ''}</td>`; }).join('')}</tr>`; }).join('');
   box.innerHTML = `<div class="rp-wrap"><table class="rp-t"><thead><tr>${r1}</tr>${r2 ? `<tr>${r2}</tr>` : ''}</thead><tbody>${body}</tbody></table></div>`
-    + (m.empty ? '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Даних не знайдено за заданими критеріями</b></div></div>' : '');
+    + (m.empty ? '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Даних не знайдено за заданими критеріями</b></div></div>' : '')
+    + (m.notes || []).map(n => `<div class="al al-i" style="margin:8px 0 0"><span class="al-icon"><span>i</span></span><div><b>${esc(n.h)}</b> ${esc(n.t)}</div></div>`).join('');
 }
 function rpDraw(){
   const box = $('rpBody'); if (!box || !RP_READY[rp.cur]) return;
@@ -2638,6 +2723,7 @@ function rpDraw(){
   if (rp.cur === 'rLbl') return rpDrawLbl(box);
   if (rp.cur === 'rSvc') return rpDrawCols(box, rpSvcModel());
   if (rp.cur === 'rRef') return rpDrawCols(box, rpRefModel());
+  if (rp.cur === 'rPay') return rpDrawCols(box, rpPayModel());
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay;
   const cm = rp.cols.main, ce = rp.cols.extra;
   const mainSpan = cm ? (money ? 3 : 1) : 0, exSpan = ce ? (money ? 2 : 1) : 0, paySpan = pay ? 2 : 0;
@@ -2682,7 +2768,7 @@ function rpDraw(){
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
 const MON_ABBR = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
 const MON_FULL_G = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
-const RP_CODE = { rLab: 'Labor', rDoc: 'Doc', rDisc: 'Disc', rPat: 'Pat', rLbl: 'Lbl', rSvc: 'Svc', rRef: 'Ref' };
+const RP_CODE = { rLab: 'Labor', rDoc: 'Doc', rDisc: 'Disc', rPat: 'Pat', rLbl: 'Lbl', rSvc: 'Svc', rRef: 'Ref', rPay: 'Pay' };
 /* період у назві файлу: 2026 · IV · Вер · 02Вер · 05-20Вер · 05Вер-20Жов */
 function rpPeriodToken(a, b){
   const [ya, ma, da] = a.split('-').map(Number), [yb, mb, dbb] = b.split('-').map(Number), last = (y, m) => new Date(y, m, 0).getDate();
@@ -2713,6 +2799,7 @@ function rpPrintModel(){
   if (rp.cur === 'rLbl') return rpLblModel();
   if (rp.cur === 'rSvc') return rpSvcModel();
   if (rp.cur === 'rRef') return rpRefModel();
+  if (rp.cur === 'rPay') return rpPayModel();
   if (rp.cur === 'rPat') return rpPatModel();
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay, cm = rp.cols.main, ce = rp.cols.extra, full = rp.detail === 'full';
   const dash = (v) => (v ? nfmt(v) : '—');
