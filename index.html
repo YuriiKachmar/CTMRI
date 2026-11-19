@@ -597,7 +597,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · «По скеруваннях»: «від себе»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · «По скеруваннях»: стовпець лікуючого лікаря</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1834,7 +1834,7 @@ const REPORTS = [
   ['rMgmt', 'Управлінський', 'Зведення загальних показників', '📈']
 ];
 const RP_READY = { rLab: true, rDoc: true, rDisc: true, rPat: true, rLbl: true, rSvc: true, rRef: true };   // звіти, що вже реалізовані
-const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, vyd: 'usi', scols: { pat: 1, hist: 1, rz: 1, doc: 1, price: 1, net: 1, disc: 1, pay: 1 }, pq: '', pres: null, pact: null, pmsg: null, ptoo: false, rz: 'ust', vib: 'par', rcols: { dt: 1, pat: 1, rz: 1, hist: 1, svc: 1, sum: 1, ex: 1, exs: 1, pm: 1, pay: 1 }, src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
+const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, vyd: 'usi', scols: { pat: 1, hist: 1, rz: 1, doc: 1, price: 1, net: 1, disc: 1, pay: 1 }, pq: '', pres: null, pact: null, pmsg: null, ptoo: false, rz: 'ust', vib: 'par', rcols: { dt: 1, doc: 1, pat: 1, rz: 1, hist: 1, svc: 1, sum: 1, ex: 1, exs: 1, pm: 1, pay: 1 }, src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
 const rpAllowed = () => REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
 const iso2 = (y, m, d) => `${y}-${p2(m + 1)}-${p2(d)}`;
 const rpMonthPer = (y, m, onLeft) => ({ y, m, onLeft: !!onLeft, custom: null });   // custom: { from, to } — «Довільний період» (поверх обраного місяця, як у period_picker)
@@ -1880,7 +1880,7 @@ function rpOpen(){
     <div class="rp-card" id="rpInstCrit"><div class="rp-cl">Тип установи</div><div class="seg" id="rpIt" style="flex-wrap:wrap"></div>
       <div class="rp-cl" style="margin-top:16px">Партнерство</div><div class="seg" id="rpPt"><span data-v="all">Усі</span><span data-v="yes">Тільки партнери</span><span data-v="no">Крім партнерів</span></div>
       <div class="rp-cl" style="margin-top:16px">Конкретна установа (необов'язково)</div><select class="in" id="rpInst" style="width:100%;max-width:none"></select></div>
-    <div class="rp-card" id="rpRfCols"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpRfc"><span class="rp-chip" data-k="dt">Дата</span><span class="rp-chip" data-k="pat">Пацієнт</span><span class="rp-chip" data-k="rz">Розподіл</span><span class="rp-chip" data-k="hist">№ іст.хв.</span><span class="rp-chip" data-k="svc">Послуга</span><span class="rp-chip" data-k="sum">Сума</span><span class="rp-chip" data-k="ex">Дод.послуга</span><span class="rp-chip" data-k="exs">Сума (дод.)</span><span class="rp-chip" data-k="pm">Спосіб оплати</span><span class="rp-chip" data-k="pay">Оплата</span></div></div>
+    <div class="rp-card" id="rpRfCols"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpRfc"><span class="rp-chip" data-k="dt">Дата</span><span class="rp-chip" data-k="doc">Лікуючий лікар</span><span class="rp-chip" data-k="pat">Пацієнт</span><span class="rp-chip" data-k="rz">Розподіл</span><span class="rp-chip" data-k="hist">№ іст.хв.</span><span class="rp-chip" data-k="svc">Послуга</span><span class="rp-chip" data-k="sum">Сума</span><span class="rp-chip" data-k="ex">Дод.послуга</span><span class="rp-chip" data-k="exs">Сума (дод.)</span><span class="rp-chip" data-k="pm">Спосіб оплати</span><span class="rp-chip" data-k="pay">Оплата</span></div></div>
     <div class="rp-card" id="rpVibCard"><div class="rp-cl">Вибірка</div><div class="seg" id="rpVib"><span data-v="par">Від партнера</span><span data-v="nopar">Усі крім партнера</span><span data-v="all">Усі</span></div></div>` : ''}
     ${rp.cur === 'rPat' ? '' : '<div class="rp-act"><button class="b pri" id="rpGo"></button></div>'}
     <div id="rpBody"></div>
@@ -2580,7 +2580,7 @@ function rpRefModel(){
   } else if (rp.rz === 'ust'){
     const c = rp.rcols, M = (k) => !!c[k], sp = (a, b) => b;
     const cd = [
-      M('dt') && { h: 'Дата', al: 'l', f: r => isoToUa(r.date) }, M('pat') && { h: 'Пацієнт', al: 'l', f: r => patInit(r.patientName) },
+      M('dt') && { h: 'Дата', al: 'l', f: r => isoToUa(r.date) }, M('doc') && { h: 'Лікуючий лікар', al: 'l', f: r => refDocName(r) }, M('pat') && { h: 'Пацієнт', al: 'l', f: r => patInit(r.patientName) },
       M('rz') && { h: 'Розподіл', al: 'l', f: r => { const l = dir.labels.find(x => x.id === r.labelId); return { t: l ? l.name : '—', ...(l ? { g: l.color } : {}) }; } }, M('hist') && { h: '№ іст.хв.', al: 'l', f: r => r.historyNo || '—' },
       M('svc') && { h: 'Послуга', al: 'l', f: r => r.serviceSnapshot?.name || '' },
       ...(money && M('sum') ? [{ h: 'Без пільг', al: 'r', grp: 'Сума', f: r => ({ t: D(Number(r.servicePrice) || 0), v: Number(r.servicePrice) || 0 }), ag: a => ({ t: D(a.price), v: a.price }) }, { h: 'З пільгами', al: 'r', grp: 'Сума', f: r => ({ t: D(Number(r.servicePriceAfterDiscount) || 0), v: Number(r.servicePriceAfterDiscount) || 0 }), ag: a => ({ t: D(a.net), v: a.net }) }] : []),
