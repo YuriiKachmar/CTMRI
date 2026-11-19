@@ -597,7 +597,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · «По скеруваннях»: стовпець лікуючого лікаря</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · правило «від себе» у всіх звітах</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -2169,7 +2169,7 @@ function rpDocModel(){
   return { rep, leaf: money ? ['Без пільг, грн', 'З пільгами, грн'] : [], groups: money ? [['Сума', 2]] : [], rows, full, lead: full ? ['Дата', 'Описи', 'Не описано'] : ['Лікар', 'Днів', 'Описи', 'Не описано'], notes: docNotes(rep), empty: !rep.list.length, sel: 'усі лікарі' };
 }
 /* ── «По пільгах» (zvit_pilhy): записи зі знижкою. Джерело: усі / лише установи / лише самоскерування. Критерії установи — тільки для «Лише установи» ── */
-const SELF_L = 'Самоскерування', NOINST_L = 'Без установи';
+const SELF_L = 'Самоскерування', NOINST_L = 'від себе';   // лікуючий лікар без установи скеровує сам від себе; порожнє скерування (ні установи, ні лікаря) = самоскерування
 const partnerOn = (inst, iso) => (inst.partnerships || []).some(p => !p.excluded && p.from <= iso && (!p.to || p.to >= iso));   // партнерство на дату візиту, а не на сьогодні
 const discTypes = () => {   // «Усі» + лише типи, реально присвоєні установам; найчастіші першими
   const c = new Map(); dir.institutions.forEach(i => { if (i.typeId && typeNameById(i.typeId)) c.set(i.typeId, (c.get(i.typeId) || 0) + 1); });
@@ -2191,7 +2191,7 @@ const patInit = (n) => { const w = String(n || '').trim().split(/\s+/).filter(Bo
 /* спільна вибірка «Джерело + критерії установи» для «По пільгах» і «За розподілом»: null — запис не підходить */
 function srcPass(r){
   const ust = rp.src === 'ust', critOn = ust && (rp.itype || rp.partner !== 'all' || rp.inst);
-  const ref = r.referral || {}, self = !!ref.self, iid = self ? '' : (ref.institutionId || '');
+  const ref = r.referral || {}, self = !!ref.self || (!ref.doctorId && !ref.institutionId && !ref.doctorName), iid = self ? '' : (ref.institutionId || '');
   if (rp.src === 'self' && !self) return null;
   if (ust){
     if (self) return null;
@@ -2229,7 +2229,7 @@ function discReport(data){
 }
 const discSel = () => rp.src === 'self' ? 'лише самоскерування' : rp.src === 'usi' ? 'усі візити'
   : ['лише установи', rp.itype ? `тип — ${typeNameById(rp.itype)}` : '', rp.partner === 'yes' ? 'тільки партнери' : rp.partner === 'no' ? 'крім партнерів' : '', rp.inst ? `установа — ${instNameById(rp.inst)}` : ''].filter(Boolean).join(' · ');
-const discNotes = (rep) => rep.noInst ? [{ crit: false, h: 'Без установи:', t: `${plN(rep.noInst, ['запис', 'записи', 'записів'])} зі знижкою не має ні установи, ні відмітки «самоскерування» — показано як «${NOINST_L}».` }] : [];
+const discNotes = (rep) => [];
 const APL_F = ['застосування', 'застосування', 'застосувань'], INST_F = ['установа', 'установи', 'установ'], KIND_F = ['вид пільги', 'види пільг', 'видів пільг'];
 function rpDrawDisc(box){
   const rep = discReport(rp.data), money = can('jSums'), full = rp.detail === 'full', mc = (v) => money ? `<td class="r">${nfmt(v)}</td>` : '';
@@ -2393,8 +2393,7 @@ function lblReport(data){
   return { lList, iList, tot, noLbl, noInst, empty: !tot };
 }
 const lblNotes = (rep) => [
-  ...(rep.noLbl ? [{ crit: false, h: 'Без розподілу:', t: `${plN(rep.noLbl, VIS_F)} без мітки розподілу — показано окремою групою «${NOLBL_L}».` }] : []),
-  ...(rep.noInst ? [{ crit: false, h: 'Без установи:', t: `${plN(rep.noInst, VIS_F)} не має ні установи, ні відмітки «самоскерування» — показано як «${NOINST_L}».` }] : [])];
+  ...(rep.noLbl ? [{ crit: false, h: 'Без розподілу:', t: `${plN(rep.noLbl, VIS_F)} без мітки розподілу — показано окремою групою «${NOLBL_L}».` }] : [])];
 const lblGrad = (c) => c ? ` style="--g1:${rgba(c, .55)};--g0:${rgba(c, 0)}"` : '';
 function rpDrawLbl(box){
   const rep = lblReport(rp.data), full = rp.detail === 'full', dot = (c) => c ? `<i class="dot" style="background:${esc(c)}"></i> ` : '';
