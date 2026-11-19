@@ -355,6 +355,9 @@
   .rp-row{display:flex;align-items:center;gap:12px}.rp-row label{font-size:var(--t-sm);color:var(--muted);min-width:70px}.rp-row .in{max-width:280px;font-size:var(--t-body);padding:13px 15px;border-radius:var(--r12);background:var(--tile);font-weight:400}
   .rp-chips{display:flex;flex-wrap:wrap;gap:10px}.rp-chip{padding:11px 18px;border-radius:var(--r20);background:var(--card);box-shadow:var(--bump);font-size:13px;color:var(--ink);cursor:pointer}   /* як .chips у zvit_karkas */
   .rp-chip.on{background:var(--soft);color:var(--green);font-weight:700;box-shadow:var(--in-on)}
+  .rp-chips.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}   /* «Показники (стовпці)» — як .chips.grid у макетах */
+  .rp-chips.grid .rp-chip{text-align:center;padding:10px 8px;border-radius:11px;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+  .rp-chips.grid .rp-chip.on{color:var(--green)}
   .rp-seg{gap:14px;padding:0;background:none;box-shadow:none}.rp-seg span{padding:15px 8px;border-radius:var(--r12);font-size:var(--t-body);font-weight:400;background:var(--card);box-shadow:var(--bump);color:var(--ink)}   /* як .seg у zvit_karkas */
   .rp-seg span.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
   #rpGo{width:100%;padding:16px;border-radius:var(--r16);font-size:var(--t-h3)}
@@ -597,7 +600,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · правило «від себе» у всіх звітах</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · чіпи «Показники» — сіткою як у макеті</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1867,7 +1870,7 @@ function rpOpen(){
     ${rp.cur === 'rPat' ? '' : `<div class="rp-card" id="rpDetCard"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>`}
     ${rp.cur === 'rPat' ? `<div class="srch-lbl">Пошук пацієнта (за прізвищем)</div><form class="srch" id="rpPf"><div class="srch-f"><input id="rpPq" autocomplete="off" placeholder="Прізвище (початок ПІБ) або телефон"><button type="button" class="srch-clear" id="rpPc">✕</button></div><button type="submit">🔍 Пошук</button></form><div class="rp-hint" style="margin:-10px 0 14px 2px">Пошук з початку прізвища. Запуск — Enter або кнопка.</div>` : ''}
     ${rp.cur === 'rLab' ? `<div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
-    <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpCols">
+    <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips grid" id="rpCols">
       <span class="rp-chip" data-c="main">Основні послуги</span><span class="rp-chip" data-c="extra">Додаткові послуги</span>${pay ? '<span class="rp-chip" data-c="pay">Оплата</span>' : ''}</div></div>` : ''}
     ${rp.cur === 'rSvc' ? '<div class="rp-card"><div class="rp-cl">Вид послуг</div><div class="seg" id="rpVy"><span data-v="usi">Усі</span><span data-v="osn">Лише основні</span><span data-v="dod">Лише додаткові</span></div></div>' : ''}
     ${rp.cur === 'rDisc' || rp.cur === 'rLbl' || rp.cur === 'rSvc' ? `<div class="rp-card"><div class="rp-cl">Джерело</div><div class="seg" id="rpSrc"><span data-v="usi">Усі візити</span><span data-v="ust">Лише установи</span><span data-v="self">Лише самоскерування</span></div>
@@ -1875,12 +1878,12 @@ function rpOpen(){
     <div class="rp-card" id="rpInstCrit"><div class="rp-cl">Тип установи</div><div class="seg" id="rpIt" style="flex-wrap:wrap"></div>
       <div class="rp-cl" style="margin-top:16px">Партнерство</div><div class="seg" id="rpPt"><span data-v="all">Усі</span><span data-v="yes">Тільки партнери</span><span data-v="no">Крім партнерів</span></div>
       <div class="rp-cl" style="margin-top:16px">Конкретна установа (необов'язково)</div><select class="in" id="rpInst" style="width:100%;max-width:none"></select>${rp.cur === 'rSvc' ? '<div class="rp-hint">Обравши конкретну установу — таблиця нижче показує той самий перелік послуг, але лише з даними цієї установи.</div>' : ''}</div>
-    ${rp.cur === 'rSvc' ? '<div class="rp-card" id="rpSvCols"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpSvc"><span class="rp-chip" data-k="pat">Пацієнт</span><span class="rp-chip" data-k="hist">№ іст.хв.</span><span class="rp-chip" data-k="rz">Розподіл</span><span class="rp-chip" data-k="doc">Лікуючий лікар</span><span class="rp-chip" data-k="price">Без пільг</span><span class="rp-chip" data-k="net">З пільгами</span><span class="rp-chip" data-k="disc">Пільга</span><span class="rp-chip" data-k="pay">Гот.-безгот.</span></div></div>' : ''}` : ''}
+    ${rp.cur === 'rSvc' ? '<div class="rp-card" id="rpSvCols"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips grid" id="rpSvc"><span class="rp-chip" data-k="pat">Пацієнт</span><span class="rp-chip" data-k="hist">№ іст.хв.</span><span class="rp-chip" data-k="rz">Розподіл</span><span class="rp-chip" data-k="doc">Лікуючий лікар</span><span class="rp-chip" data-k="price">Без пільг</span><span class="rp-chip" data-k="net">З пільгами</span><span class="rp-chip" data-k="disc">Пільга</span><span class="rp-chip" data-k="pay">Гот.-безгот.</span></div></div>' : ''}` : ''}
     ${rp.cur === 'rRef' ? `<div class="rp-card"><div class="rp-cl">Розріз</div><div class="seg" id="rpRz"><span data-v="ust">🏥 Установи</span><span data-v="doc">🩺 Лікуючі лікарі</span><span data-v="self">🙋 Самоскерування</span></div></div>
     <div class="rp-card" id="rpInstCrit"><div class="rp-cl">Тип установи</div><div class="seg" id="rpIt" style="flex-wrap:wrap"></div>
       <div class="rp-cl" style="margin-top:16px">Партнерство</div><div class="seg" id="rpPt"><span data-v="all">Усі</span><span data-v="yes">Тільки партнери</span><span data-v="no">Крім партнерів</span></div>
       <div class="rp-cl" style="margin-top:16px">Конкретна установа (необов'язково)</div><select class="in" id="rpInst" style="width:100%;max-width:none"></select></div>
-    <div class="rp-card" id="rpRfCols"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips" id="rpRfc"><span class="rp-chip" data-k="dt">Дата</span><span class="rp-chip" data-k="doc">Лікуючий лікар</span><span class="rp-chip" data-k="pat">Пацієнт</span><span class="rp-chip" data-k="rz">Розподіл</span><span class="rp-chip" data-k="hist">№ іст.хв.</span><span class="rp-chip" data-k="svc">Послуга</span><span class="rp-chip" data-k="sum">Сума</span><span class="rp-chip" data-k="ex">Дод.послуга</span><span class="rp-chip" data-k="exs">Сума (дод.)</span><span class="rp-chip" data-k="pm">Спосіб оплати</span><span class="rp-chip" data-k="pay">Оплата</span></div></div>
+    <div class="rp-card" id="rpRfCols"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips grid" id="rpRfc"><span class="rp-chip" data-k="dt">Дата</span><span class="rp-chip" data-k="doc">Лікуючий лікар</span><span class="rp-chip" data-k="pat">Пацієнт</span><span class="rp-chip" data-k="rz">Розподіл</span><span class="rp-chip" data-k="hist">№ іст.хв.</span><span class="rp-chip" data-k="svc">Послуга</span><span class="rp-chip" data-k="sum">Сума</span><span class="rp-chip" data-k="ex">Дод.послуга</span><span class="rp-chip" data-k="exs">Сума (дод.)</span><span class="rp-chip" data-k="pm">Спосіб оплати</span><span class="rp-chip" data-k="pay">Оплата</span></div></div>
     <div class="rp-card" id="rpVibCard"><div class="rp-cl">Вибірка</div><div class="seg" id="rpVib"><span data-v="par">Від партнера</span><span data-v="nopar">Усі крім партнера</span><span data-v="all">Усі</span></div></div>` : ''}
     ${rp.cur === 'rPat' ? '' : '<div class="rp-act"><button class="b pri" id="rpGo"></button></div>'}
     <div id="rpBody"></div>
