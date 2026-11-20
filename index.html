@@ -504,7 +504,7 @@
   .srch button[type="submit"]:active{box-shadow:inset 3px 3px 7px rgba(30,90,70,.42),inset -2px -2px 6px rgba(255,255,255,.18)}
   .found{font-size:11.5px;color:var(--muted);margin:0 0 12px;padding-left:2px}
   .found b{color:var(--green)}
-  .pts{max-height:calc(100vh - 360px);min-height:200px;overflow-y:auto;scroll-snap-type:y proximity;padding:2px 4px 6px 2px}
+  .pts{max-height:calc(100vh - 360px);min-height:200px;overflow-y:auto;scroll-snap-type:y proximity;scroll-padding:14px 0 18px;padding:14px 16px 18px 14px;margin:-12px -14px -12px -12px}   /* запас для тіней карток: контейнер із прокруткою обрізав верхню/ліву підсвітку і лівий верхній радіус */
   .pcard{border-radius:var(--r16);background:var(--bg);box-shadow:var(--up);padding:18px 20px;margin-bottom:16px;scroll-snap-align:start}
   .pcard .sect{box-shadow:none;background:none;padding:0;border-radius:0;margin-top:14px}   /* як у макеті: таблиця історії не у вдавленому полі, картка без кольорової смуги */
   .pname{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:14px}
@@ -598,7 +598,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · вкладка «Пацієнти»: без синьої смуги</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · «Пацієнти»: підсвітка картки не обрізається</div>
   </div>
 </div>
 <div id="modals"></div>
