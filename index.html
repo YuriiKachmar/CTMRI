@@ -600,7 +600,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · звіт «Конструктор»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · XLSX: підсумки формулами</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -2708,7 +2708,7 @@ function rpPayModel(){
   if (!empty && !narrow){
     const lbl = full ? `Разом — ${per}` : rp.oz === 'ust' ? `Разом — ${plN(rep.nInst, INST_F)}${rep.list.some(g => g.key === '\u0001self') ? ' + самоскерування' : ''}${rep.list.some(g => g.key === '\u0001own') ? ' + від себе' : ''}` : `Разом — ${plN(rep.list.length, PAT_F)}`;
     rows.push(line(lbl, rep.tot, 'tt'));
-    rows.push({ k: 'tt', cls: 'grand', nof: true, cells: [{ t: 'Загальна сума за період', b: true, span: 3, al: 'r' }, { t: D(rep.tot.net), v: rep.tot.net, b: true, span: 2, al: 'c' }, { t: D(r2(rep.tot.pcl + rep.tot.pch)), v: r2(rep.tot.pcl + rep.tot.pch), b: true, span: 2, al: 'c' }] });
+    rows.push({ k: 'tt', cls: 'grand', cells: [{ t: 'Загальна сума за період', b: true, span: 3, al: 'r' }, { t: D(rep.tot.net), v: rep.tot.net, b: true, span: 2, al: 'c', ref: [2] }, { t: D(r2(rep.tot.pcl + rep.tot.pch)), v: r2(rep.tot.pcl + rep.tot.pch), b: true, span: 2, al: 'c', ref: [5, 6] }] });
   }
   if (empty) rows.push({ k: 'r', cells: cols.map(() => ({ t: '—' })) });
   const notes = rep.tot.nm ? [{ h: 'Без способу оплати:', t: `${D(rep.tot.nm)} грн нараховано за записами, де спосіб оплати не вказано, — у групах «Спосіб оплати» й «Оплата» їх немає.` }] : [];
@@ -2784,25 +2784,25 @@ function ctorSync(){
 function rpCtorModel(){
   const g = rp.cg, full = rp.detail === 'full', ms = ctorMeas(), sub = full && g.sub ? g.sub : '', D = (v) => nfmt(v);
   const recs = rp.data.recs.filter(ctorPass);
-  const cols = [{ h: sub ? `${ctorName(g.main)} / ${ctorName(sub).toLowerCase()}` : ctorName(g.main), al: 'l' }, ...ms.map(x => ({ h: x[1], al: 'r' }))];
+  const cols = [{ h: sub ? `${ctorName(g.main)} / ${ctorName(sub).toLowerCase()}` : ctorName(g.main), al: 'l' }, ...ms.map(x => ({ h: x[1], al: 'r', ...(x[0] === 'dn' ? { na: true } : {}) }))];
   const cells = (label, a, bold) => [{ t: label, ...(bold ? { b: true } : {}) }, ...ms.map(x => ({ t: D(a[x[0]]), v: a[x[0]], ...(bold ? { b: true } : {}) }))];
   const grp = (ls, k) => { const m = new Map(); ls.forEach(r => { const [key, label] = ctorKey(k, r); (m.get(key) || m.set(key, { key, label, ls: [] }).get(key)).ls.push(r); }); return [...m.values()].map(x => ({ ...x, a: ctorAgg(x.ls) })); };
   const first = ms[0]?.[0] || 'n';
   const sorter = (k) => k === 'day' ? (x, y) => String(x.key).localeCompare(String(y.key)) : (x, y) => (y.a[first] - x.a[first]) || x.label.localeCompare(y.label, 'uk');
   const rows = [], main = grp(recs, g.main).sort(sorter(g.main)); let nSub = 0;
   main.forEach(G => {
-    rows.push({ k: 'r', cells: cells(G.label, G.a, true) });
+    rows.push({ k: 'r', ...(sub ? { tr: true } : {}), cells: cells(G.label, G.a, true) });
     if (sub){ const S = grp(G.ls, sub).sort(sorter(sub)); nSub += S.length; S.forEach(x => rows.push({ k: 'sub', cells: cells('↳ ' + x.label, x.a, false) })); }
   });
   const empty = !recs.length;
-  if (!empty) rows.push({ k: 'tt', nof: true, cells: cells('Разом', ctorAgg(recs), true) });
+  if (!empty) rows.push({ k: 'tt', cells: cells('Разом', ctorAgg(recs), true) });
   else rows.push({ k: 'r', cells: cols.map(() => ({ t: '—' })) });
   const notes = [];
   if (main.length + nSub > 300) notes.push({ h: 'Забагато груп:', t: `${main.length + nSub} рядків (груп основного: ${main.length}). Зменште кількість груп — оберіть інше групування або звузьте фільтр.` });
   if (!sub && g.sub && !full) notes.push({ h: 'Підгрупа:', t: 'у стислому звіті не показується — оберіть «Повний».' });
   if (empty) notes.push({ h: 'Порожній результат:', t: 'за вибраними періодом і фільтром записів немає — це не помилка.' });
   const f = [g.ust === 'par' ? 'установа: партнер' : g.ust === 'nopar' ? 'установа: крім партнера' : g.ust === 'self' ? 'установа: самоскерування' : '', g.cond === 'unpaid' ? 'оплата = не оплачено' : g.cond && g.cval ? `${{ svc: 'послуга', disc: 'пільга', lbl: 'розподіл' }[g.cond]} = ${g.cval}` : ''].filter(Boolean);
-  return { rep: { recs }, plain: true, grouped: false, sumSt: false, nolabel: false, cols, leaf: [], groups: [], lead: [], rows, full, notes, empty, sel: `групування: ${ctorName(g.main).toLowerCase()}${sub ? ' / ' + ctorName(sub).toLowerCase() : ''}${f.length ? ' · фільтр: ' + f.join(', ') : ''}` };
+  return { rep: { recs }, plain: true, grouped: false, sumSt: !!sub, nolabel: false, cols, leaf: [], groups: [], lead: [], rows, full, notes, empty, sel: `групування: ${ctorName(g.main).toLowerCase()}${sub ? ' / ' + ctorName(sub).toLowerCase() : ''}${f.length ? ' · фільтр: ' + f.join(', ') : ''}` };
 }
 /* екранна таблиця зі стовпців моделі (cols/grp/span; g — колір градієнта комірки) */
 function rpDrawCols(box, m){
@@ -3160,7 +3160,7 @@ function rpXlsx(m){
     merges.push(`A${hr1}:A${hr2}`); m.lead.forEach((x, i) => merges.push(`${L(1 + i)}${hr1}:${L(1 + i)}${hr2}`));
   }
   /* тіло */
-  let n = 0, blockFirst = 0, lastData = 0, firstData = 0; const stRows = [], dataRows = []; let curTp = '';
+  let n = 0, blockFirst = 0, lastData = 0, firstData = 0; const stRows = [], dataRows = [], mainBl = []; let curTp = '', ttRow = 0;
   const colW = [4, ...(m.cols ? m.cols.map(c => c.h) : [...m.lead, ...m.leaf]).map(x => String(x).length)];
   const track = (col, t) => { colW[col] = Math.max(colW[col] || 0, String(t).length); };
   const money = (v) => nfmt(v);
@@ -3186,7 +3186,8 @@ function rpXlsx(m){
         if (isNum && typeof c.v === 'number' && c.v !== 0 && !tot){ out.push(cN(col, rr, c.v, sty({ b: bold, h: ha, nf: 1, bd }))); track(col, money(c.v)); }
         else if (isNum && tot && typeof c.v === 'number' && c.v !== 0){
           let f = null;
-          if (r.nof) f = null;
+          if (c.ref && ttRow) f = c.ref.map(x => `${L(x + 1)}${ttRow}`).join('+');   // клітинка-посилання на підсумковий рядок (напр. «Загальна сума»)
+          else if (r.nof || (cd && cd.na)) f = null;   // nof — рядок без формул; na — стовпець не адитивний (напр. кількість днів)
           else if (r.k === 'st' && blockFirst) f = `SUM(${L(col)}${blockFirst}:${L(col)}${rr - 1})`;
           else if (r.k === 'tt') f = (m.sumSt ?? (m.full || m.grouped)) ? `SUM(${stRows.map(x => `${L(col)}${x}`).join(',')})` : `SUM(${L(col)}${firstData}:${L(col)}${lastData})`;
           out.push(f ? cF(col, rr, f, c.v, sty({ b: 1, h: ha, nf: 1, bd })) : cN(col, rr, c.v, sty({ b: 1, h: ha, nf: 1, bd }))); track(col, money(c.v));
@@ -3200,8 +3201,12 @@ function rpXlsx(m){
       return out;
     });
     if (r.k === 'r' || r.k === 'sub'){ if (!firstData) firstData = R; lastData = R; if (m.full && !m.plain && r.cells.length !== 1 + m.leaf.length && r.cells[1]) curTp = r.cells[1].t; }
-    if (r.k === 'st') stRows.push(R);
+    if (r.k === 'st' || r.tr) stRows.push(R);   // tr — головний рядок групи з підрядками (конструктор): у підсумок входять лише такі рядки
+    if (r.tr) mainBl.push({ R, cells: r.cells, subs: [] }); else if (r.k === 'sub' && mainBl.length) mainBl[mainBl.length - 1].subs.push(R);
+    if (r.k === 'tt') ttRow = R;
   }
+  /* головний рядок групи = сума її підрядків (формулою) */
+  mainBl.forEach(b => { if (!b.subs.length) return; b.cells.forEach((c, i) => { const col = i + 1, cd = m.cols && m.cols[col - 1]; if (cd && !cd.na && typeof c.v === 'number' && c.v !== 0 && rows[b.R - 1]) rows[b.R - 1].cells[col] = cF(col, b.R, `SUM(${L(col)}${b.subs[0]}:${L(col)}${b.subs[b.subs.length - 1]})`, c.v, sty({ b: 1, h: HA[cd.al], nf: 1, bd: { l: thin, r: thin, bt: thin } })); }); });
   /* примітки й підвал */
   push(() => []);
   if (m.empty) push((rr) => [cT(0, rr, 'Даних не знайдено за заданими критеріями', sty({ sz: 11 }))]);
