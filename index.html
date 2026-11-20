@@ -352,12 +352,14 @@
   .rp-card{padding:14px 16px;border-radius:var(--r16);background:var(--card);box-shadow:var(--up);margin-bottom:16px}
   .rp-cl{font-size:11.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
   .rp-yr{display:flex;align-items:center;justify-content:center;gap:14px;margin:4px 0 10px}.rp-yr b{min-width:60px;text-align:center;font-size:16px}
+  .ct-frow{display:flex;gap:11px;flex-wrap:wrap}.ct-fld{flex:1 1 200px;min-width:0;margin-bottom:11px}.ct-fld:last-child{margin-bottom:0}.ct-fld label{display:block;font-size:var(--t-sm);color:var(--muted);margin-bottom:5px;padding-left:3px}.ct-fld .in{width:100%;max-width:none}   /* поля конструктора: підпис зверху, на всю ширину — як .fld/.frow у макеті */
   .rp-row{display:flex;align-items:center;gap:12px}.rp-row label{font-size:var(--t-sm);color:var(--muted);min-width:70px}.rp-row .in{max-width:280px;font-size:var(--t-body);padding:13px 15px;border-radius:var(--r12);background:var(--tile);font-weight:400}
   .rp-chips{display:flex;flex-wrap:wrap;gap:10px}.rp-chip{padding:11px 18px;border-radius:var(--r20);background:var(--card);box-shadow:var(--bump);font-size:13px;color:var(--ink);cursor:pointer}   /* як .chips у zvit_karkas */
   .rp-chip.on{background:var(--soft);color:var(--green);font-weight:700;box-shadow:var(--in-on)}
   .rp-chips.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}   /* «Показники (стовпці)» — як .chips.grid у макетах */
   .rp-chips.grid .rp-chip{text-align:center;padding:10px 8px;border-radius:11px;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap}
   .rp-chips.grid .rp-chip.on{color:var(--green)}
+  .rp-chips.grid .rp-chip.off{opacity:.45;cursor:not-allowed;box-shadow:none}   /* несумісний показник гасне, а не зникає */
   .rp-seg{gap:14px;padding:0;background:none;box-shadow:none}.rp-seg span{padding:15px 8px;border-radius:var(--r12);font-size:var(--t-body);font-weight:400;background:var(--card);box-shadow:var(--bump);color:var(--ink)}   /* як .seg у zvit_karkas */
   .rp-seg span.on{background:var(--soft);color:var(--green);font-weight:800;box-shadow:var(--in-on)}
   #rpGo{width:100%;padding:16px;border-radius:var(--r16);font-size:var(--t-h3)}
@@ -598,7 +600,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · «Пацієнти»: підсвітка картки не обрізається</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · звіт «Конструктор»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1834,8 +1836,8 @@ const REPORTS = [
   ['rCtor', 'Конструктор', 'Групування + показники + фільтр', '🔎'],
   ['rMgmt', 'Управлінський', 'Зведення загальних показників', '📈']
 ];
-const RP_READY = { rLab: true, rDoc: true, rDisc: true, rPat: true, rLbl: true, rSvc: true, rRef: true, rPay: true };   // звіти, що вже реалізовані
-const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, vyd: 'usi', scols: { pat: 1, hist: 1, rz: 1, doc: 1, price: 1, net: 1, disc: 1, pay: 1 }, pq: '', pres: null, pact: null, pmsg: null, ptoo: false, rz: 'ust', vib: 'par', oz: 'ust', pfq: '', rcols: { dt: 1, doc: 1, pat: 1, rz: 1, hist: 1, svc: 1, sum: 1, ex: 1, exs: 1, pm: 1, pay: 1 }, src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
+const RP_READY = { rLab: true, rDoc: true, rDisc: true, rPat: true, rLbl: true, rSvc: true, rRef: true, rPay: true, rCtor: true };   // звіти, що вже реалізовані
+const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, vyd: 'usi', scols: { pat: 1, hist: 1, rz: 1, doc: 1, price: 1, net: 1, disc: 1, pay: 1 }, pq: '', pres: null, pact: null, pmsg: null, ptoo: false, rz: 'ust', vib: 'par', oz: 'ust', pfq: '', cg: { main: 'lab', sub: 'day', m: { n: 1, price: 1, net: 1 }, ust: 'all', cond: '', cval: '' }, rcols: { dt: 1, doc: 1, pat: 1, rz: 1, hist: 1, svc: 1, sum: 1, ex: 1, exs: 1, pm: 1, pay: 1 }, src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
 const rpAllowed = () => REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
 const iso2 = (y, m, d) => `${y}-${p2(m + 1)}-${p2(d)}`;
 const rpMonthPer = (y, m, onLeft) => ({ y, m, onLeft: !!onLeft, custom: null });   // custom: { from, to } — «Довільний період» (поверх обраного місяця, як у period_picker)
@@ -1857,7 +1859,7 @@ function rpHub(){
       : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Немає жодного дозволеного звіту</b>Права надає адміністратор у розділі «Доступи».</div></div>');
   $('sheet').onclick = (e) => {
     const t = e.target.closest('[data-rep]'); if (!t) return;
-    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працюють «По лаборантах», «По лікарях», «По пільгах», «По пацієнтах», «За розподілом», «По послугах», «По скеруваннях» і «По оплаті»; решта — за зразком.');
+    if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працюють «По лаборантах», «По лікарях», «По пільгах», «По пацієнтах», «За розподілом», «По послугах», «По скеруваннях», «По оплаті» і «Конструктор»; решта — за зразком.');
     rp.cur = t.dataset.rep; rp.data = null; rpOpen();
   };
 }
@@ -1866,6 +1868,9 @@ function rpOpen(){
   const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
   $('sheet').innerHTML = `<div class="rp-win"><div class="j-actions"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div>${ppMarkup('rp')}<button class="win-x" id="rpX" style="justify-self:end">✕</button></div>
     ${rp.cur === 'rPat' || rp.cur === 'rPay' ? '' : `<div class="rp-card" id="rpDetCard"><div class="rp-cl">Деталізація</div><div class="seg rp-seg" id="rpDet"><span data-v="short">Стислий</span><span data-v="full">Повний</span></div></div>`}
+    ${rp.cur === 'rCtor' ? `<div class="rp-card"><div class="rp-cl">Групування</div><div class="ct-frow"><div class="ct-fld"><label>Основне (по чому звіт)</label><select class="in" id="rpCgM"></select></div><div class="ct-fld"><label>Підгрупа (необов'язково; лише в повному звіті)</label><select class="in" id="rpCgS"></select></div></div></div>
+    <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips grid" id="rpCgC"></div></div>
+    <div class="rp-card"><div class="rp-cl">Фільтр</div><div class="ct-fld"><label>Установа</label><select class="in" id="rpCfU"><option value="all">Усі</option><option value="par">Партнер</option><option value="nopar">Крім партнера</option><option value="self">Самоскерування</option></select></div><div class="ct-fld"><label>Додаткова умова (необов'язково)</label><select class="in" id="rpCfC"></select></div><div class="ct-fld" id="rpCfVr"><label>Значення (лише ті, що є в базі за період)</label><select class="in" id="rpCfV"></select></div><div class="rp-hint" id="rpCfH"></div></div>` : ''}
     ${rp.cur === 'rPat' ? `<div class="srch-lbl">Пошук пацієнта (за прізвищем)</div><form class="srch" id="rpPf"><div class="srch-f"><input id="rpPq" autocomplete="off" placeholder="Прізвище (початок ПІБ) або телефон"><button type="button" class="srch-clear" id="rpPc">✕</button></div><button type="submit">🔍 Пошук</button></form><div class="rp-hint" style="margin:-10px 0 14px 2px">Пошук з початку прізвища. Запуск — Enter або кнопка.</div>` : ''}
     ${rp.cur === 'rLab' ? `<div class="rp-card"><div class="rp-cl">Критерії</div><div class="rp-row"><label>Лаборант</label><select class="in" id="rpLab"></select></div></div>
     <div class="rp-card"><div class="rp-cl">Показники (стовпці)</div><div class="rp-chips grid" id="rpCols">
@@ -1901,8 +1906,9 @@ function rpOpen(){
     if ($('rpVy')) svcCritSync();
     if ($('rpRz')) refCritSync();
     if ($('rpOz')) payCritSync();
+    if ($('rpCgM')) ctorSync();
     rpSyncExport();
-    if ($('rpGo')){ $('rpGo').innerHTML = rp.loading ? '<span class="spin"></span>' : (rp.data ? '📊 Оновити звіт' : '📊 Показати звіт'); $('rpGo').disabled = rp.loading; }
+    if ($('rpGo')){ $('rpGo').innerHTML = rp.loading ? '<span class="spin"></span>' : (rp.data ? '📊 Оновити звіт' : '📊 Показати звіт'); $('rpGo').disabled = rp.loading || (rp.cur === 'rCtor' && !ctorValid()); }
   };
   const back = () => { rp.cur = null; rp.data = null; renderReports(); };
   $('rpX').onclick = back; $('rpClose').onclick = back;
@@ -1921,6 +1927,15 @@ function rpOpen(){
   if ($('rpVy')){
     $('rpVy').onclick = (e) => { const x = e.target.closest('[data-v]'); if (x){ rp.vyd = x.dataset.v; sync(); rpDraw(); } };
     $('rpSvc').onclick = (e) => { const x = e.target.closest('[data-k]'); if (x){ rp.scols[x.dataset.k] = rp.scols[x.dataset.k] ? 0 : 1; sync(); rpDraw(); } };
+  }
+  if ($('rpCgM')){
+    const g = rp.cg;
+    $('rpCgM').onchange = () => { g.main = $('rpCgM').value; sync(); rpDraw(); };
+    $('rpCgS').onchange = () => { g.sub = $('rpCgS').value; sync(); rpDraw(); };
+    $('rpCgC').onclick = (e) => { const x = e.target.closest('[data-k]'); if (x && !x.classList.contains('off')){ g.m[x.dataset.k] = g.m[x.dataset.k] ? 0 : 1; sync(); rpDraw(); } };
+    $('rpCfU').onchange = () => { g.ust = $('rpCfU').value; rpDraw(); };
+    $('rpCfC').onchange = () => { g.cond = $('rpCfC').value; g.cval = ''; sync(); rpDraw(); };
+    $('rpCfV').onchange = () => { g.cval = $('rpCfV').value; rpDraw(); };
   }
   if ($('rpOz')){
     $('rpOz').onclick = (e) => { const x = e.target.closest('[data-v]'); if (x){ rp.oz = x.dataset.v; sync(); rpDraw(); } };
@@ -2700,6 +2715,95 @@ function rpPayModel(){
   if (narrow && !empty) notes.push({ h: 'Підсумок приховано:', t: 'вибірку звужено (тип/установа/пошук) — загальний підсумок за період був би оманливим.' });
   return { rep, plain: true, grouped: false, sumSt: full, nolabel: false, cols, leaf: [], groups: [], lead: [], rows, full, notes, empty, sel: paySel() };
 }
+/* ── «Конструктор» (zvit_konstruktor): групування (основне + підгрупа, рівно два рівні) + показники + фільтр.
+   Дозволене замість забороненого: таблиця сумісності «поле → допустимі показники»; недоступне гасне, а не зникає ── */
+const CT_DIMS = [['svc', 'Послуга'], ['disc', 'Пільга'], ['lab', 'Лаборант'], ['doc', 'Лікар'], ['ref', 'Лікуючий лікар'], ['lbl', 'Розподіл'], ['pat', 'Пацієнт'], ['day', 'День'], ['pay', 'Спосіб оплати'], ['inst', 'Установа']];
+const CT_SUBS = ['day', 'svc', 'disc', 'lab', 'lbl', 'pay'];
+const CT_MEAS = [['n', 'Кількість'], ['dn', 'Кількість днів'], ['price', 'Сума без пільг'], ['net', 'Сума з пільгами'], ['paid', 'Оплачено'], ['unpaid', 'Неоплачено'], ['cl', 'Безготівка'], ['ch', 'Готівка'], ['disc', 'Сума знижки']];
+const ctorName = (k) => (CT_DIMS.find(x => x[0] === k) || [])[1] || '';
+const ctorDimOk = (k) => k !== 'pay' || FACILITY_TRACKS_PAYMENT;
+function ctorAvail(k){
+  const g = rp.cg, money = can('jSums');
+  if (k === 'dn') return g.main !== 'day' && g.sub !== 'day';
+  if (['price', 'net', 'disc'].includes(k)) return money;
+  if (['paid', 'unpaid', 'cl', 'ch'].includes(k)) return money && FACILITY_TRACKS_PAYMENT;
+  return true;
+}
+const ctorMeas = () => CT_MEAS.filter(x => rp.cg.m[x[0]] && ctorAvail(x[0]));
+const ctorValid = () => !!rp.cg.main && ctorMeas().length > 0;
+const ctorSelf = (r) => { const ref = r.referral || {}; return !!ref.self || (!ref.doctorId && !ref.institutionId && !ref.doctorName); };
+function ctorKey(k, r){
+  switch (k){
+    case 'svc': { const n = r.serviceSnapshot?.name || '—'; return [n, n]; }
+    case 'disc': { const n = r.discountSnapshot?.name || 'Без пільги'; return [n, n]; }
+    case 'lab': { const w = workerBy(r.labTechId); return [w?.id || r.labTechId || '', w ? shortName(w) : '—']; }
+    case 'doc': { const w = workerBy(r.describerId); return [w?.id || r.describerId || '', w ? shortName(w) : 'не описано']; }
+    case 'ref': return ctorSelf(r) ? ['\u0001self', SELF_L] : (() => { const l = refDocName(r); return [l, l]; })();
+    case 'lbl': { const l = dir.labels.find(x => x.id === r.labelId); return [l ? l.id : '', l ? l.name : 'Без розподілу']; }
+    case 'pat': return [r.patientId || 'n:' + r.patientName, patInit(r.patientName)];
+    case 'day': return [r.date, isoToUa(r.date)];
+    case 'pay': { const l = r.paymentMethod === 'cashless' ? 'Безготівка' : r.paymentMethod === 'cash' ? 'Готівка' : 'Не вказано'; return [l, l]; }
+    default: { if (ctorSelf(r)) return ['\u0001self', SELF_L]; const iid = (r.referral || {}).institutionId || ''; return iid ? [iid, instNameById(iid)] : ['\u0001own', NOINST_L]; }
+  }
+}
+function ctorPass(r){
+  const g = rp.cg, ref = r.referral || {};
+  if (g.ust !== 'all'){
+    const self = ctorSelf(r), inst = !self && ref.institutionId ? dir.institutions.find(x => x.id === ref.institutionId) : null, par = !!inst && partnerOn(inst, r.date);
+    if (g.ust === 'par' && !par) return false;
+    if (g.ust === 'nopar' && par) return false;   // «Крім партнера» — усе, що не від партнера, разом із самоскеруванням і «від себе»
+    if (g.ust === 'self' && !self) return false;
+  }
+  if (g.cond === 'unpaid') return !r.paid;
+  if (g.cond && g.cval){ const k = g.cond === 'svc' ? 'svc' : g.cond === 'disc' ? 'disc' : 'lbl'; if (ctorKey(k, r)[1] !== g.cval) return false; }
+  return true;
+}
+const ctorAgg = (ls) => { const a = { n: ls.length, dn: new Set(ls.map(r => r.date)).size, price: 0, net: 0, paid: 0, unpaid: 0, cl: 0, ch: 0, disc: 0 };
+  ls.forEach(r => { const v = oSum(r); a.price += v.price; a.net += v.net; a.disc += (Number(r.servicePrice) || 0) - (Number(r.servicePriceAfterDiscount) || 0); if (r.paid) a.paid += v.net; else a.unpaid += v.net; if (r.paymentMethod === 'cashless') a.cl += v.net; else if (r.paymentMethod === 'cash') a.ch += v.net; });
+  ['price', 'net', 'paid', 'unpaid', 'cl', 'ch', 'disc'].forEach(k => { a[k] = r2(a[k]); }); return a; };
+function ctorSync(){
+  const g = rp.cg;
+  if (!ctorDimOk(g.main)) g.main = 'lab';
+  if (g.sub === g.main || (g.sub && !CT_SUBS.includes(g.sub)) || (g.sub && !ctorDimOk(g.sub))) g.sub = '';
+  $('rpCgM').innerHTML = CT_DIMS.filter(x => ctorDimOk(x[0])).map(x => `<option value="${x[0]}">${x[1]}</option>`).join(''); $('rpCgM').value = g.main;
+  $('rpCgS').innerHTML = '<option value="">— немає —</option>' + CT_SUBS.filter(k => k !== g.main && ctorDimOk(k)).map(k => `<option value="${k}">${ctorName(k)}</option>`).join(''); $('rpCgS').value = g.sub;
+  $('rpCgS').disabled = rp.detail !== 'full';
+  $('rpCgC').innerHTML = CT_MEAS.map(x => `<span class="rp-chip${g.m[x[0]] && ctorAvail(x[0]) ? ' on' : ''}${ctorAvail(x[0]) ? '' : ' off'}" data-k="${x[0]}">${x[1]}</span>`).join('');
+  $('rpCfU').value = g.ust;
+  const conds = [['', '— без умови —'], ['svc', 'Послуга = …'], ['disc', 'Пільга = …'], ['lbl', 'Розподіл = …'], ...(FACILITY_TRACKS_PAYMENT ? [['unpaid', 'Оплата = Не оплачено']] : [])];
+  if (!conds.some(c => c[0] === g.cond)) g.cond = '';
+  $('rpCfC').innerHTML = conds.map(c => `<option value="${c[0]}">${c[1]}</option>`).join(''); $('rpCfC').value = g.cond;
+  const need = ['svc', 'disc', 'lbl'].includes(g.cond); $('rpCfVr').style.display = need ? '' : 'none';
+  if (need){
+    const vals = rp.data ? [...new Set(rp.data.recs.map(r => ctorKey(g.cond, r)[1]).filter(v => !(g.cond === 'disc' && v === 'Без пільги') && !(g.cond === 'lbl' && v === 'Без розподілу')))].sort((x, y) => x.localeCompare(y, 'uk')) : [];
+    if (g.cval && !vals.includes(g.cval)) g.cval = '';
+    $('rpCfV').innerHTML = `<option value="">${rp.data ? '— оберіть значення —' : '— спершу покажіть звіт —'}</option>` + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join(''); $('rpCfV').value = g.cval; $('rpCfV').disabled = !rp.data;
+  }
+  $('rpCfH').textContent = ctorValid() ? '' : (!ctorMeas().length ? 'Оберіть хоча б один показник.' : '');
+}
+function rpCtorModel(){
+  const g = rp.cg, full = rp.detail === 'full', ms = ctorMeas(), sub = full && g.sub ? g.sub : '', D = (v) => nfmt(v);
+  const recs = rp.data.recs.filter(ctorPass);
+  const cols = [{ h: sub ? `${ctorName(g.main)} / ${ctorName(sub).toLowerCase()}` : ctorName(g.main), al: 'l' }, ...ms.map(x => ({ h: x[1], al: 'r' }))];
+  const cells = (label, a, bold) => [{ t: label, ...(bold ? { b: true } : {}) }, ...ms.map(x => ({ t: D(a[x[0]]), v: a[x[0]], ...(bold ? { b: true } : {}) }))];
+  const grp = (ls, k) => { const m = new Map(); ls.forEach(r => { const [key, label] = ctorKey(k, r); (m.get(key) || m.set(key, { key, label, ls: [] }).get(key)).ls.push(r); }); return [...m.values()].map(x => ({ ...x, a: ctorAgg(x.ls) })); };
+  const first = ms[0]?.[0] || 'n';
+  const sorter = (k) => k === 'day' ? (x, y) => String(x.key).localeCompare(String(y.key)) : (x, y) => (y.a[first] - x.a[first]) || x.label.localeCompare(y.label, 'uk');
+  const rows = [], main = grp(recs, g.main).sort(sorter(g.main)); let nSub = 0;
+  main.forEach(G => {
+    rows.push({ k: 'r', cells: cells(G.label, G.a, true) });
+    if (sub){ const S = grp(G.ls, sub).sort(sorter(sub)); nSub += S.length; S.forEach(x => rows.push({ k: 'sub', cells: cells('↳ ' + x.label, x.a, false) })); }
+  });
+  const empty = !recs.length;
+  if (!empty) rows.push({ k: 'tt', nof: true, cells: cells('Разом', ctorAgg(recs), true) });
+  else rows.push({ k: 'r', cells: cols.map(() => ({ t: '—' })) });
+  const notes = [];
+  if (main.length + nSub > 300) notes.push({ h: 'Забагато груп:', t: `${main.length + nSub} рядків (груп основного: ${main.length}). Зменште кількість груп — оберіть інше групування або звузьте фільтр.` });
+  if (!sub && g.sub && !full) notes.push({ h: 'Підгрупа:', t: 'у стислому звіті не показується — оберіть «Повний».' });
+  if (empty) notes.push({ h: 'Порожній результат:', t: 'за вибраними періодом і фільтром записів немає — це не помилка.' });
+  const f = [g.ust === 'par' ? 'установа: партнер' : g.ust === 'nopar' ? 'установа: крім партнера' : g.ust === 'self' ? 'установа: самоскерування' : '', g.cond === 'unpaid' ? 'оплата = не оплачено' : g.cond && g.cval ? `${{ svc: 'послуга', disc: 'пільга', lbl: 'розподіл' }[g.cond]} = ${g.cval}` : ''].filter(Boolean);
+  return { rep: { recs }, plain: true, grouped: false, sumSt: false, nolabel: false, cols, leaf: [], groups: [], lead: [], rows, full, notes, empty, sel: `групування: ${ctorName(g.main).toLowerCase()}${sub ? ' / ' + ctorName(sub).toLowerCase() : ''}${f.length ? ' · фільтр: ' + f.join(', ') : ''}` };
+}
 /* екранна таблиця зі стовпців моделі (cols/grp/span; g — колір градієнта комірки) */
 function rpDrawCols(box, m){
   const al = (i) => ({ l: 'l', c: 'c', r: 'r' }[m.cols[i].al]);
@@ -2722,6 +2826,7 @@ function rpDraw(){
   if (rp.cur === 'rSvc') return rpDrawCols(box, rpSvcModel());
   if (rp.cur === 'rRef') return rpDrawCols(box, rpRefModel());
   if (rp.cur === 'rPay') return rpDrawCols(box, rpPayModel());
+  if (rp.cur === 'rCtor') return rpDrawCols(box, rpCtorModel());
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay;
   const cm = rp.cols.main, ce = rp.cols.extra;
   const mainSpan = cm ? (money ? 3 : 1) : 0, exSpan = ce ? (money ? 2 : 1) : 0, paySpan = pay ? 2 : 0;
@@ -2766,7 +2871,7 @@ function rpDraw(){
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
 const MON_ABBR = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
 const MON_FULL_G = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
-const RP_CODE = { rLab: 'Labor', rDoc: 'Doc', rDisc: 'Disc', rPat: 'Pat', rLbl: 'Lbl', rSvc: 'Svc', rRef: 'Ref', rPay: 'Pay' };
+const RP_CODE = { rLab: 'Labor', rDoc: 'Doc', rDisc: 'Disc', rPat: 'Pat', rLbl: 'Lbl', rSvc: 'Svc', rRef: 'Ref', rPay: 'Pay', rCtor: 'Ctor' };
 /* період у назві файлу: 2026 · IV · Вер · 02Вер · 05-20Вер · 05Вер-20Жов */
 function rpPeriodToken(a, b){
   const [ya, ma, da] = a.split('-').map(Number), [yb, mb, dbb] = b.split('-').map(Number), last = (y, m) => new Date(y, m, 0).getDate();
@@ -2798,6 +2903,7 @@ function rpPrintModel(){
   if (rp.cur === 'rSvc') return rpSvcModel();
   if (rp.cur === 'rRef') return rpRefModel();
   if (rp.cur === 'rPay') return rpPayModel();
+  if (rp.cur === 'rCtor') return rpCtorModel();
   if (rp.cur === 'rPat') return rpPatModel();
   const { a, b } = rp.data, rep = labReport(rp.data, rp.lab), money = can('jSums'), pay = FACILITY_TRACKS_PAYMENT && money && rp.cols.pay, cm = rp.cols.main, ce = rp.cols.extra, full = rp.detail === 'full';
   const dash = (v) => (v ? nfmt(v) : '—');
