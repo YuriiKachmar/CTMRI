@@ -3143,7 +3143,7 @@ const mgML = (m) => MON_NAME[m].toLowerCase();
 const mgDef = () => (new Date().getMonth() === 0 ? 'py' : 'cy');   // у січні — попередній рік, інакше поточний рік станом на сьогодні
 function mgPer(ps){
   const n = new Date(), Y = n.getFullYear(), M = n.getMonth(), D = n.getDate(), t = todayISO(), dm = (d) => p2(d) + '.' + p2(M + 1);
-  if (ps === 'cy') return { ps, year: true, a: iso2(Y, 0, 1), b: t, ca: iso2(Y - 1, 0, 1), cb: iso2(Y - 1, M, Math.min(D, mgDim(Y - 1, M))), nm: `${Y} рік`, pv: `${Y - 1}`, label: 'Поточний рік', top: 'ПОТОЧНИЙ РІК', short: `${Y} (до ${dm(D)})`, part: true };
+  if (ps === 'cy') return { ps, year: true, a: iso2(Y, 0, 1), b: t, ca: iso2(Y - 1, 0, 1), cb: iso2(Y - 1, M, Math.min(D, mgDim(Y - 1, M))), nm: `${Y} рік`, pv: `${Y - 1}`, label: 'Поточний рік', top: String(Y), short: `${Y} (до ${dm(D)})`, part: true };
   if (ps === 'py') return { ps, year: true, a: iso2(Y - 1, 0, 1), b: iso2(Y - 1, 11, 31), ca: iso2(Y - 2, 0, 1), cb: iso2(Y - 2, 11, 31), nm: `${Y - 1} рік`, pv: `${Y - 2}`, label: 'Попередній рік', top: String(Y - 1), short: `${Y - 1} рік` };
   if (ps === 'cm'){ const pm = (M + 11) % 12, py = M ? Y : Y - 1; return { ps, year: false, a: iso2(Y, M, 1), b: t, ca: iso2(py, pm, 1), cb: iso2(py, pm, Math.min(D, mgDim(py, pm))), nm: `${mgML(M)} ${Y}`, pv: `${MG_MS[pm]} ${py} (01–${p2(Math.min(D, mgDim(py, pm)))})`, label: 'Поточний місяць', top: MON_NAME[M].toUpperCase(), short: `${MG_MS[M]} ${Y} (до ${dm(D)})`, part: true }; }
   const pm = (M + 11) % 12, py = M ? Y : Y - 1, qm = (pm + 11) % 12, qy = pm ? py : py - 1;
