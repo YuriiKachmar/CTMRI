@@ -3804,7 +3804,7 @@ function mgScrape(body){
         if (rows.length) out.push({ k: 'tab', head: rows[0].map((h, i) => mgTx(h) || (i ? '' : 'Показник')), rows: rows.slice(1).map(r => r.map(mgTx)), meta: rows.slice(1).map(r => r.map(x => ({ bg: x.dataset.bg || null, bar: null, dot: null }))), foot: null });
       }
       else if (tg === 'details') out.push({ k: 'p', t: mgTx(c) });
-      else if (cl.contains('al')) { const d = c.querySelector(':scope > div'); out.push({ k: 'p', t: mgTx(d || c) }); }
+      else if (cl.contains('al')) { const d = c.querySelector(':scope > div'), bb = d && d.querySelector(':scope > b'), b = bb ? mgTx(bb) : ''; if (bb) bb.remove(); out.push({ k: 'p', b, t: mgTx(d || c) }); }
       else if (cl.contains('rule') || cl.contains('hint') || cl.contains('sc-e') || tg === 'p') { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
       else if (c.children.length && c.querySelector('table,.mini,.kpis,.dn,.al,details,svg,[style*="grid-template-columns"]')) walk(c, out);
       else if (c.children.length || c.textContent.trim()) { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
@@ -3841,7 +3841,7 @@ function mgDocx(secs, imgs){
   const tr = (cells, o = {}) => `<w:tr><w:trPr>${o.split ? '' : '<w:cantSplit/>'}${o.h ? '<w:tblHeader/>' : ''}</w:trPr>${cells}</w:tr>`;
   const tabX = (it, TWi) => {
     const { head, rows, foot, meta } = it, n = Math.max(head.length, ...rows.map(r => r.length), foot ? foot.length : 0), all = [head, ...rows, ...(foot ? [foot] : [])];
-    const wt = Array.from({ length: n }, (_, j) => Math.min(26, Math.max(6, ...all.map(r => (r[j] || '').length)))), sw = wt.reduce((s, x) => s + x, 0), W = wt.map(x => Math.floor(x / sw * TWi));
+    const wt = Array.from({ length: n }, (_, j) => Math.min(26, Math.max(7, Math.min(12, (head[j] || '').length), ...all.slice(1).map(r => (r[j] || '').length + 1)))), sw = wt.reduce((s, x) => s + x, 0), W = wt.map(x => Math.floor(x / sw * TWi));
     const sz = n > 9 ? 14 : n > 6 ? 16 : 18, mx = (j) => Math.max(0, ...rows.map((r, i) => (meta && meta[i] && meta[i][j] && meta[i][j].bar) || 0));
     const bdB = (c) => `<w:bottom w:val="single" w:sz="4" w:space="0" w:color="${c}"/>`;
     const tc = (j, t, o = {}) => cell(W[j], par((o.dot ? run('● ', { c: o.dot.slice(1), sz }) : '') + run(t || '', { b: o.b, c: o.c, sz }) + (o.bar ? run(' ') : ''), { after: 0, jc: o.r ? 'right' : (o.ctr ? 'center' : 'left') }) + (o.bar ? par(run('█'.repeat(Math.max(1, Math.round(o.bar / 100 * Math.min(14, Math.max(4, Math.floor(W[j] / 150)))))), { c: GREEN, sz: 12 }), { after: 0, jc: o.r ? 'right' : 'left' }) : ''), { fill: o.fill, bd: (o.top ? '<w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>' : '') + (o.last ? '' : bdB(o.fill && o.hdr ? GREEN : 'C9D2D0')) });
@@ -3851,7 +3851,7 @@ function mgDocx(secs, imgs){
     return tblx(W, hd + bd + ft) + par('', { after: 60 });
   };
   const itemX = (it, TWi) => {
-    if (it.k === 'p') return par(run(it.t, { sz: 18 }), { after: 80 });
+    if (it.k === 'p') return par((it.b ? run(it.b + ' ', { b: 1, sz: 18 }) : '') + run(it.t, { sz: 18 }), { after: it.b ? 120 : 80 });
     if (it.k === 'tab') return tabX(it, TWi);
     if (it.k === 'img') return par(pic(it.id, it.w > 300 ? 165 : 42), { after: 60 });
     if (it.k === 'leg') return par(it.parts.map(p => (p.c ? run('■ ', { c: p.c.slice(1), sz: 18 }) : '') + run(p.t + '    ', { sz: 16, c: GREY })).join(''), { after: 60 });
@@ -3922,7 +3922,7 @@ function mgXlsx(secs, imgs){
       T(0, S.title, b.title || s.name); r += 2;
       b.items.forEach(it => {
         if (it.k === 'sub'){ T(0, S.sub, it.t.toUpperCase()); r++; }
-        else if (it.k === 'p'){ T(0, S.par, it.t); r++; }
+        else if (it.k === 'p'){ T(0, S.par, (it.b ? it.b + ' — ' : '') + it.t); r++; }
         else if (it.k === 'leg'){ T(0, S.meta, it.parts.map(p => (p.c ? '■ ' : '') + p.t).join('    ')); r++; }
         else if (it.k === 'img' || it.k === 'donut' && it.id){
           const im = imgs.get(String(it.id)); if (im){ const wpx = (it.k === 'donut' || im.w <= 300) ? 150 : 600, hpx = Math.round(wpx * im.h / im.w); const n = MED.length + 1; MED.push({ si, n, bytes: im.bytes }); anchors.push({ n, row: r, wpx, hpx }); if (it.k === 'donut'){ it.rows.forEach((d, i) => { T(3, S.txt, d.l); T(4, S.txt, d.s); T(5, S.txt, d.v); r++; }); r = Math.max(r, anchors[anchors.length - 1].row + Math.ceil(hpx / 20) + 1); } else r += Math.ceil(hpx / 20) + 1; }
