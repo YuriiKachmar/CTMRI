@@ -576,7 +576,8 @@
   /* ═══ УПРАВЛІНСЬКИЙ ЗВІТ (макет CT_MRI_ЗВІТ_zvit_upravlinskyi.html): усе в межах .mg ═══ */
   .mg .chips{display:flex;gap:7px;flex-wrap:wrap}
   .mg .chips.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
-  .mg .chips.grid .chip{text-align:center;padding:10px 8px}
+  .mg .chips.grid .chip{text-align:center;padding:10px 8px;min-height:68px;display:flex;align-items:center;justify-content:center;white-space:normal;line-height:1.25;word-break:break-word}
+  .mg .exonly{display:none}
   .mg .chip{padding:9px 13px;border-radius:11px;background:var(--bg);box-shadow:var(--bump);
           font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
   .mg .chip:active{box-shadow:var(--in)}
@@ -3244,7 +3245,7 @@ function mgOv(X){
   $('mgP_ov').innerHTML = `<section class="blk"><h3>Результат періоду · ${esc(P.nm)}</h3>${mgKpis(X)}
       <div class="hint" style="margin-top:var(--s1)">«Нараховано» — сума до знижок; «Середній чек» — сума після знижок ÷ візитів; «Отримано» і «Неоплачено» — суми після знижок за прапором оплати; «Пільги» — сума знижок. Візит = запис послуги в журналі.</div>
       <div class="mini" style="margin-top:var(--s3)" id="mgOvT"></div>
-      <div class="chips" id="mgOvG" style="margin-bottom:var(--s1)"><span class="chip" data-g="m">Місяці</span><span class="chip" data-g="q">Квартали</span><span class="chip" data-g="y">Роки</span></div>
+      <div class="chips noexp" id="mgOvG" style="margin-bottom:var(--s1)"><span class="chip" data-g="m">Місяці</span><span class="chip" data-g="q">Квартали</span><span class="chip" data-g="y">Роки</span></div>
       <div id="mgOvMx" class="omx"></div></section>
     <section class="blk"><h3>Сигнали · ${esc(P.nm)} <span class="sub">що потребує уваги</span></h3><div id="mgSig"></div></section>`;
   $('mgOvG').onclick = (e) => { const c = e.target.closest('[data-g]'); if (c){ mg.og = c.dataset.g; mgMatrix(X); } };
@@ -3552,8 +3553,9 @@ function mgWrkTab(X){
   const tDr = mgTable(dh, dl.map(x => [esc(nameOfW(x.k)), x.p ? `<span class="pend">${x.p}</span>` : '', x.d, ...(money ? [`${nfmt(x.v)}${mgBar(x.v, dmx)}`] : []), mgChg(x.d, dp.get(x.k)?.d ?? 0, 1, noc)]));
   $('mgP_wrk').innerHTML = `<section class="blk"><h3>Працівники · ${esc(P.nm)}</h3>
     <div class="two"><div><div class="mini">Лаборанти · ${esc(P.nm)}</div>${tLab}</div></div>
-    <div class="mini" style="margin-top:var(--s3)">Лікарі (описи) · ${esc(P.nm)}</div>${tDr}
+    <div class="mini" style="margin-top:var(--s3)">Лікарі (описи) · ${esc(P.nm)}</div>${tDr.replace('<table class="lt"', '<table class="lt" id="tDr"')}
     <div class="hint" style="margin-top:var(--s1)">Швидкість описів (час між дослідженням і описом) не входить: такого поля немає, рішення власника — нових даних не вводити. «Не описано» — лікар призначений, але відмітки «описано» ще немає.</div></section>`;
+  $('mgP_wrk').querySelectorAll('#tDr .pend').forEach(x => x.parentNode.classList.add('pendc'));
 }
 /* ── «Тенденції»: 12 місяців, що закінчуються місяцем кінця періоду ── */
 function mgLineBar(labels, bars, line, o){
@@ -3606,7 +3608,8 @@ function mgSeaTab(X){
   let h = '<div class="h rn"></div>' + MG_MS.map(m => `<div class="h">${m}</div>`).join('');
   ord.forEach(i => { h += `<div class="rn">${esc(names[i])}</div>` + M[i].map((v, m) => { if (v === null) return '<div class="sc-nm" style="color:var(--muted)">—</div>'; const t = (v - cm[m][0]) / ((cm[m][1] - cm[m][0]) || 1); return `<div style="background:${mgHeatC(t, yc)};color:${t > .5 ? '#fff' : 'var(--ink)'}">${v}</div>`; }).join(''); });
   /* 2 · один розподіл: по роках */
-  const sn = mg.seaSel, data = yrs.map(y => MG_MS.map((_, m) => vis(sn, y, m))), fv = data.flat().filter(x => x !== null), mxv = Math.max(1, ...fv), top = Math.ceil(mxv * 1.12 / 10) * 10 || 10;
+  const one = (sn) => {
+  const data = yrs.map(y => MG_MS.map((_, m) => vis(sn, y, m))), fv = data.flat().filter(x => x !== null), mxv = Math.max(1, ...fv), top = Math.ceil(mxv * 1.12 / 10) * 10 || 10;
   const W = 640, H = 200, L = 34, B = 24, T = 16, pw = (W - L - 8) / 12, yy = (v) => T + (H - T - B) * (1 - v / top), cols = yrs.map(mgYc);
   let s = `<svg viewBox="0 0 ${W} ${H}" width="100%">`;
   [0, .5, 1].forEach(f => { s += `<line x1="${L}" x2="${W - 8}" y1="${yy(f * top)}" y2="${yy(f * top)}" class="gl"/><text x="${L - 4}" y="${yy(f * top) + 3}" font-size="9" text-anchor="end" class="tx">${Math.round(f * top)}</text>`; });
@@ -3621,14 +3624,17 @@ function mgSeaTab(X){
     const mins = data.map(r => { const a = r.filter(x => x !== null); return r.indexOf(Math.min(...a)); });
     fc = `<b>${esc(sn)}</b>: найбільше візитів у сумі за роки припадає на <b>${MG_MONN[pk]}</b>: ${yrs.map((yr, yi) => `${yr} — <b>${data[yi][pk] ?? '—'}</b>`).join(' · ')} візитів. Найменше: ${yrs.map((yr, yi) => `${yr} — ${MG_MONN[mins[yi]]} (${data[yi][mins[yi]]})`).join('; ')}. Поточний (неповний) місяць не враховано.`;
   }
+  return `<div>${s}<div class="legend" style="margin-top:6px">${yrs.map((yr, i) => `<span><i style="background:${cols[i]}"></i>${yr}</span>`).join('')}<span style="color:var(--muted)">колір — рік</span></div>${tbl}</div><div class="rule">${fc}</div>`;
+  };
+  const sn = mg.seaSel;
   el.innerHTML = `<section class="blk"><h3>Сезонність розподілу</h3>
     <div class="mini">1 · Склад місяця: візитів за розподілами</div><div class="chips" style="margin-bottom:var(--s1)">${chips}</div>
     <div class="legend" style="align-items:center"><span>менше візитів</span><span class="heatlg">${[0, .17, .34, .5, .67, .84, 1].map(t => `<i style="background:${mgHeatC(t, yc)}"></i>`).join('')}</span><span>більше візитів</span><span style="margin-left:var(--s2)">колір — рік; відтінок — між розподілами в межах місяця</span></div>
     <div class="sheat" style="grid-template-columns:112px repeat(12,minmax(34px,1fr))">${h}</div>
     <div class="mini" style="margin-top:var(--s3)">2 · Один розподіл: візити по роках (останні 3 роки з бази)</div>
-    <div class="chips grid" style="margin-bottom:8px">${names.map(n => `<span class="chip ${n === sn ? 'on' : ''}" data-ss="${esc(n)}">${esc(n)}</span>`).join('')}</div>
-    <div>${s}<div class="legend" style="margin-top:6px">${yrs.map((yr, i) => `<span><i style="background:${cols[i]}"></i>${yr}</span>`).join('')}<span style="color:var(--muted)">колір — рік</span></div>${tbl}</div>
-    <div class="rule">${fc}</div><div class="hint">Це спостереження за історією, а не пояснення причин. Причину піку (наприклад, погода) програма не стверджує.</div></section>`;
+    <div class="chips grid noexp" style="margin-bottom:8px">${names.map(n => `<span class="chip ${n === sn ? 'on' : ''}" data-ss="${esc(n)}">${esc(n)}</span>`).join('')}</div>
+    <div class="noexp">${one(sn)}</div>
+    <div class="exonly">${names.map(n => `<div style="break-inside:avoid;margin-top:var(--s2)"><div class="mini">${esc(n)}</div>${one(n)}</div>`).join('')}</div><div class="hint">Це спостереження за історією, а не пояснення причин. Причину піку (наприклад, погода) програма не стверджує.</div></section>`;
   el.onclick = (e) => { const a = e.target.closest('[data-sy]'), b = e.target.closest('[data-ss]'); if (a){ mg.seaYr = +a.dataset.sy; mgSeaTab(X); } else if (b){ mg.seaSel = b.dataset.ss; mgSeaTab(X); } };
 }
 
@@ -3639,12 +3645,12 @@ function mgExportPdf(){
   const X = mg.X, P = X.P, tk = rpPeriodToken(P.a, P.b), t = new Date(), name = `ZV-Mgmt-${tk}-${p2(t.getDate())}${p2(t.getMonth() + 1)}${p2(t.getFullYear() % 100)}`;
   const body = $('mgBody').cloneNode(true);
   body.querySelectorAll('.stabs,.noexp,script,button,input,[data-go]').forEach(e => e.remove());
-  body.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
   const css = [...document.querySelectorAll('style')].map(x => x.textContent).join('\n') + `
     @page{size:A4 portrait;margin:10mm}
     html,body{background:#fff!important;margin:0}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .mg .pane{display:block!important;break-inside:auto}.mg .blk{break-inside:avoid-page;margin-bottom:10px}.mg .fsheet{box-shadow:none;border:0;padding:0;background:none}
+    .mg .exonly{display:block!important}.mg .noexp{display:none!important}
+    .mg .pane{display:block!important;break-inside:auto;break-before:page}.mg .pane:first-of-type{break-before:auto}.mg .omx,.mg .sheat,.mg .heat{overflow:visible!important;max-width:none!important}.mg .blk{break-inside:avoid-page;margin-bottom:10px}.mg .fsheet{box-shadow:none;border:0;padding:0;background:none}
     .mg *{box-shadow:none!important}`;
   const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><div class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div></body></html>`;
   const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
