@@ -3733,10 +3733,10 @@ function mgPaginate(d, head){
   src.remove();
 }
 /* ═══ DOC і XLS управлінського звіту ═══
-   Зміст беремо з готової розмітки екрана (ті самі числа, що й у PDF): заголовки, таблиці, картки, діаграми-кільця (як таблиці частин),
-   матриці. Графіки-лінії/стовпці передаються таблицею даних (.exdata, на екрані прихована). Вибране групування «Динаміки» і всі розподіли «Сезонності» — як у PDF.
-   XLS: числа — числами, підсумкові рядки «Разом» — формулами SUM. */
-const mgTx = (e) => { if (!e) return ''; const w = (n) => n.nodeType === 3 ? n.data : n.nodeType === 1 ? [...n.childNodes].map(w).join('') + ' ' : ''; return w(e).replace(/[\s\u00a0]+/g, ' ').replace(/\s+([,.])/g, '$1').trim(); };   // між елементами — пробіл (інакше «грніз»)
+   Вигляд наближено до PDF: блоки в рамках, кольорові заголовки, картки показників, кільця й графіки (малюнками PNG з SVG екрана),
+   таблиці з зеленою шапкою, кольори теплових карт, смужки-частки. Зміст — з розмітки екрана (ті самі числа, що й у PDF).
+   Графіки-лінії додатково мають таблицю даних (.exdata). XLS: числа — числами, «Разом» — формулами SUM, смужки — умовним форматом (data bar). */
+const mgTx = (e) => { if (!e) return ''; const w = (n) => n.nodeType === 3 ? n.data : n.nodeType === 1 ? [...n.childNodes].map(w).join('') + ' ' : ''; return w(e).replace(/[\s ]+/g, ' ').replace(/\s+([,.])/g, '$1').trim(); };   // між елементами — пробіл (інакше «грніз»)
 function mgExportBody(){
   const body = $('mgBody').cloneNode(true);
   body.querySelectorAll('.stabs,.noexp,.mg-top,script,button,input,[data-go],style').forEach(e => e.remove());
@@ -3745,44 +3745,69 @@ function mgExportBody(){
   return body;
 }
 function mgFileBase(){ const t = new Date(), P = mg.X.P; return `ZV-Mgmt-${rpPeriodToken(P.a, P.b)}-${p2(t.getDate())}${p2(t.getMonth() + 1)}${p2(t.getFullYear() % 100)}`; }
-/* розмітка → [{name, blks:[{title, items:[{k:'sub'|'p'|'tab', …}]}]}] */
+/* малюнки: кожен <svg> екрана → PNG (стилі з живого DOM вписуємо в копію); кольори фону клітинок і крапок легенд — у data-атрибути */
+async function mgRaster(live){
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1; const cx = cv.getContext('2d', { willReadFrequently: true });
+  const hex = (c) => { if (!c || c === 'none' || c === 'transparent') return null; cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data; return d[3] < 20 ? null : '#' + [d[0], d[1], d[2]].map(x => x.toString(16).padStart(2, '0')).join(''); };
+  const out = new Map(); let id = 0;
+  live.querySelectorAll('td,.sheat>div,.omx>div').forEach(e => { const c = hex(getComputedStyle(e).backgroundColor); if (c && c !== '#ffffff') e.dataset.bg = c; });
+  live.querySelectorAll('.lg i,.legend i,.ydot').forEach(e => { const c = hex(getComputedStyle(e).backgroundColor); if (c) e.dataset.col = c; });
+  const P = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-dashoffset', 'font-size', 'font-weight', 'text-anchor', 'opacity'];
+  const paint = (a, b) => { const cs = getComputedStyle(a); for (const p of P){ let v = cs.getPropertyValue(p); if (!v) continue; if (p === 'fill' || p === 'stroke') v = hex(v) || 'none'; b.style.setProperty(p, v); } b.setAttribute('font-family', 'Arial, sans-serif'); [...a.children].forEach((x, i) => b.children[i] && paint(x, b.children[i])); };
+  const svgs = [...live.querySelectorAll('svg')].filter(s => !s.closest('.noexp,.stabs,.mg-top') && s.getAttribute('viewBox'));
+  for (const s of svgs){
+    try {
+      const vb = s.getAttribute('viewBox').split(/[\s,]+/).map(Number), W = vb[2], H = vb[3], k = 2, cl = s.cloneNode(true);
+      paint(s, cl); cl.setAttribute('xmlns', 'http://schemas.openxmlformats.org/../svg'.replace('http://schemas.openxmlformats.org/../svg', 'http://www.w3.org/2000/svg')); cl.setAttribute('width', W * k); cl.setAttribute('height', H * k); cl.removeAttribute('class');
+      const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(cl));
+      await img.decode();
+      const c = document.createElement('canvas'); c.width = W * k; c.height = H * k; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/png')); s.dataset.sv = ++id;
+      out.set(String(id), { bytes: new Uint8Array(await blob.arrayBuffer()), w: W, h: H });
+    } catch (e){ console.error('svg→png', e); }
+  }
+  return out;
+}
+const mgUntag = (live) => live.querySelectorAll('[data-sv],[data-bg],[data-col]').forEach(e => { delete e.dataset.sv; delete e.dataset.bg; delete e.dataset.col; });
+/* розмітка → [{name, blks:[{title, items}]}]; items: sub | p | tab | cards | donut | img | leg */
 function mgScrape(body){
   const gridN = (el) => { const g = el.style.gridTemplateColumns || ''; if (!g) return 0; const rep = g.match(/repeat\((\d+),/); return (rep ? +rep[1] : 0) + g.replace(/repeat\(\d+,\s*minmax\([^)]*\)\)/g, '').trim().split(/\s+/).filter(Boolean).length; };
+  const barOf = (td) => { const i = td.querySelector('.shb i'); const m = i && (i.style.width || '').match(/([\d.]+)%/); return m ? +m[1] : null; };
   const tab = (t) => {
-    const cell = (td) => { const sh = td.querySelector('.shv'), s = sh ? mgTx(sh) : null; if (sh){ const cl = td.cloneNode(true); cl.querySelector('.shv').remove(); return { t: mgTx(cl), s }; } return { t: mgTx(td), s: null }; };
+    const cell = (td) => { const sh = td.querySelector('.shv'), dot = td.querySelector('.ydot'); let tx = '', s = null; if (sh){ const cl = td.cloneNode(true); cl.querySelector('.shv').remove(); tx = mgTx(cl); s = mgTx(sh); } else tx = mgTx(td); return { t: tx, s, bg: td.dataset.bg || null, bar: barOf(td), dot: dot ? dot.dataset.col || null : null }; };
     let head = [...t.querySelectorAll('thead th')].map(mgTx);
     let rows = [...t.querySelectorAll('tbody tr')].map(tr => [...tr.children].map(cell)), foot = t.querySelector('tfoot tr') ? [...t.querySelector('tfoot tr').children].map(cell) : null;
     if (rows.length === 1 && rows[0].length === 1 && head.length > 1) return { k: 'p', t: rows[0][0].t };
     for (let j = head.length - 1; j >= 0; j--){      // колонка «значення + частка»: ділимо на дві
       if (!rows.some(r => r[j] && r[j].s !== null)) continue;
       const hp = head[j].split(' · '); head.splice(j, 1, hp[0], hp[1] || 'Частка');
-      rows = rows.map(r => { if (r.length <= j) return r; const c = r[j]; r.splice(j, 1, { t: c.t, s: null }, { t: c.s || '', s: null }); return r; });
+      rows = rows.map(r => { if (r.length <= j) return r; const c = r[j]; r.splice(j, 1, { t: c.t, s: null, bg: c.bg, bar: c.bar, dot: c.dot }, { t: c.s || '', s: null, bg: null, bar: null, dot: null }); return r; });
       if (foot){ const c = foot[j]; foot.splice(j, 1, { t: c ? c.t : '', s: null }, { t: c && c.s ? c.s : '', s: null }); }
     }
-    return { k: 'tab', head, rows: rows.map(r => r.map(c => c.t)), foot: foot ? foot.map(c => c.t) : null };
+    return { k: 'tab', head, rows: rows.map(r => r.map(c => c.t)), meta: rows.map(r => r.map(c => ({ bg: c.bg, bar: c.bar, dot: c.dot }))), foot: foot ? foot.map(c => c.t) : null };
   };
   const walk = (el, out) => {
     for (const c of el.children){
-      const cl = c.classList;
-      if (c.tagName === 'H3' || c.tagName === 'SVG' || c.tagName === 'svg' || cl.contains('legend') || cl.contains('chips') || cl.contains('exonly')) continue;
+      const cl = c.classList, tg = c.tagName.toLowerCase();
+      if (tg === 'h3' || cl.contains('chips') || cl.contains('exonly')) continue;
+      if (tg === 'svg'){ if (c.dataset.sv) out.push({ k: 'img', id: c.dataset.sv, w: +(c.getAttribute('viewBox') || '0 0 420 0').split(/[\s,]+/)[2] }); continue; }
+      if (cl.contains('legend')){ const parts = [...c.children].map(x => ({ c: (x.querySelector('i') || {}).dataset ? x.querySelector('i').dataset.col || null : null, t: mgTx(x) })).filter(x => x.t); if (parts.length) out.push({ k: 'leg', parts }); continue; }
       if (cl.contains('mini')) out.push({ k: 'sub', t: mgTx(c) });
-      else if (c.tagName === 'TABLE'){ if (c.dataset.cap) out.push({ k: 'sub', t: c.dataset.cap }); out.push(tab(c)); }
-      else if (cl.contains('kpis')) out.push({ k: 'tab', head: ['Показник', 'Значення', 'Порівняння'], rows: [...c.querySelectorAll('.kpi')].map(k => { const l = mgTx(k.querySelector('.k-l')), v = mgTx(k.querySelector('.k-v')); return [l, v, mgTx(k).replace(l, '').replace(v, '').trim()]; }), foot: null });
+      else if (tg === 'table'){ if (c.dataset.cap) out.push({ k: 'sub', t: c.dataset.cap }); out.push(tab(c)); }
+      else if (cl.contains('kpis')) out.push({ k: 'cards', cols: cl.contains('k2') ? 2 : 4, cards: [...c.querySelectorAll('.kpi')].map(k => { const l = mgTx(k.querySelector('.k-l')), v = mgTx(k.querySelector('.k-v')); return { l, v, r: mgTx(k).replace(l, '').replace(v, '').trim() }; }) });
       else if (cl.contains('dn')){
-        const tv = mgTx(c.querySelector('.tv')), ts = mgTx(c.querySelector('.ts')); if (tv) out.push({ k: 'p', t: `Центр діаграми: ${tv}${ts ? ' ' + ts : ''}` });
-        const rows = [...c.querySelectorAll('.lg > div')].map(d => [[...d.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim(), mgTx(d.querySelector('b')), mgTx(d.querySelector('small'))]);
-        if (rows.length) out.push({ k: 'tab', head: ['Частина', 'Частка', 'Значення'], rows, foot: null });
+        const sv = c.querySelector('svg');
+        out.push({ k: 'donut', id: sv && sv.dataset.sv || null, rows: [...c.querySelectorAll('.lg > div')].map(d => ({ c: (d.querySelector('i') || {}).dataset ? d.querySelector('i').dataset.col || null : null, l: [...d.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim(), s: mgTx(d.querySelector('b')), v: mgTx(d.querySelector('small')) })) });
       }
       else if (c.style && c.style.gridTemplateColumns && gridN(c)){
-        const n = gridN(c), cells = [...c.children].map(mgTx), rows = []; for (let i = 0; i < cells.length; i += n) rows.push(cells.slice(i, i + n));
-        if (rows.length) out.push({ k: 'tab', head: rows[0].map((h, i) => h || (i ? '' : 'Показник')), rows: rows.slice(1), foot: null });
+        const n = gridN(c), kids = [...c.children], rows = []; for (let i = 0; i < kids.length; i += n) rows.push(kids.slice(i, i + n));
+        if (rows.length) out.push({ k: 'tab', head: rows[0].map((h, i) => mgTx(h) || (i ? '' : 'Показник')), rows: rows.slice(1).map(r => r.map(mgTx)), meta: rows.slice(1).map(r => r.map(x => ({ bg: x.dataset.bg || null, bar: null, dot: null }))), foot: null });
       }
-      else if (c.tagName === 'DETAILS') out.push({ k: 'p', t: mgTx(c) });
+      else if (tg === 'details') out.push({ k: 'p', t: mgTx(c) });
       else if (cl.contains('al')) { const d = c.querySelector(':scope > div'); out.push({ k: 'p', t: mgTx(d || c) }); }
-      else if (cl.contains('rule') || cl.contains('hint') || cl.contains('sc-e') || c.tagName === 'P') { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
+      else if (cl.contains('rule') || cl.contains('hint') || cl.contains('sc-e') || tg === 'p') { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
       else if (c.children.length && c.querySelector('table,.mini,.kpis,.dn,.al,details,svg,[style*="grid-template-columns"]')) walk(c, out);
-      else if (c.children.length) { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
-      else { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
+      else if (c.children.length || c.textContent.trim()) { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
     }
   };
   return [...body.querySelectorAll('.pane')].map(p => {
@@ -3796,78 +3821,139 @@ function mgMeta(){
 }
 const mgDl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
 const mgIsNum = (s) => /^[▲▼●]?\s*[−+-]?\d[\d\s]*([.,]\d+)?\s*(%|грн|дн\.?|тис\. грн)?$/.test(s) || s === '—';
+const mgDark = (h) => { const n = parseInt(h.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) < 140; };
 /* ── DOCX ── */
-function mgDocx(secs){
-  const M = mgMeta(), XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"', GREEN = '1E6B4F', RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+function mgDocx(secs, imgs){
+  const M = mgMeta(), XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', GREEN = '1E6B4F', RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships', FR = 'B8C4C1', GREY = '6B7B78';
+  const NS = `xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="${RT}" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"`;
+  const IM = [];
   const rPr = (o = {}) => `<w:rPr><w:rFonts w:ascii="Arsenal" w:hAnsi="Arsenal" w:cs="Arsenal" w:eastAsia="Arsenal"/>${o.b ? '<w:b/><w:bCs/>' : ''}<w:color w:val="${o.c || '000000'}"/><w:sz w:val="${o.sz || 20}"/><w:szCs w:val="${o.sz || 20}"/></w:rPr>`;
   const run = (t, o) => `<w:r>${rPr(o)}<w:t xml:space="preserve">${WX(t)}</w:t></w:r>`;
-  const par = (runs, o = {}) => `<w:p><w:pPr>${o.pb ? '<w:pageBreakBefore/>' : ''}${o.kn ? '<w:keepNext/>' : ''}${o.bdr ? `<w:pBdr><w:bottom w:val="single" w:sz="12" w:space="2" w:color="${GREEN}"/></w:pBdr>` : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after === undefined ? 60 : o.after}"/>${o.jc ? `<w:jc w:val="${o.jc}"/>` : ''}</w:pPr>${runs}</w:p>`;
-  const TW = 10206;   // 180 мм у twips (A4 − поля по 15 мм)
-  const tbl = (head, rows, foot) => {
-    const n = Math.max(head.length, ...rows.map(r => r.length), foot ? foot.length : 0), all = [head, ...rows, ...(foot ? [foot] : [])];
-    const wt = Array.from({ length: n }, (_, j) => Math.min(26, Math.max(6, ...all.map(r => (r[j] || '').length)))), sw = wt.reduce((s, x) => s + x, 0), W = wt.map(x => Math.floor(x / sw * TW));
-    const sz = n > 9 ? 14 : n > 6 ? 16 : 18;
-    const tc = (j, t, o = {}) => `<w:tc><w:tcPr><w:tcW w:w="${W[j]}" w:type="dxa"/>${o.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>` : ''}<w:tcBorders><w:bottom w:val="single" w:sz="4" w:space="0" w:color="${o.fill ? GREEN : 'C9D2D0'}"/>${o.top ? '<w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>' : ''}</w:tcBorders><w:vAlign w:val="center"/></w:tcPr>${par(run(t || '', { b: o.b, c: o.c, sz }), { after: 0, jc: o.r ? 'right' : (o.c ? 'center' : 'left') })}</w:tc>`;
-    const tr = (cells, h) => `<w:tr><w:trPr><w:cantSplit/>${h ? '<w:tblHeader/>' : ''}</w:trPr>${cells}</w:tr>`;
-    const hd = tr(Array.from({ length: n }, (_, j) => tc(j, head[j], { fill: GREEN, c: 'FFFFFF', b: 1 })).join(''), 1);
-    const bd = rows.map(r => tr(Array.from({ length: n }, (_, j) => tc(j, r[j], { r: j > 0 && mgIsNum(r[j] || '') })).join(''))).join('');
-    const ft = foot ? tr(Array.from({ length: n }, (_, j) => tc(j, foot[j], { b: 1, top: 1, r: j > 0 && mgIsNum(foot[j] || '') })).join('')) : '';
-    return `<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="30" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="30" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${W.map(x => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>${hd}${bd}${ft}</w:tbl>${par('', { after: 80 })}`;
+  const par = (runs, o = {}) => `<w:p><w:pPr>${o.pb ? '<w:pageBreakBefore/>' : ''}${o.kn ? '<w:keepNext/>' : ''}${o.bdr ? `<w:pBdr><w:bottom w:val="single" w:sz="${o.bdr === 2 ? 4 : 12}" w:space="2" w:color="${o.bdr === 2 ? FR : GREEN}"/></w:pBdr>` : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after === undefined ? 60 : o.after}"/>${o.jc ? `<w:jc w:val="${o.jc}"/>` : ''}</w:pPr>${runs}</w:p>`;
+  const pic = (id, wmm) => {
+    const im = imgs.get(String(id)); if (!im) return '';
+    const n = IM.length + 1, cx = Math.round(wmm * 36000), cy = Math.round(wmm * 36000 * im.h / im.w); IM.push({ n, bytes: im.bytes });
+    return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="Рисунок ${n}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${n}" name="Рисунок ${n}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdImg${n}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
   };
-  let doc = par(run('Управлінський звіт', { b: 1, sz: 40, c: GREEN }), { after: 40 }) + par(run(M.l2, { sz: 18, c: '6B7B78' }), { after: 20 }) + par(run('Сформовано: ' + M.stamp, { sz: 18, c: '6B7B78' }), { after: 160, bdr: 1 });
+  const TW = 10206, PAD = 140;   // 180 мм (A4 − поля по 15 мм); відступ усередині рамки блоку
+  const cell = (w, inner, o = {}) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>` : ''}<w:tcBorders>${o.bd || ''}</w:tcBorders>${o.mar ? `<w:tcMar><w:top w:w="${o.mar}" w:type="dxa"/><w:left w:w="${o.mar}" w:type="dxa"/><w:bottom w:w="${o.mar}" w:type="dxa"/><w:right w:w="${o.mar}" w:type="dxa"/></w:tcMar>` : ''}<w:vAlign w:val="${o.va || 'center'}"/></w:tcPr>${inner}</w:tc>`;
+  const tblx = (W, rows, o = {}) => `<w:tbl><w:tblPr><w:tblW w:w="${W.reduce((s, x) => s + x, 0)}" w:type="dxa"/><w:tblLayout w:type="fixed"/>${o.bd || ''}<w:tblCellMar><w:top w:w="30" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="30" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${W.map(x => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
+  const tr = (cells, o = {}) => `<w:tr><w:trPr>${o.split ? '' : '<w:cantSplit/>'}${o.h ? '<w:tblHeader/>' : ''}</w:trPr>${cells}</w:tr>`;
+  const tabX = (it, TWi) => {
+    const { head, rows, foot, meta } = it, n = Math.max(head.length, ...rows.map(r => r.length), foot ? foot.length : 0), all = [head, ...rows, ...(foot ? [foot] : [])];
+    const wt = Array.from({ length: n }, (_, j) => Math.min(26, Math.max(6, ...all.map(r => (r[j] || '').length)))), sw = wt.reduce((s, x) => s + x, 0), W = wt.map(x => Math.floor(x / sw * TWi));
+    const sz = n > 9 ? 14 : n > 6 ? 16 : 18, mx = (j) => Math.max(0, ...rows.map((r, i) => (meta && meta[i] && meta[i][j] && meta[i][j].bar) || 0));
+    const bdB = (c) => `<w:bottom w:val="single" w:sz="4" w:space="0" w:color="${c}"/>`;
+    const tc = (j, t, o = {}) => cell(W[j], par((o.dot ? run('● ', { c: o.dot.slice(1), sz }) : '') + run(t || '', { b: o.b, c: o.c, sz }) + (o.bar ? run(' ') : ''), { after: 0, jc: o.r ? 'right' : (o.ctr ? 'center' : 'left') }) + (o.bar ? par(run('█'.repeat(Math.max(1, Math.round(o.bar / 100 * Math.min(14, Math.max(4, Math.floor(W[j] / 150)))))), { c: GREEN, sz: 12 }), { after: 0, jc: o.r ? 'right' : 'left' }) : ''), { fill: o.fill, bd: (o.top ? '<w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>' : '') + (o.last ? '' : bdB(o.fill && o.hdr ? GREEN : 'C9D2D0')) });
+    const hd = tr(Array.from({ length: n }, (_, j) => tc(j, head[j], { fill: GREEN, c: 'FFFFFF', b: 1, ctr: j > 0, hdr: 1 })).join(''), { h: 1 });
+    const bd = rows.map((r, i) => tr(Array.from({ length: n }, (_, j) => { const m = (meta && meta[i] && meta[i][j]) || {}; return tc(j, r[j], { r: j > 0 && mgIsNum(r[j] || ''), fill: m.bg ? m.bg.slice(1).toUpperCase() : null, c: m.bg && mgDark(m.bg) ? 'FFFFFF' : null, ctr: m.bg ? 1 : 0, bar: m.bar, dot: m.dot, last: i === rows.length - 1 && !foot }); }).join(''))).join('');
+    const ft = foot ? tr(Array.from({ length: n }, (_, j) => tc(j, foot[j], { b: 1, top: 1, last: 1, r: j > 0 && mgIsNum(foot[j] || '') })).join('')) : '';
+    return tblx(W, hd + bd + ft) + par('', { after: 60 });
+  };
+  const itemX = (it, TWi) => {
+    if (it.k === 'p') return par(run(it.t, { sz: 18 }), { after: 80 });
+    if (it.k === 'tab') return tabX(it, TWi);
+    if (it.k === 'img') return par(pic(it.id, it.w > 300 ? 165 : 42), { after: 60 });
+    if (it.k === 'leg') return par(it.parts.map(p => (p.c ? run('■ ', { c: p.c.slice(1), sz: 18 }) : '') + run(p.t + '    ', { sz: 16, c: GREY })).join(''), { after: 60 });
+    if (it.k === 'cards'){
+      const cw = Math.floor(TWi / it.cols), W = Array(it.cols).fill(cw), bdc = `<w:top w:val="single" w:sz="12" w:space="0" w:color="FFFFFF"/><w:left w:val="single" w:sz="12" w:space="0" w:color="FFFFFF"/><w:bottom w:val="single" w:sz="12" w:space="0" w:color="FFFFFF"/><w:right w:val="single" w:sz="12" w:space="0" w:color="FFFFFF"/>`;
+      let rows = ''; for (let i = 0; i < it.cards.length; i += it.cols){
+        rows += tr(Array.from({ length: it.cols }, (_, j) => { const c = it.cards[i + j]; return cell(cw, c ? par(run(c.l.toUpperCase(), { sz: 13, c: GREY, b: 1 }), { after: 20 }) + par(run(c.v, { sz: 26, b: 1 }), { after: 20 }) + par(run(c.r, { sz: 14, c: GREY }), { after: 0 }) : par('', { after: 0 }), { fill: c ? 'E9EEEC' : null, bd: bdc, mar: 90, va: 'top' }); }).join(''));
+      }
+      return tblx(W, rows) + par('', { after: 80 });
+    }
+    if (it.k === 'donut'){
+      const L = [Math.floor(TWi * 0.3), TWi - Math.floor(TWi * 0.3)];
+      const leg = it.rows.map(r => par((r.c ? run('● ', { c: r.c.slice(1), sz: 20 }) : '') + run(r.l, { b: 1, sz: 18 }) + run('   ' + r.s, { b: 1, sz: 18, c: GREEN }) + (r.v ? run('   ' + r.v, { sz: 16, c: GREY }) : ''), { after: 70 })).join('');
+      return tblx(L, tr(cell(L[0], par(it.id ? pic(it.id, 42) : '', { after: 0 })) + cell(L[1], leg || par('', { after: 0 })))) + par('', { after: 60 });
+    }
+    return '';
+  };
+  let doc = par(run('Управлінський звіт', { b: 1, sz: 40, c: GREEN }), { after: 40 }) + par(run(M.l2, { sz: 18, c: GREY }), { after: 20 }) + par(run('Сформовано: ' + M.stamp, { sz: 18, c: GREY }), { after: 160, bdr: 1 });
+  const frame = `<w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="${FR}"/><w:left w:val="single" w:sz="6" w:space="0" w:color="${FR}"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="${FR}"/><w:right w:val="single" w:sz="6" w:space="0" w:color="${FR}"/></w:tblBorders>`;
+  const box = (items) => {   // блок у рамці: від «sub» до наступного «sub»
+    const TWi = TW - 2 * PAD - 60;
+    let inner = ''; items.forEach(it => { inner += it.k === 'sub' ? par(run(it.t.toUpperCase(), { b: 1, sz: 21, c: GREEN }), { after: 80, kn: 1, bdr: 2 }) : itemX(it, TWi); });
+    return tblx([TW], tr(cell(TW, inner + par('', { after: 0 }), { mar: PAD, va: 'top' }), { split: 1 }), { bd: frame }) + par('', { after: 200 });
+  };
   secs.forEach((s, si) => {
     s.blks.forEach((b, bi) => {
-      doc += par(run(b.title || s.name, { b: 1, sz: 34, c: GREEN }), { pb: si > 0 && bi === 0, before: bi ? 280 : 0, after: 100, kn: 1, bdr: 1 });
-      b.items.forEach(it => {
-        if (it.k === 'sub') doc += par(run(it.t.toUpperCase(), { b: 1, sz: 20 }), { before: 160, after: 60, kn: 1 });
-        else if (it.k === 'p') doc += par(run(it.t, { sz: 18 }), { after: 80 });
-        else doc += tbl(it.head, it.rows, it.foot);
-      });
+      doc += par(run(b.title || s.name, { b: 1, sz: 34, c: GREEN }), { pb: si > 0 && bi === 0, before: bi ? 280 : 0, after: 120, kn: 1, bdr: 1 });
+      let grp = null; const flush = () => { if (grp){ doc += box(grp); grp = null; } };
+      b.items.forEach(it => { if (it.k === 'sub'){ flush(); grp = [it]; } else if (grp) grp.push(it); else doc += itemX(it, TW); });
+      flush();
     });
   });
   const sect = `<w:sectPr><w:headerReference w:type="default" r:id="rId1"/><w:footerReference w:type="default" r:id="rId2"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1300" w:right="850" w:bottom="1000" w:left="850" w:header="450" w:footer="400" w:gutter="0"/></w:sectPr>`;
-  const hdr = `${XH}<w:hdr ${NS}>${par(run(M.l1, { b: 1, sz: 18, c: GREEN }) + run('   ·   ' + M.l2.replace(/^Вибірка: /, ''), { sz: 15, c: '6B7B78' }) + run('   ·   Сформовано ' + M.stamp, { sz: 15, c: '6B7B78' }), { after: 0, bdr: 1 })}</w:hdr>`;
-  const fld = (ins) => `<w:fldSimple w:instr="${ins}"><w:r>${rPr({ sz: 15, c: '6B7B78' })}<w:t>1</w:t></w:r></w:fldSimple>`;
-  const ftr = `${XH}<w:ftr ${NS}><w:p><w:pPr><w:jc w:val="right"/></w:pPr>${run('Сторінка ', { sz: 15, c: '6B7B78' })}${fld(' PAGE ')}${run(' з ', { sz: 15, c: '6B7B78' })}${fld(' NUMPAGES ')}</w:p></w:ftr>`;
+  const hdr = `${XH}<w:hdr ${NS}>${par(run(M.l1, { b: 1, sz: 18, c: GREEN }) + run('   ·   ' + M.l2.replace(/^Вибірка: /, ''), { sz: 15, c: GREY }) + run('   ·   Сформовано ' + M.stamp, { sz: 15, c: GREY }), { after: 0, bdr: 1 })}</w:hdr>`;
+  const fld = (ins) => `<w:fldSimple w:instr="${ins}"><w:r>${rPr({ sz: 15, c: GREY })}<w:t>1</w:t></w:r></w:fldSimple>`;
+  const ftr = `${XH}<w:ftr ${NS}><w:p><w:pPr><w:jc w:val="right"/></w:pPr>${run('Сторінка ', { sz: 15, c: GREY })}${fld(' PAGE ')}${run(' з ', { sz: 15, c: GREY })}${fld(' NUMPAGES ')}</w:p></w:ftr>`;
   const files = [
-    ['[Content_Types].xml', `${XH}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`],
+    ['[Content_Types].xml', `${XH}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`],
     ['_rels/.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/officeDocument" Target="word/document.xml"/></Relationships>`],
-    ['word/_rels/document.xml.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/header" Target="header1.xml"/><Relationship Id="rId2" Type="${RT}/footer" Target="footer1.xml"/></Relationships>`],
-    ['word/document.xml', `${XH}<w:document ${NS}><w:body>${doc}${sect}</w:body></w:document>`], ['word/header1.xml', hdr], ['word/footer1.xml', ftr]
+    ['word/_rels/document.xml.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/header" Target="header1.xml"/><Relationship Id="rId2" Type="${RT}/footer" Target="footer1.xml"/>${IM.map(m => `<Relationship Id="rIdImg${m.n}" Type="${RT}/image" Target="media/image${m.n}.png"/>`).join('')}</Relationships>`],
+    ['word/document.xml', `${XH}<w:document ${NS}><w:body>${doc}${sect}</w:body></w:document>`], ['word/header1.xml', hdr], ['word/footer1.xml', ftr],
+    ...IM.map(m => [`word/media/image${m.n}.png`, m.bytes])
   ];
   return zipStore(files, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
 /* ── XLSX ── */
-function mgXlsx(secs){
+function mgXlsx(secs, imgs){
   const M = mgMeta(), XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships', GREEN = 'FF1E6B4F';
   const L = (i) => { let s = ''; i++; while (i > 0){ const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
-  const S = { def: 0, title: 1, sub: 2, head: 3, txt: 4, num: 5, pct: 6, ftxt: 7, fnum: 8, par: 9, meta: 10, fpct: 11 };
-  const toNum = (s) => { const t = String(s).replace(/[\s ]/g, '').replace('−', '-').replace(',', '.'); if (/^-?\d+(\.\d+)?$/.test(t)) return { v: +t, p: 0 }; const m = t.match(/^(-?\d+(?:\.\d+)?)%$/); return m ? { v: +m[1] / 100, p: 1 } : null; };
-  const used = new Set();
-  const sheets = secs.map(s => {
+  const S = { def: 0, title: 1, sub: 2, head: 3, txt: 4, num: 5, pct: 6, ftxt: 7, fnum: 8, par: 9, meta: 10, fpct: 11, h1: 12, card: 13, cardv: 14 };
+  const toNum = (s) => { const t = String(s).replace(/[\s ]/g, '').replace('−', '-').replace(',', '.'); if (/^-?\d+(\.\d+)?$/.test(t)) return { v: +t, p: 0 }; const m = t.match(/^(-?\d+(?:\.\d+)?)%$/); return m ? { v: +(+m[1] / 100).toFixed(6), p: 1 } : null; };
+  const fills = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>', `<fill><patternFill patternType="solid"><fgColor rgb="${GREEN}"/><bgColor indexed="64"/></patternFill></fill>`, '<fill><patternFill patternType="solid"><fgColor rgb="FFE9EEEC"/><bgColor indexed="64"/></patternFill></fill>'];
+  const font = (o) => `<font>${o.b ? '<b/>' : ''}<sz val="${o.sz || 10}"/><color rgb="${o.c || 'FF000000'}"/><name val="Arsenal"/></font>`;
+  const fonts = [font({}), font({ b: 1, sz: 14, c: GREEN }), font({ b: 1 }), font({ b: 1, c: 'FFFFFFFF' }), font({ sz: 9, c: 'FF6B7B78' }), font({ b: 1, sz: 18, c: GREEN }), font({ c: 'FFFFFFFF' }), font({ b: 1, sz: 13 })];
+  const xf = (f, fill, bo, nf, al) => `<xf numFmtId="${nf || 0}" fontId="${f}" fillId="${fill || 0}" borderId="${bo || 0}" xfId="0" applyFont="1"${fill ? ' applyFill="1"' : ''}${bo ? ' applyBorder="1"' : ''}${nf ? ' applyNumberFormat="1"' : ''} applyAlignment="1"><alignment ${al || 'vertical="center"'}/></xf>`;
+  const xfs = [xf(0), xf(1), xf(2), xf(3, 2, 0, 0, 'horizontal="center" vertical="center" wrapText="1"'), xf(0, 0, 1), xf(0, 0, 1, 3, 'horizontal="right" vertical="center"'), xf(0, 0, 1, 164, 'horizontal="right" vertical="center"'), xf(2, 0, 2), xf(2, 0, 2, 3, 'horizontal="right" vertical="center"'), xf(0), xf(4), xf(2, 0, 2, 164, 'horizontal="right" vertical="center"'), xf(5), xf(4, 3, 0, 0, 'vertical="top"'), xf(7, 3, 0, 0, 'vertical="top"')];
+  const dyn = new Map();   // колір комірки (теплова карта) → стиль
+  const sx = (base, bg) => { if (!bg) return base; const k = base + bg; if (dyn.has(k)) return dyn.get(k); const rgb = 'FF' + bg.slice(1).toUpperCase(); fills.push(`<fill><patternFill patternType="solid"><fgColor rgb="${rgb}"/><bgColor indexed="64"/></patternFill></fill>`); const f = mgDark(bg) ? 6 : 0, nf = base === S.num ? 3 : base === S.pct ? 164 : 0; xfs.push(xf(f, fills.length - 1, 1, nf, base === S.txt ? 'horizontal="center" vertical="center"' : 'horizontal="right" vertical="center"')); dyn.set(k, xfs.length - 1); return xfs.length - 1; };
+  const used = new Set(), MED = [];   // MED: {sheet, n, bytes}
+  const sheets = secs.map((s, si) => {
     let nm = s.name.replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31) || 'Аркуш'; while (used.has(nm.toLowerCase())) nm += '_'; used.add(nm.toLowerCase());
-    const rows = [], wid = []; let r = 0;
+    const rows = [], wid = [], cf = [], anchors = []; let r = 0;
     const put = (col, st, val, kind) => { (rows[r] = rows[r] || []).push({ col, st, val, kind }); };
     const T = (col, st, t) => put(col, st, t, 's'), N = (col, st, v) => put(col, st, v, 'n'), F = (col, st, f, v) => put(col, st, { f, v }, 'f');
     const grow = (col, t) => { wid[col] = Math.max(wid[col] || 0, Math.min(42, String(t).length + 2)); };
-    T(0, S.title, 'Управлінський звіт · ' + s.name); r++; T(0, S.meta, M.l2); r++; T(0, S.meta, 'Сформовано: ' + M.stamp); r += 2;
+    T(0, S.h1, 'Управлінський звіт · ' + s.name); r++; T(0, S.meta, M.l2); r++; T(0, S.meta, 'Сформовано: ' + M.stamp); r += 2;
     s.blks.forEach(b => {
-      T(0, S.sub, b.title || s.name); r += 2;
+      T(0, S.title, b.title || s.name); r += 2;
       b.items.forEach(it => {
         if (it.k === 'sub'){ T(0, S.sub, it.t.toUpperCase()); r++; }
         else if (it.k === 'p'){ T(0, S.par, it.t); r++; }
-        else {
+        else if (it.k === 'leg'){ T(0, S.meta, it.parts.map(p => (p.c ? '■ ' : '') + p.t).join('    ')); r++; }
+        else if (it.k === 'img' || it.k === 'donut' && it.id){
+          const im = imgs.get(String(it.id)); if (im){ const wpx = (it.k === 'donut' || im.w <= 300) ? 150 : 600, hpx = Math.round(wpx * im.h / im.w); const n = MED.length + 1; MED.push({ si, n, bytes: im.bytes }); anchors.push({ n, row: r, wpx, hpx }); if (it.k === 'donut'){ it.rows.forEach((d, i) => { T(3, S.txt, d.l); T(4, S.txt, d.s); T(5, S.txt, d.v); r++; }); r = Math.max(r, anchors[anchors.length - 1].row + Math.ceil(hpx / 20) + 1); } else r += Math.ceil(hpx / 20) + 1; }
+          else if (it.k === 'donut'){ it.rows.forEach(d => { T(0, S.txt, d.l); T(1, S.txt, d.s); T(2, S.txt, d.v); r++; }); }
+          r++;
+        }
+        else if (it.k === 'cards'){
+          const nc = it.cols === 4 ? 4 : 2, cw = 2;   // кожна картка — 2 стовпці завширшки; текст у лівому
+          for (let i = 0; i < it.cards.length; i += nc){
+            for (let j = 0; j < nc; j++){ const c = it.cards[i + j]; if (!c) continue; const col = j * 2; T(col, S.card, c.l); T(col + 1, S.card, ''); }
+            r++;
+            for (let j = 0; j < nc; j++){ const c = it.cards[i + j]; if (!c) continue; const col = j * 2; T(col, S.cardv, c.v); T(col + 1, S.cardv, ''); }
+            r++;
+            for (let j = 0; j < nc; j++){ const c = it.cards[i + j]; if (!c) continue; const col = j * 2; T(col, S.card, c.r); T(col + 1, S.card, ''); }
+            r += 2;
+          }
+        }
+        else if (it.k === 'tab') {
           it.head.forEach((h, j) => { T(j, S.head, h); grow(j, h); }); r++;
-          const first = r + 1;                                   // номер першого рядка даних (1-based)
+          const first = r + 1;
           const numCol = it.head.map((_, j) => it.rows.length && it.rows.every(row => toNum(row[j] === undefined ? '' : row[j]) && !toNum(row[j]).p));
-          it.rows.forEach(row => { it.head.forEach((_, j) => { const t = row[j] === undefined ? '' : row[j], n = j > 0 ? toNum(t) : null; if (n) N(j, n.p ? S.pct : S.num, n.v); else T(j, S.txt, t); grow(j, t); }); r++; });
+          const barCols = new Set();
+          it.rows.forEach((row, i) => { it.head.forEach((_, j) => { const t = row[j] === undefined ? '' : row[j], m = (it.meta && it.meta[i] && it.meta[i][j]) || {}, n = (j > 0 || m.bg) ? toNum(t) : null; if (m.bar !== null && m.bar !== undefined) barCols.add(j); if (n) N(j, sx(n.p ? S.pct : S.num, m.bg), n.v); else T(j, sx(S.txt, m.bg), (m.dot ? '● ' : '') + t); grow(j, t); }); r++; });
+          const last = r;
           if (it.foot){
-            const last = r;                                      // останній рядок даних (1-based) = r
             it.head.forEach((_, j) => { const t = it.foot[j] === undefined ? '' : it.foot[j], n = j > 0 ? toNum(t) : null;
               if (n && !n.p && numCol[j]) F(j, S.fnum, `SUM(${L(j)}${first}:${L(j)}${last})`, n.v);
               else if (n) N(j, n.p ? S.fpct : S.fnum, n.v); else T(j, S.ftxt, t); });
             r++;
           }
+          barCols.forEach(j => { if (last >= first) cf.push(`<conditionalFormatting sqref="${L(j)}${first}:${L(j)}${last}"><cfRule type="dataBar" priority="${cf.length + 1}"><dataBar><cfvo type="num" val="0"/><cfvo type="max"/><color rgb="FF8FB8A6"/></dataBar></cfRule></conditionalFormatting>`); });
           r++;
         }
       });
@@ -3876,29 +3962,32 @@ function mgXlsx(secs){
     const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const data = rows.map((cells, i) => cells ? `<row r="${i + 1}">${cells.sort((a, b) => a.col - b.col).map(c => { const ref = L(c.col) + (i + 1); return c.kind === 'n' ? `<c r="${ref}" s="${c.st}"><v>${c.val}</v></c>` : c.kind === 'f' ? `<c r="${ref}" s="${c.st}"><f>${c.val.f}</f><v>${c.val.v}</v></c>` : `<c r="${ref}" s="${c.st}" t="inlineStr"><is><t xml:space="preserve">${esc(c.val)}</t></is></c>`; }).join('')}</row>` : '').join('');
     const cols = `<cols>${Array.from({ length: Math.max(1, wid.length) }, (_, j) => `<col min="${j + 1}" max="${j + 1}" width="${j === 0 ? Math.max(24, wid[0] || 24) : Math.max(10, wid[j] || 10)}" customWidth="1"/>`).join('')}</cols>`;
-    return { nm, xml: `${XH}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView showGridLines="0" workbookViewId="0"/></sheetViews>${cols}<sheetData>${data}</sheetData></worksheet>` };
+    const dr = anchors.length ? '<drawing r:id="rId1"/>' : '';
+    const drawing = anchors.length ? `${XH}<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${RT}">${anchors.map((a, i) => `<xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${a.row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${a.wpx * 9525}" cy="${a.hpx * 9525}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${i + 2}" name="Рисунок ${a.n}"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${i + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${a.wpx * 9525}" cy="${a.hpx * 9525}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`).join('')}</xdr:wsDr>` : null;
+    return { nm, anchors, drawing, xml: `${XH}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${RT}"><sheetViews><sheetView showGridLines="0" workbookViewId="0"/></sheetViews>${cols}<sheetData>${data}</sheetData>${cf.join('')}${dr}</worksheet>` };
   });
-  const font = (o) => `<font>${o.b ? '<b/>' : ''}<sz val="${o.sz || 10}"/><color rgb="${o.c || 'FF000000'}"/><name val="Arsenal"/></font>`;
-  const fonts = [font({}), font({ b: 1, sz: 14, c: GREEN }), font({ b: 1 }), font({ b: 1, c: 'FFFFFFFF' }), font({ sz: 9, c: 'FF6B7B78' })];
   const bdr = '<border><left/><right/><top/><bottom style="thin"><color rgb="FFC9D2D0"/></bottom><diagonal/></border>', bdrF = '<border><left/><right/><top style="medium"><color rgb="FF000000"/></top><bottom/><diagonal/></border>';
-  const xf = (f, fill, bo, nf, al) => `<xf numFmtId="${nf || 0}" fontId="${f}" fillId="${fill || 0}" borderId="${bo || 0}" xfId="0" applyFont="1"${fill ? ' applyFill="1"' : ''}${bo ? ' applyBorder="1"' : ''}${nf ? ' applyNumberFormat="1"' : ''} applyAlignment="1"><alignment ${al || 'vertical="center"'}/></xf>`;
-  const xfs = [xf(0), xf(1), xf(2), xf(3, 2, 0, 0, 'horizontal="center" vertical="center" wrapText="1"'), xf(0, 0, 1), xf(0, 0, 1, 3, 'horizontal="right" vertical="center"'), xf(0, 0, 1, 164, 'horizontal="right" vertical="center"'), xf(2, 0, 2), xf(2, 0, 2, 3, 'horizontal="right" vertical="center"'), xf(0), xf(4), xf(2, 0, 2, 164, 'horizontal="right" vertical="center"')];
-  const styles = `${XH}<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.0%"/></numFmts><fonts count="${fonts.length}">${fonts.join('')}</fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="${GREEN}"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border>${bdr}${bdrF}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs></styleSheet>`;
+  const styles = `${XH}<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.0%"/></numFmts><fonts count="${fonts.length}">${fonts.join('')}</fonts><fills count="${fills.length}">${fills.join('')}</fills><borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border>${bdr}${bdrF}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs></styleSheet>`;
+  const withDr = sheets.map((s, i) => s.drawing ? i : -1).filter(i => i >= 0);
   const files = [
-    ['[Content_Types].xml', `${XH}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+    ['[Content_Types].xml', `${XH}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}${withDr.map(i => `<Override PartName="/xl/drawings/drawing${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`).join('')}</Types>`],
     ['_rels/.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
     ['xl/workbook.xml', `${XH}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${RT}"><sheets>${sheets.map((s, i) => `<sheet name="${WX(s.nm)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets><calcPr fullCalcOnLoad="1"/></workbook>`],
     ['xl/_rels/workbook.xml.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="${RT}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="${RT}/styles" Target="styles.xml"/></Relationships>`],
-    ['xl/styles.xml', styles], ...sheets.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, s.xml])
+    ['xl/styles.xml', styles], ...sheets.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, s.xml]),
+    ...withDr.flatMap(i => [[`xl/worksheets/_rels/sheet${i + 1}.xml.rels`, `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/drawing" Target="../drawings/drawing${i + 1}.xml"/></Relationships>`], [`xl/drawings/drawing${i + 1}.xml`, sheets[i].drawing], [`xl/drawings/_rels/drawing${i + 1}.xml.rels`, `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets[i].anchors.map((a, k) => `<Relationship Id="rId${k + 1}" Type="${RT}/image" Target="../media/image${a.n}.png"/>`).join('')}</Relationships>`]]),
+    ...MED.map(m => [`xl/media/image${m.n}.png`, m.bytes])
   ];
   return zipStore(files, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
-function mgExportFile(kind){
+async function mgExportFile(kind){
   if (!mg.cache || !mg.X) return toast('i', 'Спершу покажіть звіт', 'Експортується те, що відображено на екрані.');
+  const live = $('mgBody');
   try {
-    const secs = mgScrape(mgExportBody()), name = mgFileBase();
-    if (kind === 'doc') mgDl(mgDocx(secs), name + '.docx'); else mgDl(mgXlsx(secs), name + '.xlsx');
+    const imgs = await mgRaster(live), secs = mgScrape(mgExportBody()), name = mgFileBase();
+    if (kind === 'doc') mgDl(mgDocx(secs, imgs), name + '.docx'); else mgDl(mgXlsx(secs, imgs), name + '.xlsx');
   } catch (e){ console.error(e); toast('e', 'Не вдалося сформувати файл', 'Спробуйте ще раз або скористайтесь PDF.'); }
+  finally { mgUntag(live); }
 }
 
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
@@ -4047,7 +4136,7 @@ const crc32 = (u) => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c 
 function zipStore(files, type){
   const enc = new TextEncoder(), chunks = [], cd = []; let off = 0;
   for (const [name, text] of files){
-    const nm = enc.encode(name), data = enc.encode(text), crc = crc32(data), lh = new DataView(new ArrayBuffer(30)), ch = new DataView(new ArrayBuffer(46));
+    const nm = enc.encode(name), data = typeof text === 'string' ? enc.encode(text) : text, crc = crc32(data), lh = new DataView(new ArrayBuffer(30)), ch = new DataView(new ArrayBuffer(46));
     lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, nm.length, true);
     ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
     chunks.push(new Uint8Array(lh.buffer), nm, data); cd.push(new Uint8Array(ch.buffer), nm); off += 30 + nm.length + data.length;
