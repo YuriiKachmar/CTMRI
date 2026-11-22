@@ -3644,7 +3644,11 @@ function mgExportPdf(){
     const tb = w.querySelector('tbody'); if (tb && tb.rows.length > 18) w.classList.add('splittable');
   };
   body.querySelectorAll('.exonly,.two').forEach(e => e.replaceWith(...e.childNodes));
-  [...body.querySelectorAll('.mini')].forEach(keepWith);
+  /* кожен підблок («.mini» і все після нього до наступного «.mini») — у рамку: візуально відокремлений блок.
+     Елемент, у якому вже є свої «.mini», рамку не продовжує; сама «самотня» «.mini» лишається заголовком (keepWith); пояснення «.hint/.rule» одразу після рамки — всередину неї */
+  new Set([...body.querySelectorAll('.mini')].map(m => m.parentNode)).forEach(p => { let g = null; [...p.childNodes].forEach(ch => { if (ch.nodeType === 1 && ch.classList.contains('mini')){ g = document.createElement('div'); g.className = 'bx'; p.insertBefore(g, ch); } else if (ch.nodeType === 1 && ch.querySelector('.mini')) g = null; if (g) g.appendChild(ch); }); });
+  body.querySelectorAll('.bx').forEach(g => { if (g.children.length === 1){ const m = g.firstElementChild; g.replaceWith(m); keepWith(m); } });
+  body.querySelectorAll('.hint,.rule').forEach(h => { const pv = h.previousElementSibling; if (!pv || pv.closest('.bx') && !pv.matches('.bx')) return; const g = pv.matches('.bx') ? pv : (pv.lastElementChild && pv.lastElementChild.matches('.bx') ? pv.lastElementChild : null); if (g) g.appendChild(h); });
   [...body.querySelectorAll('.blk>h3')].forEach(keepWith);
   const stamp = `${p2(t.getDate())}.${p2(t.getMonth() + 1)}.${t.getFullYear()} ${p2(t.getHours())}:${p2(t.getMinutes())}`;
   /* верхній колонтитул — у <thead> зовнішньої таблиці: повторюється на кожній сторінці (і в Chromium, і в Safari) */
@@ -3665,6 +3669,7 @@ function mgExportPdf(){
     .mg .blk{margin:0 0 16px;padding:12px 0 0;border-top:3px solid var(--green)}
     .mg .blk.cont{border-top:0;padding-top:0}
     .mg .blk h3{font-size:17pt!important;line-height:1.2;margin:0 0 10px;color:var(--green)}
+    .bx{border:1px solid #b8c4c1;border-radius:8px;padding:8px 10px 3px;margin:0 0 14px;background:#fbfcfc}.bx.cont{border-top-style:dashed}.bx>.mini:first-child{margin-top:0}
     .mg .mini{font-size:10.5pt!important;font-weight:800;margin:12px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--rule)}`;
   const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><div id="src" class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div><div id="out" class="mg"></div></body></html>`;
   const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
@@ -3708,7 +3713,7 @@ function mgPaginate(d, head){
               cur.parentNode.removeChild(cur); if (!sh.children.length) sh.remove();
               pc = newPage(); sh = shellOf(true); sh.appendChild(cur);
             } else if (!empty){
-              const cl = cur.cloneNode(true); cl.querySelectorAll('h3,.mini').forEach(x => x.remove()); const ct = cl.querySelectorAll('tbody')[bi]; [...ct.rows].forEach(x => x.remove());
+              const src2 = tb.closest('.tw') || tb.closest('table'), cl = d.createElement('div'); cl.className = 'bx cont'; const tc = src2.cloneNode(true); cl.appendChild(tc); const ct = tc.querySelector('tbody'); [...ct.rows].forEach(x => x.remove());
               pc = newPage(); sh = shellOf(true); sh.appendChild(cl); cur = cl; tb = ct;
             }
             tb.appendChild(r);
