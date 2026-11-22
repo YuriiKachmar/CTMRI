@@ -1135,6 +1135,27 @@ const canEditDirs = () => ['Керівник', 'Адміністратор'].inc
 /* Довідники: повне читання — раз на добу й при першому вході; між тим — лише змінені документи (updatedAt ≥ синхр. − 2 хв) із кешу IndexedDB.
    Працівники (права, статуси) — завжди повністю. Невеликі за обсягом, але читаються при кожному відкритті програми, тому кеш економить сотні читань. */
 const DIR_VER = 1, DIR_FULL_MS = 24 * 3600e3;
+/* Підтягування змін довідників під час сесії (змінив інший користувач): при відкритті вікна довідника й форми візиту; не частіше раз на хвилину.
+   Читає лише змінені документи (updatedAt ≥ останньої синхр. − 2 хв); працівників не чіпає (вони оновлюються при вході). */
+let dirSyncT = 0, dirBusy = null;
+function refreshDirs(){
+  if (dirBusy) return dirBusy;
+  if (!dirSyncT || Date.now() - dirSyncT < 60000 || !navigator.onLine) return Promise.resolve(false);
+  dirBusy = (async () => {
+    const t0 = Date.now(), since = new Date(dirSyncT - 120000), ks = Object.keys(COL).filter(k => k !== 'workers');
+    let ok = true, changed = false;
+    await Promise.all(ks.map(async (k) => {
+      try {
+        const snap = await getDocs(query(collection(db, COL[k]), where('updatedAt', '>=', since)));
+        snap.docs.forEach(d => { const r = mgRec(d), i = dir[k].findIndex(x => x.id === r.id); if (i >= 0) dir[k][i] = r; else dir[k].push(r); changed = true; });
+      } catch (e){ ok = false; }
+    }));
+    if (ok) dirSyncT = t0;
+    if (changed) rerenderWins();
+    return changed;
+  })().finally(() => { dirBusy = null; });
+  return dirBusy;
+}
 async function loadDirs(){
   const failed = [], t0 = Date.now(), meta = await mgKvGet('dirmeta'), fresh = {};
   const inc = !!meta && meta.ver === DIR_VER && Number.isFinite(meta.sync) && Number.isFinite(meta.full) && t0 - meta.full < DIR_FULL_MS && t0 >= meta.sync;
@@ -1155,6 +1176,7 @@ async function loadDirs(){
     } catch (e){ console.warn('dir', COL[k], e.code); failed.push(COL[k] + (e.code ? ' (' + e.code + ')' : '')); }
   }));
   if (failed.length){ const err = new Error('dirs'); err.failed = failed; throw err; }
+  dirSyncT = t0;
   (async () => { for (const k of Object.keys(fresh)) await mgKvSet('dir:' + k, fresh[k]); await mgKvSet('dirmeta', { ver: DIR_VER, sync: t0, full: inc ? meta.full : t0 }); })().catch(() => {});
 }
 
@@ -1239,6 +1261,7 @@ const penCell = (attr) => `<td>${canEditDirs() ? `<span class="pen" ${attr}>✎<
 const emptyRow = (cols, text) => `<tr><td colspan="${cols}" style="padding:16px 10px"><div class="al al-i" style="display:inline-flex;text-align:left;max-width:300px;margin:0"><span class="al-icon">i</span><div><b>Тут поки нічого немає</b>${esc(text)}</div></div></td></tr>`;
 
 function listWin(title, footerHtml, renderBody, width){
+  refreshDirs();   // довідник міг змінити інший користувач
   const ov = openWin(`<div class="win-h"><h4>${esc(title)}</h4><button class="win-x" data-x>✕</button></div><div class="win-b" data-body></div><div class="win-f">${footerHtml}</div>`, width);
   ov._render = () => { ov.querySelector('[data-body]').innerHTML = renderBody(); };
   ov._render();
@@ -4960,7 +4983,8 @@ async function loadVisitState(visitId){
     }))
   };
 }
-function openVisitForm(visitId){
+async function openVisitForm(visitId){
+  await Promise.race([refreshDirs().catch(() => {}), new Promise(r => setTimeout(r, 1500))]);   // свіжі послуги/пільги/лікарі від інших користувачів
   if (visitId){
     loadVisitState(visitId).then(vs => { if (vs) visitWin(vs); else toast('e', 'Візит не знайдено', 'Можливо, його вже видалили.'); })
       .catch(e => toast('e', 'Не вдалося відкрити візит', e.code || ''));
