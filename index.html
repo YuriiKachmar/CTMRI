@@ -831,7 +831,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 22.11.2026 · Управлінський звіт: усі розділи крім «Апарат»</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 22.11.2026 · Управлінський звіт: усі розділи</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -3129,7 +3129,7 @@ const mgN = (n) => Math.round(Number(n) || 0).toLocaleString('uk-UA');
 const MG_TABS = [['ov', '📋', 'Огляд', 'Результат і сигнали'], ['src', '🧭', 'Джерела', 'Звідки пацієнти'], ['dev', '🩻', 'Апарат', 'Завантаження, слоти'], ['inc', '💰', 'Дохід і пільги', 'Послуги, знижки'],
   ['mon', '💳', 'Гроші', 'Оплата, борги'], ['wrk', '👥', 'Працівники', 'Лаборанти, лікарі'], ['trd', '📈', 'Тенденції', '12 місяців'], ['sea', '🗓', 'Сезонність', 'Піки по місяцях']];
 const MG_MS = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
-const MG_TH = { unpaid30: .20, conc: .60, disc: .15, chk: .05, share: .05, visits: .10 };   // пороги сигналів (початкові пропозиції; змінює керівник — пізніше)
+const MG_TH = { unpaid30: .20, conc: .60, disc: .15, chk: .05, share: .05, visits: .10, devLo: .50, devHi: .95 };   // пороги сигналів (початкові пропозиції; змінює керівник — пізніше)
 const mg = { ps: null, tab: 'ov', og: 'm', sf: 'all', cache: null, loading: false, err: null, th: null, thm: '' };
 const mgDim = (y, m) => new Date(y, m + 1, 0).getDate();
 const mgML = (m) => MON_NAME[m].toLowerCase();
@@ -3238,7 +3238,81 @@ function mgDraw(){
   mgOv(X);
   mgSrcTab(X);
   mgIncTab(X); if (MGT.some(t => t[0] === 'mon')) mgMonTab(X); mgWrkTab(X); mgTrdTab(X); mgSeaTab(X);
-  { const t = MG_TABS.find(x => x[0] === 'dev'); $('mgP_dev').innerHTML = `<section class="blk noexp"><h3>${t[2]} · ${esc(P.nm)}</h3><div class="al al-i"><span class="al-icon">i</span><div><b class="al-t">Розділ у розробці</b>Потребує нових полів (тривалість послуги, пауза між дослідженнями) — наступним етапом.</div></div></section>`; }
+  mgDevTab(X);
+}
+/* ── «Апарат»: завантаження за тривалістю послуг і паузою між дослідженнями ──
+   Потужність дня = робочі хвилини за графіком закладу (settings.schedule; «доба» = 1440; вихідний = 0).
+   Зайнято = Σ (тривалість послуги + пауза) за дослідженнями з відомою тривалістю (serviceSnapshot.duration; старі візити без неї — не враховуються).
+   Розрахунок — для одного апарата (позначки типу обладнання в довіднику немає). Дослідження у вихідні дні графіка в завантаження не входять. */
+const mgHM = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
+function mgDevCap(){   // хвилини роботи за днем тижня (Пн = 0)
+  const sc = settings?.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
+  return Array.from({ length: 7 }, (_, i) => { const d = sc[i]; if (!d || d.off) return 0; if (d.full) return 1440; const a = mgHM(d.from), b = mgHM(d.to); if (a === null || b === null) return 0; return b > a ? b - a : b === a ? 1440 : b + 1440 - a; });
+}
+function mgDevCalc(rs, a, b){
+  const td = todayISO(), e = b < td ? b : td, cap = mgDevCap(), pz = studyPause();
+  const days = new Map();   // дата → { wd, cap, n, nd, used, v }
+  for (let d = a; d <= e; d = addDays(d, 1)){ const wd = (new Date(d + 'T00:00:00').getDay() + 6) % 7; days.set(d, { d, wd, cap: cap[wd], n: 0, nd: 0, used: 0, v: 0 }); }
+  const o = { days, cap: 0, used: 0, n: 0, nd: 0, off: 0, after: 0, wd: Array.from({ length: 7 }, () => ({ days: 0, n: 0, used: 0, cap: 0 })), hh: Array.from({ length: 7 }, () => new Map()), pz };
+  for (const r of rs){
+    const D = days.get(r.date); if (!D) continue;
+    if (!D.cap){ o.off++; continue; }
+    const du = Number(r.serviceSnapshot?.duration);
+    D.n++; o.n++; o.after += Number(r.totalAmount) || 0;
+    const h = mgHM(r.time); if (h !== null){ const m = o.hh[D.wd]; const k = Math.floor(h / 60); m.set(k, (m.get(k) || 0) + 1); }
+    if (Number.isInteger(du) && du > 0){ D.nd++; o.nd++; D.used += du + pz; o.used += du + pz; }
+  }
+  for (const D of days.values()){ if (!D.cap) continue; o.cap += D.cap; const w = o.wd[D.wd]; w.days++; w.n += D.n; w.used += D.used; w.cap += D.cap; }
+  o.wdays = [...days.values()].filter(D => D.cap).length;
+  o.load = o.nd && o.cap ? o.used / o.cap : null;
+  o.avg = o.nd ? o.used / o.nd : null;
+  o.free = o.avg ? Math.max(0, Math.floor((o.cap - o.used) / o.avg)) : null;
+  o.chk = o.n ? o.after / o.n : null;
+  return o;
+}
+function mgDevTab(X){
+  const P = X.P, el = $('mgP_dev'), money = X.money, noc = X.nocmp, A = mgDevCalc(X.cur, P.a, P.b), B = noc ? null : mgDevCalc(X.prv, P.ca, P.cb);
+  const ttl = `<h3>Апарат · ${esc(P.nm)} <span class="sub">завантаження</span></h3>`;
+  if (!A.wdays || !A.n){ el.innerHTML = `<section class="blk">${ttl}<div class="sc-e">${!A.wdays ? 'У періоді немає робочих днів за графіком закладу (Налаштування → графік).' : 'За цей період досліджень у робочі дні немає.'}</div></section>`; return; }
+  const pc = (x) => x === null ? '—' : String(Math.round(x * 1000) / 10).replace('.', ',') + ' %', h1 = (m) => String(Math.round(m / 6) / 10).replace('.', ',');
+  const kp = (l, v, sub, cv, pv, up) => `<div class="kpi"><div class="k-l">${l}</div><div class="k-v">${v}</div>${sub ? `<div class="k-d flat">${sub}</div>` : ''}${cv === null || cv === undefined ? '' : mgDelta(cv, noc || pv === null ? null : pv, up, P.pv, noc)}</div>`;
+  const perDay = (c) => c.wdays ? c.n / c.wdays : null, hasDur = A.nd > 0;
+  const lost = money && hasDur && A.free && A.chk ? Math.round(A.free * A.chk) : null;
+  const cards = `<div class="kpis">`
+    + kp('Завантаження апарата', hasDur ? pc(A.load) : '—', hasDur ? `${h1(A.used)} з ${h1(A.cap)} год` : 'немає тривалості', hasDur ? A.load : null, B ? B.load : null, 1)
+    + kp('Досліджень', mgFmt(A.n), `у ${A.wdays} роб. днів`, A.n, B ? B.n : null, 1)
+    + kp('На робочий день', mgFmt(Math.round(perDay(A) * 10) / 10), `пауза ${A.pz} хв`, perDay(A), B ? perDay(B) : null, 1)
+    + kp('Вільних слотів', hasDur ? mgFmt(A.free) : '—', hasDur ? `середній слот ${Math.round(A.avg)} хв` : '', hasDur ? A.free : null, B ? B.free : null, 0)
+    + `</div>`;
+  const nodur = A.n - A.nd;
+  const note = (hasDur ? '' : '<b>Відсоток завантаження не обчислено:</b> у дослідженнях періоду немає тривалості (її записують нові візити). ') + (nodur && hasDur ? `У ${nodur} з ${A.n} досліджень немає тривалості (старі візити) — вони не враховані, тож завантаження занижене. ` : '') + (A.off ? `${A.off} досліджень припали на вихідні за графіком — до розрахунку не входять. ` : '');
+  /* по днях тижня */
+  const WD = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'Пʼятниця', 'Субота', 'Неділя'], mxL = Math.max(0.0001, ...A.wd.map(w => w.cap && w.used ? w.used / w.cap : 0));
+  const rows = A.wd.map((w, i) => w.days ? `<tr><td>${WD[i]}</td><td>${w.days}</td><td>${w.n}</td><td>${(w.n / w.days).toFixed(1).replace('.', ',')}</td><td>${hasDur ? `${pc(w.cap ? w.used / w.cap : null)}${mgBar(w.used / w.cap, mxL)}` : '—'}</td></tr>` : '').join('');
+  const tWd = `<div class="tw"><table class="lt"><thead><tr><th>День тижня</th><th>Робочих днів</th><th>Досліджень</th><th>На день</th><th>${hasDur ? 'Завантаження' : 'Завантаження (немає тривалості)'}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  /* по годинах: теплова карта (дослідження за годиною початку) */
+  const all = A.hh.flatMap(m => [...m.keys()]), hMin = all.length ? Math.min(...all) : 8, hMax = all.length ? Math.max(...all) : 8, hrs = Array.from({ length: hMax - hMin + 1 }, (_, i) => hMin + i);
+  const mx = Math.max(1, ...A.hh.flatMap(m => [...m.values()]));
+  let g = '<div class="h rn"></div>' + hrs.map(h => `<div class="h">${p2(h)}</div>`).join('');
+  A.hh.forEach((m, i) => { if (!A.wd[i].days) return; g += `<div class="rn">${WD[i]}</div>` + hrs.map(h => { const v = m.get(h) || 0, t = v / mx; return v ? `<div style="background:${mgHeatC(t)};color:${t > .5 ? '#fff' : 'var(--ink)'}">${v}</div>` : '<div style="color:var(--muted)">·</div>'; }).join(''); });
+  /* дні: найбільш і найменш завантажені; робочі дні без досліджень */
+  const td = todayISO(), wk = [...A.days.values()].filter(D => D.cap && D.d !== td), emp = wk.filter(D => !D.n);
+  const dl = (D) => D.d, ds = (D) => `${isoToUa(D.d)}, ${WD[D.wd].toLowerCase()}`;
+  const ranked = wk.filter(D => D.n).sort((a, b) => (hasDur ? b.used / b.cap - a.used / a.cap : b.n - a.n) || b.n - a.n);
+  const topN = ranked.slice(0, 3), lowN = ranked.slice(-3).reverse().filter(D => !topN.includes(D));
+  const dtab = (L) => L.length ? `<div class="tw"><table class="lt"><thead><tr><th>Дата</th><th>Досліджень</th><th>${hasDur ? 'Завантаження' : 'Робочих хв'}</th></tr></thead><tbody>${L.map(D => `<tr><td>${ds(D)}</td><td>${D.n}</td><td>${hasDur ? pc(D.used / D.cap) : D.cap}</td></tr>`).join('')}</tbody></table></div>` : '';
+  const empTx = emp.length ? `Робочих днів без жодного дослідження: <b>${emp.length}</b>${emp.length <= 8 ? ' (' + emp.map(D => isoToUa(D.d)).join(', ') + ')' : ''}.` : 'Робочих днів без досліджень немає.';
+  el.innerHTML = `<section class="blk">${ttl}
+    ${cards}
+    ${note ? `<div class="rule">${note}</div>` : ''}
+    <div class="mini">Завантаження по днях тижня</div>${tWd}
+    <div class="mini" style="margin-top:var(--s3)">Досліджень за годиною початку (по днях тижня)</div>
+    <div class="sheat" style="grid-template-columns:112px repeat(${hrs.length},minmax(26px,1fr))">${g}</div>
+    <div class="mini" style="margin-top:var(--s3)">Найзавантаженіші дні</div>${dtab(topN)}
+    ${lowN.length ? `<div class="mini" style="margin-top:var(--s3)">Найменш завантажені дні</div>${dtab(lowN)}` : ''}
+    <div class="rule">${empTx}</div>
+    ${lost !== null ? `<div class="rule"><b>Втрачений потенціал (оцінка):</b> ≈ ${mgN(lost)} грн — вільні слоти (${mgN(A.free)}) × середній чек (${mgN(Math.round(A.chk))} грн). Це верхня оцінка: не кожен вільний слот можна заповнити.</div>` : ''}
+    <div class="hint">Метод: потужність = робочі години за графіком закладу; зайнято = Σ (тривалість послуги + пауза ${A.pz} хв) за дослідженнями; розрахунок — для одного апарата. Порівняння — з ${esc(P.pv)}.</div></section>`;
 }
 /* ── «Огляд» ── */
 const mgKpiDef = (X) => {
@@ -3352,6 +3426,13 @@ function mgSignals(X){
     for (const s of pm.values()){ if (s.t !== 'inst' || !s.inst || !partnerOn(s.inst, X.P.b)) continue; const n1 = cm.get(s.k)?.n || 0; if (n1 > 0 && n1 < s.n){ any = true; add('amber', `Партнер «${esc(s.name)}»: візитів −${pc((s.n - n1) / s.n)} %`, `Було ${s.n}, стало ${n1}. Партнерство діє.`, 'Без порогу: показується будь-яке зниження', 'src'); } }
     if (!any) quiet.push('Зниження візитів партнерів');
   }
+  /* Тривога №2 — надмірне завантаження апарата; Увага №7 — низьке (потрібна тривалість послуг) */
+  { const D = mgDevCalc(X.cur, P.a, P.b);
+    if (D.load !== null){
+      if (D.load > MG_TH.devHi) add('red', `Апарат перевантажений: ${pc(D.load)} %`, `Зайнято ${Math.round(D.used / 6) / 10} з ${Math.round(D.cap / 6) / 10} год (тривалість + пауза ${D.pz} хв).`, `Поріг: > ${pc(MG_TH.devHi)} %`, 'dev');
+      else if (D.load < MG_TH.devLo) add('amber', `Низьке завантаження апарата: ${pc(D.load)} %`, `Зайнято ${Math.round(D.used / 6) / 10} з ${Math.round(D.cap / 6) / 10} год; вільних слотів ≈ ${mgN(D.free)}.`, `Поріг: < ${pc(MG_TH.devLo)} %`, 'dev');
+      else quiet.push('Завантаження апарата');
+    } }
   /* Інформація №1 — сезонність: той самий місяць / день тижня — пік у кожному повному році (потрібно ≥ 2 повних роки) */
   { const Y = new Date().getFullYear(), first = mg.cache.recs[0]?.date || '9999', ys = [Y - 3, Y - 2, Y - 1].filter(y => first <= iso2(y, 0, 31));
     if (ys.length >= 2){
@@ -3370,7 +3451,7 @@ function mgSigDraw(X){
   const S = mgSignals(X), ic = { red: ['al-e', '✕'], amber: ['al-w', '<span>!</span>'], blue: ['al-i', 'i'] };
   const reds = S.act.filter(s => s.l === 'red').length; if (N){ N.textContent = reds; N.style.display = reds ? '' : 'none'; }
   el.innerHTML = `<div class="chips noexp" id="mgSigF" style="margin-bottom:10px">${[['all', 'Усі'], ['red', '● Тривога'], ['amber', '● Увага'], ['blue', '● Інформація']].map(([k, t]) => `<span class="chip ${k === mg.sf ? 'on' : ''}" data-l="${k}">${t}</span>`).join('')}</div>`
-    + (S.act.length ? S.act.map(s => `<div class="al ${ic[s.l][0]}" data-l="${s.l}"><span class="al-icon">${ic[s.l][1]}</span><div><b class="al-t">${s.t}</b>${s.d}<div class="s-m">${s.m}</div></div><a class="s-lk" href="#" data-go="${s.tab}">${{ mon: 'Гроші', src: 'Джерела', inc: 'Дохід і пільги', sea: 'Сезонність', ov: 'Огляд' }[s.tab]} →</a></div>`).join('') : '<div class="sc-e">Сигналів немає — усе в межах порогів.</div>')
+    + (S.act.length ? S.act.map(s => `<div class="al ${ic[s.l][0]}" data-l="${s.l}"><span class="al-icon">${ic[s.l][1]}</span><div><b class="al-t">${s.t}</b>${s.d}<div class="s-m">${s.m}</div></div><a class="s-lk" href="#" data-go="${s.tab}">${{ mon: 'Гроші', src: 'Джерела', inc: 'Дохід і пільги', dev: 'Апарат', sea: 'Сезонність', ov: 'Огляд' }[s.tab]} →</a></div>`).join('') : '<div class="sc-e">Сигналів немає — усе в межах порогів.</div>')
     + (S.quiet.length ? `<details class="quiet"><summary>Не спрацювало (${S.quiet.length})</summary>${S.quiet.map(x => `<div>○ ${esc(x)}</div>`).join('')}</details>` : '');
   const flt = () => el.querySelectorAll('.al[data-l]').forEach(d => { d.style.display = (mg.sf === 'all' || d.dataset.l === mg.sf) ? '' : 'none'; }); flt();
   el.onclick = (e) => {
