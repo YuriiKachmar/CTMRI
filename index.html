@@ -1276,12 +1276,12 @@ function openServiceForm(key, id){
     ${main ? `<div class="row"><div class="f full"><label>Опис</label><textarea class="in" rows="3" data-f="description">${esc(rec?.description || '')}</textarea></div></div>` : ''}
     <div class="row"><div class="f sm"><label>Вартість, грн</label><input class="in" inputmode="decimal" data-f="price" value="${rec ? esc(rec.price) : ''}"></div>
       <div class="f"><label>Статус</label>${seg(rec?.status)}</div></div>
-    ${main ? `<div class="row"><div class="f sm"><label>Тривалість, хв</label><input class="in" inputmode="numeric" data-f="duration" placeholder="необов'язково" value="${rec?.duration ? esc(rec.duration) : ''}"></div>
-      <div class="f"><div class="hint" style="margin-top:22px">Потрібна для розділу «Апарат» в управлінському звіті. Можна залишити порожньою.</div></div></div>` : ''}`,
+    ${main ? `<div class="row"><div class="f sm"><label>Тривалість, хв</label><input class="in" inputmode="numeric" data-f="duration" placeholder="хвилин" value="${rec?.duration ? esc(rec.duration) : ''}"></div>
+      <div class="f"><div class="hint" style="margin-top:22px">Обов'язкова для основної послуги: потрібна для розділу «Апарат» в управлінському звіті.</div></div></div>` : ''}`,
   (ov) => {
     const name = val(ov, 'name'), price = parseMoney(val(ov, 'price'));
     let duration = null;
-    if (main){ const dr = val(ov, 'duration'); if (dr !== ''){ duration = Number(dr.replace(',', '.')); if (!Number.isFinite(duration) || duration <= 0 || duration > 600 || !Number.isInteger(duration)) return ['Некоректна тривалість', 'Вкажіть ціле число хвилин від 1 до 600 або залиште порожнім.']; } }
+    if (main){ const dr = val(ov, 'duration'); if (dr === '') return ['Вкажіть тривалість', 'Для основної послуги тривалість у хвилинах обов\'язкова.']; duration = Number(dr.replace(',', '.')); if (!Number.isFinite(duration) || duration <= 0 || duration > 600 || !Number.isInteger(duration)) return ['Некоректна тривалість', 'Вкажіть ціле число хвилин від 1 до 600.']; }
     if (!name) return ['Введіть назву', ''];
     if (dupName(key, name, id)) return ['Така назва вже є', 'Оберіть іншу або змініть наявну.'];
     if (price === null) return ['Некоректна вартість', 'Вкажіть число, наприклад 1200.'];
@@ -4576,7 +4576,7 @@ async function saveVisit(ov, vs){
     const custom = dir.discounts.find(d => d.id === s.discountId)?.isCustom;
     const paidDate = s.paid ? (s.paidDate || todayISO()) : null;
     const data = {
-      ...vis, visitId, date: vs.date, time: vs.time, serviceId: s.serviceId, serviceSnapshot: { name: s.svcName || dir.services.find(x => x.id === s.serviceId)?.name || '', price: c.base },
+      ...vis, visitId, date: vs.date, time: vs.time, serviceId: s.serviceId, serviceSnapshot: { name: s.svcName || dir.services.find(x => x.id === s.serviceId)?.name || '', price: c.base, duration: dir.services.find(x => x.id === s.serviceId)?.duration ?? null },
       extras: s.extras.map(e => ({ extraId: e.extraId, name: e.name, price: e.price })), discountId: s.discountId || '',
       discountSnapshot: s.discountId ? { name: s.discName, percent: c.pct } : null,
       customDiscountPercent: custom ? c.pct : null, customDiscountComment: custom ? s.discComment.trim() : '',
