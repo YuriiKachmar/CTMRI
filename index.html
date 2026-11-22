@@ -577,7 +577,7 @@
   .mg .chips{display:flex;gap:7px;flex-wrap:wrap}
   .mg .chips.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
   .mg .chips.grid .chip{text-align:center;padding:10px 8px;min-height:68px;display:flex;align-items:center;justify-content:center;white-space:normal;line-height:1.25;word-break:break-word}
-  .mg .exonly{display:none}
+  .mg .exonly,.mg .exdata{display:none}
   .mg .chip{padding:9px 13px;border-radius:11px;background:var(--bg);box-shadow:var(--bump);
           font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
   .mg .chip:active{box-shadow:var(--in)}
@@ -3184,6 +3184,7 @@ function mgOpen(){
   $('mgX').onclick = back; $('mgClose').onclick = back;
   $('mgGo').onclick = () => mgLoad(!!mg.cache);
   $('mgPdf').onclick = mgExportPdf;
+  $('mgXls').onclick = () => mgExportFile('xls'); $('mgDoc').onclick = () => mgExportFile('doc');
   const set = (ps) => () => { if (mg.ps === ps) return; mg.ps = ps; mgDraw(); };
   mgPanel(); mgDraw();
 }
@@ -3200,7 +3201,7 @@ function mgPanel(){
 function mgDraw(){
   const box = $('mgBody'); if (!box) return;
   mgPanel();
-  { const ok = !!mg.cache && !mg.loading && !mg.err; $('mgPdf').disabled = !ok; $('mgPdf').title = ok ? '' : 'Спершу покажіть звіт'; for (const id of ['mgXls', 'mgDoc']) $(id).title = 'Буде додано окремим етапом'; }
+  { const ok = !!mg.cache && !mg.loading && !mg.err; $('mgPdf').disabled = !ok; $('mgPdf').title = ok ? '' : 'Спершу покажіть звіт'; for (const id of ['mgXls', 'mgDoc']){ $(id).disabled = !ok; $(id).title = ok ? '' : 'Спершу покажіть звіт'; } }
   $('mgGo').innerHTML = mg.loading ? '<span class="spin"></span>' : (mg.cache ? '📊 Оновити дані' : '📊 Показати звіт'); $('mgGo').disabled = mg.loading;
   if (mg.loading){ box.innerHTML = '<div class="rp-ph"><span class="spin dk"></span></div>'; return; }
   if (mg.err){ box.innerHTML = `<div class="al al-e" style="margin:0"><span class="al-icon">✕</span><div><b>Не вдалося завантажити звіт</b>${esc(mg.err)}. Перевірте з'єднання й право «Дані» в Журналі.</div></div>`; return; }
@@ -3569,7 +3570,8 @@ function mgTrdTab(X){
   const k = (x) => Math.round(x / 100) / 10, paid = mgPaid() && money;
   const c1 = money ? `<div><div class="mini">Нараховано (стовпці)${paid ? ' і отримано (лінія)' : ''}, тис. грн</div>${mgLineBar(lab, v.map(o => k(o.base)), paid ? v.map(o => o.vis ? k(o.got) : null) : v.map(o => o.vis ? k(o.tot) : null), { c: 'var(--red)', bl: 'нараховано, тис. грн', ll: paid ? 'отримано, тис. грн' : 'після пільг, тис. грн', ma: 1 })}</div>` : '';
   const c2 = `<div><div class="mini">Візити (стовпці)${money ? ' і середній чек (лінія)' : ''}</div>${mgLineBar(lab, v.map(o => o.vis), money ? v.map(o => o.vis ? Math.round(o.tot / o.vis) / 1000 : null) : v.map(o => o.vis), { c: 'var(--muted)', bl: 'візити', ll: money ? 'середній чек, тис. грн' : 'візити', ma: !money })}</div>`;
-  $('mgP_trd').innerHTML = `<section class="blk"><h3>Тренд за 12 місяців · ${esc(P.nm)}</h3><div class="two">${c1}${c2}</div><div class="hint">12 місяців до кінця вибраного періоду. Пунктир — ковзне середнє за 3 місяці. Місяці без візитів у лінії пропущені.${P.part ? ' Останній місяць неповний (дані станом на сьогодні).' : ''}</div></section>`;
+  const exd = `<table class="lt exdata" data-cap="Дані графіків за 12 місяців"><thead><tr><th>Місяць</th><th>Візитів</th>${money ? '<th>Нараховано, грн</th><th>Після пільг, грн</th>' + (paid ? '<th>Отримано, грн</th>' : '') + '<th>Середній чек, грн</th>' : ''}</tr></thead><tbody>${ms.map((x, i) => { const o = v[i]; return `<tr><td>${lab[i]} ${x.y}</td><td>${o.vis}</td>${money ? `<td>${mgN(o.base)}</td><td>${mgN(o.tot)}</td>${paid ? `<td>${mgN(o.got)}</td>` : ''}<td>${o.vis ? mgN(o.tot / o.vis) : '—'}</td>` : ''}</tr>`; }).join('')}</tbody></table>`;
+  $('mgP_trd').innerHTML = `<section class="blk"><h3>Тренд за 12 місяців · ${esc(P.nm)}</h3><div class="two">${c1}${c2}</div><div class="hint">12 місяців до кінця вибраного періоду. Пунктир — ковзне середнє за 3 місяці. Місяці без візитів у лінії пропущені.${P.part ? ' Останній місяць неповний (дані станом на сьогодні).' : ''}</div>${exd}</section>`;
 }
 /* ── «Сезонність»: розподіл = мітка візиту (dir.labels); останні 3 роки з бази ── */
 const MG_YCOL = ['var(--ok)', 'var(--warn)', 'var(--info)'], mgYc = (y) => MG_YCOL[y % 3];
@@ -3723,6 +3725,175 @@ function mgPaginate(d, head){
   pages.forEach((pg, i) => { pg.querySelector('.pgf').textContent = `Сторінка ${i + 1} з ${pages.length}`; });
   src.remove();
 }
+/* ═══ DOC і XLS управлінського звіту ═══
+   Зміст беремо з готової розмітки екрана (ті самі числа, що й у PDF): заголовки, таблиці, картки, діаграми-кільця (як таблиці частин),
+   матриці. Графіки-лінії/стовпці передаються таблицею даних (.exdata, на екрані прихована). Вибране групування «Динаміки» і всі розподіли «Сезонності» — як у PDF.
+   XLS: числа — числами, підсумкові рядки «Разом» — формулами SUM. */
+const mgTx = (e) => { if (!e) return ''; const w = (n) => n.nodeType === 3 ? n.data : n.nodeType === 1 ? [...n.childNodes].map(w).join('') + ' ' : ''; return w(e).replace(/[\s\u00a0]+/g, ' ').replace(/\s+([,.])/g, '$1').trim(); };   // між елементами — пробіл (інакше «грніз»)
+function mgExportBody(){
+  const body = $('mgBody').cloneNode(true);
+  body.querySelectorAll('.stabs,.noexp,.mg-top,script,button,input,[data-go],style').forEach(e => e.remove());
+  body.querySelectorAll('.exonly,.two').forEach(e => e.replaceWith(...e.childNodes));
+  body.querySelectorAll('.pane').forEach(p => { if (!p.textContent.trim()) p.remove(); });
+  return body;
+}
+function mgFileBase(){ const t = new Date(), P = mg.X.P; return `ZV-Mgmt-${rpPeriodToken(P.a, P.b)}-${p2(t.getDate())}${p2(t.getMonth() + 1)}${p2(t.getFullYear() % 100)}`; }
+/* розмітка → [{name, blks:[{title, items:[{k:'sub'|'p'|'tab', …}]}]}] */
+function mgScrape(body){
+  const gridN = (el) => { const g = el.style.gridTemplateColumns || ''; if (!g) return 0; const rep = g.match(/repeat\((\d+),/); return (rep ? +rep[1] : 0) + g.replace(/repeat\(\d+,\s*minmax\([^)]*\)\)/g, '').trim().split(/\s+/).filter(Boolean).length; };
+  const tab = (t) => {
+    const cell = (td) => { const sh = td.querySelector('.shv'), s = sh ? mgTx(sh) : null; if (sh){ const cl = td.cloneNode(true); cl.querySelector('.shv').remove(); return { t: mgTx(cl), s }; } return { t: mgTx(td), s: null }; };
+    let head = [...t.querySelectorAll('thead th')].map(mgTx);
+    let rows = [...t.querySelectorAll('tbody tr')].map(tr => [...tr.children].map(cell)), foot = t.querySelector('tfoot tr') ? [...t.querySelector('tfoot tr').children].map(cell) : null;
+    if (rows.length === 1 && rows[0].length === 1 && head.length > 1) return { k: 'p', t: rows[0][0].t };
+    for (let j = head.length - 1; j >= 0; j--){      // колонка «значення + частка»: ділимо на дві
+      if (!rows.some(r => r[j] && r[j].s !== null)) continue;
+      const hp = head[j].split(' · '); head.splice(j, 1, hp[0], hp[1] || 'Частка');
+      rows = rows.map(r => { if (r.length <= j) return r; const c = r[j]; r.splice(j, 1, { t: c.t, s: null }, { t: c.s || '', s: null }); return r; });
+      if (foot){ const c = foot[j]; foot.splice(j, 1, { t: c ? c.t : '', s: null }, { t: c && c.s ? c.s : '', s: null }); }
+    }
+    return { k: 'tab', head, rows: rows.map(r => r.map(c => c.t)), foot: foot ? foot.map(c => c.t) : null };
+  };
+  const walk = (el, out) => {
+    for (const c of el.children){
+      const cl = c.classList;
+      if (c.tagName === 'H3' || c.tagName === 'SVG' || c.tagName === 'svg' || cl.contains('legend') || cl.contains('chips') || cl.contains('exonly')) continue;
+      if (cl.contains('mini')) out.push({ k: 'sub', t: mgTx(c) });
+      else if (c.tagName === 'TABLE'){ if (c.dataset.cap) out.push({ k: 'sub', t: c.dataset.cap }); out.push(tab(c)); }
+      else if (cl.contains('kpis')) out.push({ k: 'tab', head: ['Показник', 'Значення', 'Порівняння'], rows: [...c.querySelectorAll('.kpi')].map(k => { const l = mgTx(k.querySelector('.k-l')), v = mgTx(k.querySelector('.k-v')); return [l, v, mgTx(k).replace(l, '').replace(v, '').trim()]; }), foot: null });
+      else if (cl.contains('dn')){
+        const tv = mgTx(c.querySelector('.tv')), ts = mgTx(c.querySelector('.ts')); if (tv) out.push({ k: 'p', t: `Центр діаграми: ${tv}${ts ? ' ' + ts : ''}` });
+        const rows = [...c.querySelectorAll('.lg > div')].map(d => [[...d.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim(), mgTx(d.querySelector('b')), mgTx(d.querySelector('small'))]);
+        if (rows.length) out.push({ k: 'tab', head: ['Частина', 'Частка', 'Значення'], rows, foot: null });
+      }
+      else if (c.style && c.style.gridTemplateColumns && gridN(c)){
+        const n = gridN(c), cells = [...c.children].map(mgTx), rows = []; for (let i = 0; i < cells.length; i += n) rows.push(cells.slice(i, i + n));
+        if (rows.length) out.push({ k: 'tab', head: rows[0].map((h, i) => h || (i ? '' : 'Показник')), rows: rows.slice(1), foot: null });
+      }
+      else if (c.tagName === 'DETAILS') out.push({ k: 'p', t: mgTx(c) });
+      else if (cl.contains('al')) { const d = c.querySelector(':scope > div'); out.push({ k: 'p', t: mgTx(d || c) }); }
+      else if (cl.contains('rule') || cl.contains('hint') || cl.contains('sc-e') || c.tagName === 'P') { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
+      else if (c.children.length && c.querySelector('table,.mini,.kpis,.dn,.al,details,svg,[style*="grid-template-columns"]')) walk(c, out);
+      else if (c.children.length) { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
+      else { const t = mgTx(c); if (t) out.push({ k: 'p', t }); }
+    }
+  };
+  return [...body.querySelectorAll('.pane')].map(p => {
+    const id = (p.id || '').replace('mgP_', ''), tb = MG_TABS.find(x => x[0] === id);
+    return { name: tb ? tb[2] : id, blks: [...p.querySelectorAll(':scope > .blk')].map(b => { const items = []; walk(b, items); return { title: mgTx(b.querySelector('h3')), items }; }) };
+  });
+}
+function mgMeta(){
+  const P = mg.X.P, t = new Date(), fac = settings?.facilityName || '';
+  return { fac, stamp: `${p2(t.getDate())}.${p2(t.getMonth() + 1)}.${t.getFullYear()} ${p2(t.getHours())}:${p2(t.getMinutes())}`, l1: `Управлінський звіт${fac ? ' · ' + fac : ''}`, l2: `Вибірка: ${P.nm} · ${isoToUa(P.a)} – ${isoToUa(P.b)}${P.part ? ' (дані станом на сьогодні)' : ''} · порівняння з ${P.pv}` };
+}
+const mgDl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
+const mgIsNum = (s) => /^[▲▼●]?\s*[−+-]?\d[\d\s]*([.,]\d+)?\s*(%|грн|дн\.?|тис\. грн)?$/.test(s) || s === '—';
+/* ── DOCX ── */
+function mgDocx(secs){
+  const M = mgMeta(), XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"', GREEN = '1E6B4F', RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const rPr = (o = {}) => `<w:rPr><w:rFonts w:ascii="Arsenal" w:hAnsi="Arsenal" w:cs="Arsenal" w:eastAsia="Arsenal"/>${o.b ? '<w:b/><w:bCs/>' : ''}<w:color w:val="${o.c || '000000'}"/><w:sz w:val="${o.sz || 20}"/><w:szCs w:val="${o.sz || 20}"/></w:rPr>`;
+  const run = (t, o) => `<w:r>${rPr(o)}<w:t xml:space="preserve">${WX(t)}</w:t></w:r>`;
+  const par = (runs, o = {}) => `<w:p><w:pPr>${o.pb ? '<w:pageBreakBefore/>' : ''}${o.kn ? '<w:keepNext/>' : ''}${o.bdr ? `<w:pBdr><w:bottom w:val="single" w:sz="12" w:space="2" w:color="${GREEN}"/></w:pBdr>` : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after === undefined ? 60 : o.after}"/>${o.jc ? `<w:jc w:val="${o.jc}"/>` : ''}</w:pPr>${runs}</w:p>`;
+  const TW = 10206;   // 180 мм у twips (A4 − поля по 15 мм)
+  const tbl = (head, rows, foot) => {
+    const n = Math.max(head.length, ...rows.map(r => r.length), foot ? foot.length : 0), all = [head, ...rows, ...(foot ? [foot] : [])];
+    const wt = Array.from({ length: n }, (_, j) => Math.min(26, Math.max(6, ...all.map(r => (r[j] || '').length)))), sw = wt.reduce((s, x) => s + x, 0), W = wt.map(x => Math.floor(x / sw * TW));
+    const sz = n > 9 ? 14 : n > 6 ? 16 : 18;
+    const tc = (j, t, o = {}) => `<w:tc><w:tcPr><w:tcW w:w="${W[j]}" w:type="dxa"/>${o.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>` : ''}<w:tcBorders><w:bottom w:val="single" w:sz="4" w:space="0" w:color="${o.fill ? GREEN : 'C9D2D0'}"/>${o.top ? '<w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>' : ''}</w:tcBorders><w:vAlign w:val="center"/></w:tcPr>${par(run(t || '', { b: o.b, c: o.c, sz }), { after: 0, jc: o.r ? 'right' : (o.c ? 'center' : 'left') })}</w:tc>`;
+    const tr = (cells, h) => `<w:tr><w:trPr><w:cantSplit/>${h ? '<w:tblHeader/>' : ''}</w:trPr>${cells}</w:tr>`;
+    const hd = tr(Array.from({ length: n }, (_, j) => tc(j, head[j], { fill: GREEN, c: 'FFFFFF', b: 1 })).join(''), 1);
+    const bd = rows.map(r => tr(Array.from({ length: n }, (_, j) => tc(j, r[j], { r: j > 0 && mgIsNum(r[j] || '') })).join(''))).join('');
+    const ft = foot ? tr(Array.from({ length: n }, (_, j) => tc(j, foot[j], { b: 1, top: 1, r: j > 0 && mgIsNum(foot[j] || '') })).join('')) : '';
+    return `<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="30" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="30" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${W.map(x => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>${hd}${bd}${ft}</w:tbl>${par('', { after: 80 })}`;
+  };
+  let doc = par(run('Управлінський звіт', { b: 1, sz: 40, c: GREEN }), { after: 40 }) + par(run(M.l2, { sz: 18, c: '6B7B78' }), { after: 20 }) + par(run('Сформовано: ' + M.stamp, { sz: 18, c: '6B7B78' }), { after: 160, bdr: 1 });
+  secs.forEach((s, si) => {
+    s.blks.forEach((b, bi) => {
+      doc += par(run(b.title || s.name, { b: 1, sz: 34, c: GREEN }), { pb: si > 0 && bi === 0, before: bi ? 280 : 0, after: 100, kn: 1, bdr: 1 });
+      b.items.forEach(it => {
+        if (it.k === 'sub') doc += par(run(it.t.toUpperCase(), { b: 1, sz: 20 }), { before: 160, after: 60, kn: 1 });
+        else if (it.k === 'p') doc += par(run(it.t, { sz: 18 }), { after: 80 });
+        else doc += tbl(it.head, it.rows, it.foot);
+      });
+    });
+  });
+  const sect = `<w:sectPr><w:headerReference w:type="default" r:id="rId1"/><w:footerReference w:type="default" r:id="rId2"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1300" w:right="850" w:bottom="1000" w:left="850" w:header="450" w:footer="400" w:gutter="0"/></w:sectPr>`;
+  const hdr = `${XH}<w:hdr ${NS}>${par(run(M.l1, { b: 1, sz: 18, c: GREEN }) + run('   ·   ' + M.l2.replace(/^Вибірка: /, ''), { sz: 15, c: '6B7B78' }) + run('   ·   Сформовано ' + M.stamp, { sz: 15, c: '6B7B78' }), { after: 0, bdr: 1 })}</w:hdr>`;
+  const fld = (ins) => `<w:fldSimple w:instr="${ins}"><w:r>${rPr({ sz: 15, c: '6B7B78' })}<w:t>1</w:t></w:r></w:fldSimple>`;
+  const ftr = `${XH}<w:ftr ${NS}><w:p><w:pPr><w:jc w:val="right"/></w:pPr>${run('Сторінка ', { sz: 15, c: '6B7B78' })}${fld(' PAGE ')}${run(' з ', { sz: 15, c: '6B7B78' })}${fld(' NUMPAGES ')}</w:p></w:ftr>`;
+  const files = [
+    ['[Content_Types].xml', `${XH}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`],
+    ['_rels/.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/officeDocument" Target="word/document.xml"/></Relationships>`],
+    ['word/_rels/document.xml.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/header" Target="header1.xml"/><Relationship Id="rId2" Type="${RT}/footer" Target="footer1.xml"/></Relationships>`],
+    ['word/document.xml', `${XH}<w:document ${NS}><w:body>${doc}${sect}</w:body></w:document>`], ['word/header1.xml', hdr], ['word/footer1.xml', ftr]
+  ];
+  return zipStore(files, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+}
+/* ── XLSX ── */
+function mgXlsx(secs){
+  const M = mgMeta(), XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships', GREEN = 'FF1E6B4F';
+  const L = (i) => { let s = ''; i++; while (i > 0){ const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
+  const S = { def: 0, title: 1, sub: 2, head: 3, txt: 4, num: 5, pct: 6, ftxt: 7, fnum: 8, par: 9, meta: 10, fpct: 11 };
+  const toNum = (s) => { const t = String(s).replace(/[\s ]/g, '').replace('−', '-').replace(',', '.'); if (/^-?\d+(\.\d+)?$/.test(t)) return { v: +t, p: 0 }; const m = t.match(/^(-?\d+(?:\.\d+)?)%$/); return m ? { v: +m[1] / 100, p: 1 } : null; };
+  const used = new Set();
+  const sheets = secs.map(s => {
+    let nm = s.name.replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31) || 'Аркуш'; while (used.has(nm.toLowerCase())) nm += '_'; used.add(nm.toLowerCase());
+    const rows = [], wid = []; let r = 0;
+    const put = (col, st, val, kind) => { (rows[r] = rows[r] || []).push({ col, st, val, kind }); };
+    const T = (col, st, t) => put(col, st, t, 's'), N = (col, st, v) => put(col, st, v, 'n'), F = (col, st, f, v) => put(col, st, { f, v }, 'f');
+    const grow = (col, t) => { wid[col] = Math.max(wid[col] || 0, Math.min(42, String(t).length + 2)); };
+    T(0, S.title, 'Управлінський звіт · ' + s.name); r++; T(0, S.meta, M.l2); r++; T(0, S.meta, 'Сформовано: ' + M.stamp); r += 2;
+    s.blks.forEach(b => {
+      T(0, S.sub, b.title || s.name); r += 2;
+      b.items.forEach(it => {
+        if (it.k === 'sub'){ T(0, S.sub, it.t.toUpperCase()); r++; }
+        else if (it.k === 'p'){ T(0, S.par, it.t); r++; }
+        else {
+          it.head.forEach((h, j) => { T(j, S.head, h); grow(j, h); }); r++;
+          const first = r + 1;                                   // номер першого рядка даних (1-based)
+          const numCol = it.head.map((_, j) => it.rows.length && it.rows.every(row => toNum(row[j] === undefined ? '' : row[j]) && !toNum(row[j]).p));
+          it.rows.forEach(row => { it.head.forEach((_, j) => { const t = row[j] === undefined ? '' : row[j], n = j > 0 ? toNum(t) : null; if (n) N(j, n.p ? S.pct : S.num, n.v); else T(j, S.txt, t); grow(j, t); }); r++; });
+          if (it.foot){
+            const last = r;                                      // останній рядок даних (1-based) = r
+            it.head.forEach((_, j) => { const t = it.foot[j] === undefined ? '' : it.foot[j], n = j > 0 ? toNum(t) : null;
+              if (n && !n.p && numCol[j]) F(j, S.fnum, `SUM(${L(j)}${first}:${L(j)}${last})`, n.v);
+              else if (n) N(j, n.p ? S.fpct : S.fnum, n.v); else T(j, S.ftxt, t); });
+            r++;
+          }
+          r++;
+        }
+      });
+      r++;
+    });
+    const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const data = rows.map((cells, i) => cells ? `<row r="${i + 1}">${cells.sort((a, b) => a.col - b.col).map(c => { const ref = L(c.col) + (i + 1); return c.kind === 'n' ? `<c r="${ref}" s="${c.st}"><v>${c.val}</v></c>` : c.kind === 'f' ? `<c r="${ref}" s="${c.st}"><f>${c.val.f}</f><v>${c.val.v}</v></c>` : `<c r="${ref}" s="${c.st}" t="inlineStr"><is><t xml:space="preserve">${esc(c.val)}</t></is></c>`; }).join('')}</row>` : '').join('');
+    const cols = `<cols>${Array.from({ length: Math.max(1, wid.length) }, (_, j) => `<col min="${j + 1}" max="${j + 1}" width="${j === 0 ? Math.max(24, wid[0] || 24) : Math.max(10, wid[j] || 10)}" customWidth="1"/>`).join('')}</cols>`;
+    return { nm, xml: `${XH}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView showGridLines="0" workbookViewId="0"/></sheetViews>${cols}<sheetData>${data}</sheetData></worksheet>` };
+  });
+  const font = (o) => `<font>${o.b ? '<b/>' : ''}<sz val="${o.sz || 10}"/><color rgb="${o.c || 'FF000000'}"/><name val="Arsenal"/></font>`;
+  const fonts = [font({}), font({ b: 1, sz: 14, c: GREEN }), font({ b: 1 }), font({ b: 1, c: 'FFFFFFFF' }), font({ sz: 9, c: 'FF6B7B78' })];
+  const bdr = '<border><left/><right/><top/><bottom style="thin"><color rgb="FFC9D2D0"/></bottom><diagonal/></border>', bdrF = '<border><left/><right/><top style="medium"><color rgb="FF000000"/></top><bottom/><diagonal/></border>';
+  const xf = (f, fill, bo, nf, al) => `<xf numFmtId="${nf || 0}" fontId="${f}" fillId="${fill || 0}" borderId="${bo || 0}" xfId="0" applyFont="1"${fill ? ' applyFill="1"' : ''}${bo ? ' applyBorder="1"' : ''}${nf ? ' applyNumberFormat="1"' : ''} applyAlignment="1"><alignment ${al || 'vertical="center"'}/></xf>`;
+  const xfs = [xf(0), xf(1), xf(2), xf(3, 2, 0, 0, 'horizontal="center" vertical="center" wrapText="1"'), xf(0, 0, 1), xf(0, 0, 1, 3, 'horizontal="right" vertical="center"'), xf(0, 0, 1, 164, 'horizontal="right" vertical="center"'), xf(2, 0, 2), xf(2, 0, 2, 3, 'horizontal="right" vertical="center"'), xf(0), xf(4), xf(2, 0, 2, 164, 'horizontal="right" vertical="center"')];
+  const styles = `${XH}<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.0%"/></numFmts><fonts count="${fonts.length}">${fonts.join('')}</fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="${GREEN}"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border>${bdr}${bdrF}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs></styleSheet>`;
+  const files = [
+    ['[Content_Types].xml', `${XH}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+    ['_rels/.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${RT}/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml', `${XH}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${RT}"><sheets>${sheets.map((s, i) => `<sheet name="${WX(s.nm)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets><calcPr fullCalcOnLoad="1"/></workbook>`],
+    ['xl/_rels/workbook.xml.rels', `${XH}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="${RT}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="${RT}/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml', styles], ...sheets.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, s.xml])
+  ];
+  return zipStore(files, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+function mgExportFile(kind){
+  if (!mg.cache || !mg.X) return toast('i', 'Спершу покажіть звіт', 'Експортується те, що відображено на екрані.');
+  try {
+    const secs = mgScrape(mgExportBody()), name = mgFileBase();
+    if (kind === 'doc') mgDl(mgDocx(secs), name + '.docx'); else mgDl(mgXlsx(secs), name + '.xlsx');
+  } catch (e){ console.error(e); toast('e', 'Не вдалося сформувати файл', 'Спробуйте ще раз або скористайтесь PDF.'); }
+}
+
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
 const MON_ABBR = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
 const MON_FULL_G = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
