@@ -766,7 +766,7 @@
   .mg .bars i{display:block;width:70%;background:var(--green);border-radius:6px 6px 0 0;margin-bottom:4px}
   .mg .legend{display:flex;gap:var(--s2);flex-wrap:wrap;font-size:var(--t-sm);color:var(--muted);margin:2px 0 var(--s1)}
   .mg .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px;border:1px solid var(--line)}
-  .mg .calg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}.mg .calg.one{grid-template-columns:minmax(0,430px)}.mg .calg.many{grid-template-columns:repeat(4,minmax(0,1fr))}@media (max-width:700px){.mg .calg.many{grid-template-columns:repeat(2,minmax(0,1fr))}}.mg .calg .sheat{gap:2px;font-size:10px;overflow:visible}.mg .calg .sheat div{padding:5px 0}.mg .calg.one .sheat{font-size:var(--t-sm)}.mg .calg.one .sheat div{padding:9px 0}
+  .mg .calg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}.mg .calg.one{grid-template-columns:minmax(0,430px)}.mg .calg.many{grid-template-columns:repeat(4,minmax(0,1fr))}@media (max-width:700px){.mg .calg.many{grid-template-columns:repeat(2,minmax(0,1fr))}}.mg .calg .sheat{gap:2px;font-size:10px;overflow:visible}.mg .calg .sheat div{padding:0;min-height:20px}.mg .calg.one .sheat{font-size:var(--t-sm)}.mg .calg.one .sheat div{padding:0;min-height:34px}
   .mg .sheat{display:grid;grid-template-columns:120px repeat(12,minmax(34px,1fr));gap:3px;font-size:var(--t-cap);overflow-x:auto}
   .mg .sheat div{padding:7px 0;text-align:center;border-radius:6px;font-variant-numeric:tabular-nums}
   .mg .sheat .h{background:none;color:var(--muted);font-weight:700;padding:3px 0}
@@ -3313,11 +3313,11 @@ function mgDevTab(X){
     const dim = mgDim(y, m), lead = (new Date(y, m, 1).getDay() + 6) % 7;
     let g = WDS.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(lead);
     for (let d = 1; d <= dim; d++){
-      const iso = iso2(y, m, d), wd = (lead + d - 1) % 7, n = cnt.get(iso) || 0;
+      const iso = iso2(y, m, d), wd = (lead + d - 1) % 7, n = cnt.get(iso) || 0, ti = isoToUa(iso);
       if (iso < P.a || iso > eD){ g += '<div></div>'; continue; }
-      if (!capW[wd]){ g += n ? `<div title="Вихідний за графіком" style="background:var(--tile);color:var(--ink);outline:1px solid var(--green)">${n}</div>` : `<div title="Вихідний за графіком" style="color:var(--muted);background:var(--tile)">·</div>`; continue; }
-      if (!n){ g += iso === td ? `<div title="Сьогодні — ще немає" style="color:var(--muted)">0</div>` : `<div title="Робочий день без досліджень" style="background:#F3D6D8;color:#8A2F3A;font-weight:700">0</div>`; continue; }
-      const t = n / cmx; g += `<div title="${n} досліджень" style="background:${mgHeatC(t)};color:${t > .5 ? '#fff' : 'var(--ink)'}">${n}</div>`;
+      if (!capW[wd]){ g += `<div title="${ti} · вихідний за графіком${n ? ', досліджень: ' + n : ''}" style="background:var(--tile);${n ? 'outline:1px solid var(--green)' : ''}"></div>`; continue; }
+      if (!n){ g += iso === td ? `<div title="${ti} · сьогодні, ще немає досліджень" style="background:var(--tile)"></div>` : `<div title="${ti} · робочий день без досліджень" style="background:#F3D6D8"></div>`; continue; }
+      g += `<div title="${ti} · досліджень: ${n}" style="background:${mgHeatC(n / cmx)}"></div>`;
     }
     return `<div><div class="hint" style="margin:0 0 4px"><b>${MON_NAME[m]} ${y}</b></div><div class="sheat" style="grid-template-columns:repeat(7,minmax(0,1fr))">${g}</div></div>`;
   };
@@ -3325,7 +3325,7 @@ function mgDevTab(X){
   const calBlk = `<div class="mini" style="margin-top:var(--s3)">Календар: дні з дослідженнями й без</div>
     <div class="legend" style="align-items:center"><span>менше досліджень</span><span class="heatlg">${[0, .17, .34, .5, .67, .84, 1].map(t => `<i style="background:${mgHeatC(t)}"></i>`).join('')}</span><span>більше</span><span><i style="background:#F3D6D8"></i>робочий день без досліджень</span><span><i style="background:var(--tile);outline:1px solid var(--green)"></i>дослідження у вихідний</span><span><i style="background:var(--tile)"></i>вихідний за графіком</span></div>
     <div class="calg ${months.length === 1 ? 'one' : months.length > 6 ? 'many' : ''}">${months.map(calOne).join('')}</div>
-    <div class="rule">Робочих днів у періоді (до сьогодні): <b>${A.wdays}</b>; з дослідженнями — <b>${withN}</b>; без жодного — <b>${emp.length}</b>${A.off ? `; досліджень у вихідні: <b>${A.off}</b>` : ''}. Число в клітинці — кількість досліджень за день.</div>`;
+    <div class="rule">Робочих днів у періоді (до сьогодні): <b>${A.wdays}</b>; з дослідженнями — <b>${withN}</b>; без жодного — <b>${emp.length}</b>${A.off ? `; досліджень у вихідні: <b>${A.off}</b>` : ''}.</div>`;
   el.innerHTML = `<section class="blk">${ttl}
     ${cards}
     ${note ? `<div class="rule">${note}</div>` : ''}
