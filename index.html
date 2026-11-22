@@ -187,6 +187,9 @@
   .lst td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:center;vertical-align:top;overflow-wrap:anywhere}
   .lst .l{text-align:left}
   .lst td.nm{text-align:left;font-weight:700}
+  .pz-row{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:8px 10px;border-radius:var(--r8);background:var(--bg);box-shadow:var(--bump)}
+  .pz-row .pz-l{color:var(--muted);font-size:var(--t-sm)}.pz-row .pz-v{font-weight:700}
+  .pz-sl{width:100%;accent-color:var(--green);margin:10px 0 2px}.pz-big{font-size:28px;font-weight:700;text-align:center;color:var(--green)}.pz-sc{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
   .lst td.ds{text-align:left;font-weight:400;color:var(--muted);font-size:11.5px;line-height:1.5}
   .lst tr:last-child td{border-bottom:none}
   .lst tr.inact td{opacity:.45}
@@ -1249,13 +1252,29 @@ function formWin(title, body, onSave, width, saveLabel){
 const val = (ov, f) => ov.querySelector(`[data-f="${f}"]`).value.trim();
 const dupName = (key, name, selfId) => dir[key].some(x => x.id !== selfId && String(x.name).trim().toLowerCase() === name.toLowerCase());
 
+/* ─── Пауза між дослідженнями (settings/main.studyPause, хв; за замовчуванням 10) ─── */
+const PAUSE_DEF = 10, PAUSE_MIN = 2, PAUSE_MAX = 30;
+const studyPause = () => { const v = Number(settings?.studyPause); return Number.isInteger(v) && v >= PAUSE_MIN && v <= PAUSE_MAX ? v : PAUSE_DEF; };
+const pauseSlider = (v) => `<div class="pz-big"><span data-pzv>${v}</span> хв</div><input type="range" class="pz-sl" data-f="pause" min="${PAUSE_MIN}" max="${PAUSE_MAX}" step="1" value="${v}"><div class="pz-sc"><span>${PAUSE_MIN} хв</span><span>${PAUSE_MAX} хв</span></div>`;
+const bindPause = (root) => { const r = root.querySelector('[data-f="pause"]'), o = root.querySelector('[data-pzv]'); if (r) r.oninput = () => { o.textContent = r.value; }; };
+function openPauseForm(){
+  const ov = formWin('Пауза між дослідженнями', `<p class="hint" style="margin:0 0 6px">Час між двома дослідженнями на одному апараті: прибрати стіл, покликати наступного пацієнта. Враховується у звіті «Апарат».</p>${pauseSlider(studyPause())}`, async (o) => {
+    const v = Number(o.querySelector('[data-f="pause"]').value);
+    if (!Number.isInteger(v) || v < PAUSE_MIN || v > PAUSE_MAX) return ['Некоректне значення', `Від ${PAUSE_MIN} до ${PAUSE_MAX} хв.`];
+    await setDoc(doc(db, 'settings', 'main'), { studyPause: v, updatedAt: serverTimestamp() }, { merge: true });
+    settings = { ...(settings || {}), studyPause: v }; rerenderWins();
+    return null;
+  }, 420);
+  bindPause(ov);
+}
 /* ─── Послуги ─── */
 function openServicesWin(){
   const ov = listWin('Послуги', '<button class="b" data-x>Закрити</button>', () => {
     const sv = [...dir.services].sort(byName), ex = [...dir.extras].sort(byName), edit = canEditDirs();
-    const svRows = sv.length ? sv.map(s => `<tr class="${s.status === 'inactive' ? 'inact' : ''}">${penCell(`data-edit="services:${s.id}"`)}<td class="nm">${esc(s.name)}</td><td class="ds">${esc(s.description || '—')}</td><td class="price nw">${fmtMoney(s.price)}</td><td>${pill(s.status)}</td></tr>`).join('') : emptyRow(5, 'Жодної основної послуги ще не додано. Додайте першу — вона з\'явиться тут.');
+    const svRows = sv.length ? sv.map(s => `<tr class="${s.status === 'inactive' ? 'inact' : ''}">${penCell(`data-edit="services:${s.id}"`)}<td class="nm">${esc(s.name)}</td><td class="ds">${esc([s.description, Number.isInteger(s.duration) ? 'Час дослідження: ' + s.duration + ' хв' : ''].filter(Boolean).join(' · ') || '—')}</td><td class="price nw">${fmtMoney(s.price)}</td><td>${pill(s.status)}</td></tr>`).join('') : emptyRow(5, 'Жодної основної послуги ще не додано. Додайте першу — вона з\'явиться тут.');
     const exRows = ex.length ? ex.map(s => `<tr class="${s.status === 'inactive' ? 'inact' : ''}">${penCell(`data-edit="extras:${s.id}"`)}<td class="nm">${esc(s.name)}</td><td class="price nw">${fmtMoney(s.price)}</td><td>${pill(s.status)}</td></tr>`).join('') : emptyRow(4, 'Жодної додаткової послуги ще не додано. Додайте першу — вона з\'явиться тут.');
-    return `<div class="grp-h"><div class="grp-t">Основні послуги</div></div>
+    return `<div class="pz-row">${edit ? '<span class="pen" data-pause>✎</span>' : ''}<span class="pz-l">Пауза між дослідженнями:</span><span class="pz-v">${studyPause()} хв</span></div>
+      <div class="grp-h"><div class="grp-t">Основні послуги</div></div>
       <table class="lst"><colgroup><col style="width:54px"><col style="width:200px"><col><col style="width:110px"><col style="width:110px"></colgroup>
         <tr><th></th><th class="l">Назва</th><th class="l">Опис</th><th>Вартість</th><th>Статус</th></tr>${svRows}</table>
       ${edit ? '<button class="grp-add-full" data-add="services"><span class="plus">+</span>Додати основну послугу</button>' : ''}
@@ -1268,6 +1287,7 @@ function openServicesWin(){
     const ed = e.target.closest('[data-edit]'), ad = e.target.closest('[data-add]');
     if (ed){ const [k, id] = ed.dataset.edit.split(':'); openServiceForm(k, id); }
     if (ad) openServiceForm(ad.dataset.add, null);
+    if (e.target.closest('[data-pause]')) openPauseForm();
   });
 }
 function openServiceForm(key, id){
@@ -5264,7 +5284,7 @@ function renderWizard(){
   $('wizard').innerHTML = `
     <h1>Дії при першому пуску програми</h1>
     <p class="lead">Що адміністратор має налаштувати перед початком роботи. <b>Кожен крок можна пропустити</b> — тоді застосовуються значення за замовчуванням.</p>
-    <div class="steps-ind" id="stepsInd">${[1,2,3,4].map(() => '<span class="dot-s"></span>').join('')}</div>
+    <div class="steps-ind" id="stepsInd">${[1,2,3,4,5].map(() => '<span class="dot-s"></span>').join('')}</div>
 
     <div class="wcard" data-step="1"><div class="step"><div class="n">1</div><div class="st">
       <b>Заклад</b><p>Основні дані — можна змінити будь-коли пізніше в Налаштуваннях.</p>
@@ -5303,7 +5323,12 @@ function renderWizard(){
       <div class="al al-w flat"><span class="al-icon"><span>!</span></span><div>Якщо графік закладу <b>відрізняється по днях</b>, обчислене вікно бере понеділок; розбіжності для окремих днів виправляються вручну в картці працівника.</div></div>
     </div></div></div>
 
-    <div class="wcard" data-step="4"><div class="st">
+    <div class="wcard" data-step="4"><div class="step"><div class="n">4</div><div class="st">
+      <b>Пауза між дослідженнями</b><p>Час між двома дослідженнями на одному апараті (прибрати стіл, покликати наступного пацієнта). Рекомендуємо <b>10 хв</b>; змінити можна будь-коли в довіднику «Послуги».</p>
+      ${pauseSlider(PAUSE_DEF)}
+    </div></div></div>
+
+    <div class="wcard" data-step="5"><div class="st">
       <b>Інші кроки першого пуску</b>
       <div class="placeholder">Тут накопичуватимуться решта дій першого запуску (працівники, послуги, пільги, установи) — у міру опрацювання.</div>
     </div></div>
@@ -5331,6 +5356,7 @@ function renderWizard(){
     for (const x of $('modeOpts').children) x.classList.toggle('on', x === o);
   };
   $('winDayFrom').onchange = $('winDayTo').onchange = () => { $('winDayFrom').dataset.touched = '1'; windowEdited(); };
+  bindPause($('wizard'));
   showStep(1);
   show('wizard');
 }
@@ -5341,7 +5367,7 @@ function showStep(n){
   [...$('stepsInd').children].forEach((d, i) => {
     d.className = 'dot-s' + (i + 1 < n ? ' done' : '') + (i + 1 === n ? ' on' : '');
   });
-  $('wizFoot').innerHTML = n < 4
+  $('wizFoot').innerHTML = n < 5
     ? `<button class="b2" id="wSkip">Пропустити крок</button><button class="b2 pri" id="wNext">Зберегти й далі</button>`
     : `<button class="b2 pri" id="wFinish">Завершити</button>`;
   if ($('wSkip')) $('wSkip').onclick = () => { wiz['s' + n] = 'skipped'; showStep(n + 1); };
@@ -5361,6 +5387,7 @@ function collectStep(n){
   if (n === 2){
     wiz.schedule = [...$('week').children].map(wd => ({ from: dayVal(wd.querySelector('[data-k=from]')), to: dayVal(wd.querySelector('[data-k=to]')), off: wd.classList.contains('closed'), full: wd.classList.contains('full') }));
   }
+  if (n === 4) wiz.studyPause = Number($('wizard').querySelector('[data-f="pause"]').value);
   if (n === 3){
     wiz.shiftMode = shiftMode;
     wiz.shiftWindows = { dayFrom: $('winDayFrom').value, dayTo: $('winDayTo').value, dobaActive: !!dobaFrom };
@@ -5403,6 +5430,7 @@ async function finishWizard(){
     schedule: wiz.schedule ?? DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] })),
     shiftMode: wiz.shiftMode ?? 'day',
     shiftWindows: wiz.shiftWindows ?? { dayFrom: '08:00', dayTo: '20:00' },
+    studyPause: wiz.studyPause ?? PAUSE_DEF,
     setupDone: true, updatedAt: serverTimestamp()
   };
   try {
