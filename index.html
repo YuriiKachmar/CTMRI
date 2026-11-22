@@ -766,6 +766,7 @@
   .mg .bars i{display:block;width:70%;background:var(--green);border-radius:6px 6px 0 0;margin-bottom:4px}
   .mg .legend{display:flex;gap:var(--s2);flex-wrap:wrap;font-size:var(--t-sm);color:var(--muted);margin:2px 0 var(--s1)}
   .mg .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px;border:1px solid var(--line)}
+  .mg .calg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}.mg .calg.one{grid-template-columns:minmax(0,430px)}.mg .calg.many{grid-template-columns:repeat(4,minmax(0,1fr))}@media (max-width:700px){.mg .calg.many{grid-template-columns:repeat(2,minmax(0,1fr))}}.mg .calg .sheat{gap:2px;font-size:10px;overflow:visible}.mg .calg .sheat div{padding:5px 0}.mg .calg.one .sheat{font-size:var(--t-sm)}.mg .calg.one .sheat div{padding:9px 0}
   .mg .sheat{display:grid;grid-template-columns:120px repeat(12,minmax(34px,1fr));gap:3px;font-size:var(--t-cap);overflow-x:auto}
   .mg .sheat div{padding:7px 0;text-align:center;border-radius:6px;font-variant-numeric:tabular-nums}
   .mg .sheat .h{background:none;color:var(--muted);font-weight:700;padding:3px 0}
@@ -3302,15 +3303,38 @@ function mgDevTab(X){
   const topN = ranked.slice(0, 3), lowN = ranked.slice(-3).reverse().filter(D => !topN.includes(D));
   const dtab = (L) => L.length ? `<div class="tw"><table class="lt"><thead><tr><th>Дата</th><th>Досліджень</th><th>${hasDur ? 'Завантаження' : 'Робочих хв'}</th></tr></thead><tbody>${L.map(D => `<tr><td>${ds(D)}</td><td>${D.n}</td><td>${hasDur ? pc(D.used / D.cap) : D.cap}</td></tr>`).join('')}</tbody></table></div>` : '';
   const empTx = emp.length ? `Робочих днів без жодного дослідження: <b>${emp.length}</b>${emp.length <= 8 ? ' (' + emp.map(D => isoToUa(D.d)).join(', ') + ')' : ''}.` : 'Робочих днів без досліджень немає.';
+
+  /* календар: дні з дослідженнями / без (місяці вибраного періоду) */
+  const cnt = new Map(); X.cur.forEach(r => cnt.set(r.date, (cnt.get(r.date) || 0) + 1));
+  const capW = mgDevCap(), eD = P.b < td ? P.b : td, cmx = Math.max(1, ...[...cnt.values()]);
+  const months = []; for (let y = +P.a.slice(0, 4), m = +P.a.slice(5, 7) - 1; iso2(y, m, 1) <= eD; m++){ if (m > 11){ m = 0; y++; } months.push([y, m]); if (months.length > 12) break; }
+  const WDS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+  const calOne = ([y, m]) => {
+    const dim = mgDim(y, m), lead = (new Date(y, m, 1).getDay() + 6) % 7;
+    let g = WDS.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(lead);
+    for (let d = 1; d <= dim; d++){
+      const iso = iso2(y, m, d), wd = (lead + d - 1) % 7, n = cnt.get(iso) || 0;
+      if (iso < P.a || iso > eD){ g += '<div></div>'; continue; }
+      if (!capW[wd]){ g += n ? `<div title="Вихідний за графіком" style="background:var(--tile);color:var(--ink);outline:1px solid var(--green)">${n}</div>` : `<div title="Вихідний за графіком" style="color:var(--muted);background:var(--tile)">·</div>`; continue; }
+      if (!n){ g += iso === td ? `<div title="Сьогодні — ще немає" style="color:var(--muted)">0</div>` : `<div title="Робочий день без досліджень" style="background:#F3D6D8;color:#8A2F3A;font-weight:700">0</div>`; continue; }
+      const t = n / cmx; g += `<div title="${n} досліджень" style="background:${mgHeatC(t)};color:${t > .5 ? '#fff' : 'var(--ink)'}">${n}</div>`;
+    }
+    return `<div><div class="hint" style="margin:0 0 4px"><b>${MON_NAME[m]} ${y}</b></div><div class="sheat" style="grid-template-columns:repeat(7,minmax(0,1fr))">${g}</div></div>`;
+  };
+  const wkd = wk.length + (A.days.get(td)?.cap ? 1 : 0), withN = [...A.days.values()].filter(D => D.cap && D.n).length;
+  const calBlk = `<div class="mini" style="margin-top:var(--s3)">Календар: дні з дослідженнями й без</div>
+    <div class="legend" style="align-items:center"><span>менше досліджень</span><span class="heatlg">${[0, .17, .34, .5, .67, .84, 1].map(t => `<i style="background:${mgHeatC(t)}"></i>`).join('')}</span><span>більше</span><span><i style="background:#F3D6D8"></i>робочий день без досліджень</span><span><i style="background:var(--tile);outline:1px solid var(--green)"></i>дослідження у вихідний</span><span><i style="background:var(--tile)"></i>вихідний за графіком</span></div>
+    <div class="calg ${months.length === 1 ? 'one' : months.length > 6 ? 'many' : ''}">${months.map(calOne).join('')}</div>
+    <div class="rule">Робочих днів у періоді (до сьогодні): <b>${A.wdays}</b>; з дослідженнями — <b>${withN}</b>; без жодного — <b>${emp.length}</b>${A.off ? `; досліджень у вихідні: <b>${A.off}</b>` : ''}. Число в клітинці — кількість досліджень за день.</div>`;
   el.innerHTML = `<section class="blk">${ttl}
     ${cards}
     ${note ? `<div class="rule">${note}</div>` : ''}
-    <div class="mini">Завантаження по днях тижня</div>${tWd}
+    <div class="mini" style="margin-top:var(--s3)">Завантаження по днях тижня</div>${tWd}
     <div class="mini" style="margin-top:var(--s3)">Досліджень за годиною початку (по днях тижня)</div>
     <div class="sheat" style="grid-template-columns:112px repeat(${hrs.length},minmax(26px,1fr))">${g}</div>
+    ${calBlk}
     <div class="mini" style="margin-top:var(--s3)">Найзавантаженіші дні</div>${dtab(topN)}
     ${lowN.length ? `<div class="mini" style="margin-top:var(--s3)">Найменш завантажені дні</div>${dtab(lowN)}` : ''}
-    <div class="rule">${empTx}</div>
     ${lost !== null ? `<div class="rule"><b>Втрачений потенціал (оцінка):</b> ≈ ${mgN(lost)} грн — вільні слоти (${mgN(A.free)}) × середній чек (${mgN(Math.round(A.chk))} грн). Це верхня оцінка: не кожен вільний слот можна заповнити.</div>` : ''}
     <div class="hint">Метод: потужність = робочі години за графіком закладу; зайнято = Σ (тривалість послуги + пауза ${A.pz} хв) за дослідженнями; розрахунок — для одного апарата. Порівняння — з ${esc(P.pv)}.</div></section>`;
 }
