@@ -3277,7 +3277,7 @@ function mgMatrix(X){
   const mx = $('mgOvMx'); mx.style.gridTemplateColumns = `112px repeat(${cols.length},minmax(${mg.og === 'y' ? 60 : 34}px,1fr))`; mx.innerHTML = h;
 }
 /* ── сигнали (алгоритми — у примітках макета «Алгоритми сигналів»; пороги MG_TH). Немає потрібних даних — сигналу немає взагалі ── */
-const mgMod = (r) => { const n = (r.serviceSnapshot?.name || '').trim(); return /^[МM][РPp][ТT]|^магнітно/i.test(n) ? 'МРТ' : /^[КK][ТT]\b|^комп.?ютерн\S*\s+томограф/i.test(n) ? 'КТ' : null; };   // тимчасово за назвою послуги: ознаки «КТ/МРТ» у довіднику ще немає (відкрите питання)
+const mgMod = (r) => { const n = (r.serviceSnapshot?.name || '').trim(); return /^[МM][РPp][ТT]|^магнітно/i.test(n) ? 'МРТ' : /^[КK][ТT](?![A-Za-zА-Яа-яІіЇїЄєҐґ])|^комп.?ютерн\S*\s+томограф/i.test(n) ? 'КТ' : null; };   // тимчасово за назвою послуги: ознаки «КТ/МРТ» у довіднику ще немає (відкрите питання)
 const mgDays = (iso) => Math.round((new Date(todayISO() + 'T00:00:00') - new Date(iso + 'T00:00:00')) / 864e5);
 function mgSrcAgg(rs, by){   // by: 'after' | 'n'
   const m = new Map();
