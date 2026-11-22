@@ -3455,12 +3455,20 @@ function mgSignals(X){
     for (const s of pm.values()){ if (s.t !== 'inst' || !s.inst || !partnerOn(s.inst, X.P.b)) continue; const n1 = cm.get(s.k)?.n || 0; if (n1 > 0 && n1 < s.n){ any = true; add('amber', `Партнер «${esc(s.name)}»: візитів −${pc((s.n - n1) / s.n)} %`, `Було ${s.n}, стало ${n1}. Партнерство діє.`, 'Без порогу: показується будь-яке зниження', 'src'); } }
     if (!any) quiet.push('Зниження візитів партнерів');
   }
-  /* Тривога №2 — надмірне завантаження апарата; Увага №7 — низьке (потрібна тривалість послуг) */
-  { const D = mgDevCalc(X.cur, P.a, P.b);
-    if (D.load !== null){
-      if (D.load > MG_TH.devHi) add('red', `Апарат перевантажений: ${pc(D.load)} %`, `Зайнято ${Math.round(D.used / 6) / 10} з ${Math.round(D.cap / 6) / 10} год (тривалість + пауза ${D.pz} хв).`, `Поріг: > ${pc(MG_TH.devHi)} %`, 'dev');
-      else if (D.load < MG_TH.devLo) add('amber', `Низьке завантаження апарата: ${pc(D.load)} %`, `Зайнято ${Math.round(D.used / 6) / 10} з ${Math.round(D.cap / 6) / 10} год; вільних слотів ≈ ${mgN(D.free)}.`, `Поріг: < ${pc(MG_TH.devLo)} %`, 'dev');
-      else quiet.push('Завантаження апарата');
+  /* Тривога №2 — день тижня з завантаженням < 50 % і в цьому періоді, і в періоді порівняння (потрібні тривалість, пауза, порівняння);
+     Увага №7 — дні календаря із завантаженням > 95 % (потрібні тривалість і пауза) */
+  { const D = mgDevCalc(X.cur, P.a, P.b), WDN = ['в понеділок', 'у вівторок', 'в середу', 'в четвер', 'у пʼятницю', 'в суботу', 'в неділю'];
+    if (D.nd){
+      if (cmp){
+        const Q = mgDevCalc(X.prv, P.ca, P.cb); let any = false;
+        D.wd.forEach((w, i) => { const q = Q.wd[i]; if (!w.days || !w.used || !q.days || !q.used) return; const l1 = w.used / w.cap, l0 = q.used / q.cap;
+          if (l1 < MG_TH.devLo && l0 < MG_TH.devLo){ any = true; const fr = D.avg ? Math.floor((w.cap - w.used) / D.avg) : 0;
+            add('red', `Завантаження ${WDN[i]} — ${pc(l1)} %`, `У періоді порівняння (${esc(P.pv)}) — ${pc(l0)} %. Вільних слотів ≈ ${mgN(fr)}${money && D.chk ? `; вільна потужність ≈ ${mgN(Math.round(fr * D.chk))} грн` : ''}.`, `Поріг: день тижня < ${pc(MG_TH.devLo)} % в обох періодах`, 'dev'); } });
+        if (!any) quiet.push('Низьке завантаження днів тижня');
+      }
+      const hot = [...D.days.values()].filter(d => d.cap && d.nd && d.used / d.cap > MG_TH.devHi);
+      if (hot.length) add('amber', `Перевантажених днів: ${hot.length}`, `Завантаження понад ${pc(MG_TH.devHi)} % (тривалість + пауза ${D.pz} хв): ${hot.slice(0, 6).map(d => isoToUa(d.d)).join(', ')}${hot.length > 6 ? ' …' : ''}.`, `Поріг: день > ${pc(MG_TH.devHi)} %`, 'dev');
+      else quiet.push(`Перевантажені дні (> ${pc(MG_TH.devHi)} %)`);
     } }
   /* Інформація №1 — сезонність: той самий місяць / день тижня — пік у кожному повному році (потрібно ≥ 2 повних роки) */
   { const Y = new Date().getFullYear(), first = mg.cache.recs[0]?.date || '9999', ys = [Y - 3, Y - 2, Y - 1].filter(y => first <= iso2(y, 0, 31));
