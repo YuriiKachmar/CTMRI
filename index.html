@@ -3644,15 +3644,28 @@ function mgExportPdf(){
   if (!mg.cache || !mg.X) return toast('i', 'Спершу покажіть звіт', 'Експортується те, що відображено на екрані.');
   const X = mg.X, P = X.P, tk = rpPeriodToken(P.a, P.b), t = new Date(), name = `ZV-Mgmt-${tk}-${p2(t.getDate())}${p2(t.getMonth() + 1)}${p2(t.getFullYear() % 100)}`;
   const body = $('mgBody').cloneNode(true);
-  body.querySelectorAll('.stabs,.noexp,script,button,input,[data-go]').forEach(e => e.remove());
+  body.querySelectorAll('.stabs,.noexp,.mg-top,script,button,input,[data-go]').forEach(e => e.remove());
+  body.querySelectorAll('.pane').forEach(p => { if (!p.textContent.trim()) p.remove(); });
+  const stamp = `${p2(t.getDate())}.${p2(t.getMonth() + 1)}.${t.getFullYear()} ${p2(t.getHours())}:${p2(t.getMinutes())}`;
+  /* верхній колонтитул — у <thead> зовнішньої таблиці: повторюється на кожній сторінці (і в Chromium, і в Safari) */
+  const head = `<div class="pgh"><div class="pgh-l"><b>Управлінський звіт</b>${settings?.facilityName ? ' · ' + PX(settings.facilityName) : ''}<br><span>Вибірка: ${PX(P.nm)} · ${isoToUa(P.a)} – ${isoToUa(P.b)}${P.part ? ' (дані станом на сьогодні)' : ''} · порівняння з ${PX(P.pv)}</span></div><div class="pgh-r">Сформовано<br><b>${stamp}</b></div></div>`;
   const css = [...document.querySelectorAll('style')].map(x => x.textContent).join('\n') + `
-    @page{size:A4 portrait;margin:10mm}
+    @page{size:A4 portrait;margin:10mm 10mm 14mm;@bottom-right{content:"Сторінка " counter(page) " з " counter(pages);font:8pt sans-serif;color:#667}}
     html,body{background:#fff!important;margin:0}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    table.pgw{width:100%;border-collapse:collapse}table.pgw>thead,table.pgw>tbody>tr>td{padding:0;border:0;background:none}
+    thead{display:table-header-group}tr{break-inside:avoid}
+    .pgh{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;border-bottom:2px solid var(--green);padding:0 0 5px;margin-bottom:12px;font-size:9pt;line-height:1.35;color:var(--ink)}
+    .pgh b{font-size:11pt;color:var(--green)}.pgh span{color:var(--muted)}.pgh-r{text-align:right;white-space:nowrap;color:var(--muted)}.pgh-r b{font-size:9pt;color:var(--ink)}
     .mg .exonly{display:block!important}.mg .noexp{display:none!important}
-    .mg .pane{display:block!important;break-inside:auto;break-before:page}.mg .pane:first-of-type{break-before:auto}.mg .omx,.mg .sheat,.mg .heat{overflow:visible!important;max-width:none!important}.mg .blk{break-inside:avoid-page;margin-bottom:10px}.mg .fsheet{box-shadow:none;border:0;padding:0;background:none}
-    .mg *{box-shadow:none!important}`;
-  const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><div class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div></body></html>`;
+    .mg .pane{display:block!important;break-inside:auto;break-before:page}.mg .pane:first-of-type{break-before:auto}.mg .omx,.mg .sheat,.mg .heat,.mg .tw{overflow:visible!important;max-width:none!important}
+    .mg .fsheet{box-shadow:none;border:0;padding:0;background:none}.mg *{box-shadow:none!important}
+    .mg .blk{break-inside:auto;margin:0 0 16px;padding:12px 0 0;border-top:3px solid var(--green)}
+    .mg .pane>.blk:first-child{margin-top:0}
+    .mg .blk>h3{font-size:17pt!important;line-height:1.2;margin:0 0 10px;color:var(--green);break-after:avoid}
+    .mg .mini{font-size:10.5pt!important;font-weight:800;margin:12px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--rule);break-after:avoid}
+    .mg .lt thead{display:table-header-group}.mg .kpi,.mg .al,.mg .dn,.mg .rule,.mg .sheat,.mg .omx{break-inside:avoid}`;
+  const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><table class="pgw"><thead><tr><td>${head}</td></tr></thead><tbody><tr><td><div class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div></td></tr></tbody></table></body></html>`;
   const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
   const d = f.contentDocument; d.open(); d.write(html); d.close();
   const old = document.title; document.title = name;
