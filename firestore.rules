@@ -42,9 +42,9 @@ service cloud.firestore {
       allow get: if true;
       allow create: if signedIn() && !settingsExist();      // лише раз — разом із першим Керівником
       allow update: if isBoss()
-        // Адмін: лише графік закладу, а список посад — лише з правом «Доступи»
+        // Адмін: лише графік закладу, паузу між дослідженнями, а список посад — лише з правом «Доступи»
         || (isActive() && myRole() == 'Адміністратор'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['schedule', 'positions', 'updatedAt'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['schedule', 'positions', 'studyPause', 'updatedAt'])
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['positions']) || perm('access')));
       allow delete: if false;
     }

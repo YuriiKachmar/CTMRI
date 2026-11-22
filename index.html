@@ -3149,20 +3149,73 @@ function mgPer(ps){
   const pm = (M + 11) % 12, py = M ? Y : Y - 1, qm = (pm + 11) % 12, qy = pm ? py : py - 1;
   return { ps: 'pm', year: false, a: iso2(py, pm, 1), b: iso2(py, pm, mgDim(py, pm)), ca: iso2(qy, qm, 1), cb: iso2(qy, qm, mgDim(qy, qm)), nm: `${mgML(pm)} ${py}`, pv: `${MG_MS[qm]} ${qy}`, label: 'Попередній місяць', top: MON_NAME[pm].toUpperCase(), short: `${MG_MS[pm]} ${py}` };
 }
-/* ── дані ── */
+/* ── дані ──
+   Читання економне (35 досліджень/день ≈ 12 тис. записів на рік; 4 роки ≈ 50 тис. читань + пацієнти):
+   · роки й нових пацієнтів зберігаємо в IndexedDB цього браузера (ключі ctmri-mg);
+   · «Оновити дані» дочитує лише зміни від останньої синхронізації: записи з updatedAt ≥ (синхр. − 2 хв), видалення візитів (журнал audit_log),
+     візити, де послуг стало менше, ніж було записів, і нових пацієнтів (createdAt після останнього);
+   · «Перечитати все» — повне читання (якщо кеш недоступний, також читається все). Дані кешу — лише знімок, звіт лишається тим самим. */
 const mgFrom = () => iso2(new Date().getFullYear() - 3, 0, 1);
-async function mgLoad(force){
+const MG_VER = 2;
+let mgDbP = null;
+const mgDbOpen = () => mgDbP || (mgDbP = new Promise((res) => { try { const q = indexedDB.open('ctmri-mg', 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => res(q.result); q.onerror = () => res(null); q.onblocked = () => res(null); } catch (e){ res(null); } }));
+const mgKvGet = async (k) => { const d = await mgDbOpen(); if (!d) return null; return new Promise((res) => { try { const r = d.transaction('kv').objectStore('kv').get(k); r.onsuccess = () => res(r.result ?? null); r.onerror = () => res(null); } catch (e){ res(null); } }); };
+const mgKvSet = async (k, v) => { const d = await mgDbOpen(); if (!d) return false; return new Promise((res) => { try { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(true); t.onerror = () => res(false); t.onabort = () => res(false); } catch (e){ res(false); } }); };
+const mgKvDel = async (k) => { const d = await mgDbOpen(); if (!d) return; return new Promise((res) => { try { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').delete(k); t.oncomplete = t.onerror = t.onabort = () => res(); } catch (e){ res(); } }); };
+const mgRec = (d) => { const o = { id: d.id, ...d.data() }; for (const k of Object.keys(o)) if (o[k] && typeof o[k].toDate === 'function') delete o[k]; return o; };   // Timestamp (createdAt/updatedAt) у кеш не кладемо
+async function mgLoad(force, full){
   if (mg.cache && !force) return;
   mg.loading = true; mg.err = null; mgDraw();
   try {
-    const a = mgFrom(), b = todayISO();
-    const [rs, ps] = await Promise.all([
-      getDocs(query(collection(db, 'records'), where('date', '>=', a), where('date', '<=', b))),
-      getDocs(query(collection(db, 'patients'), where('createdAt', '>=', new Date(a + 'T00:00:00')))).catch(() => ({ docs: [] }))
-    ]);
-    const recs = rs.docs.map(d => ({ id: d.id, ...d.data() })).sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
-    const born = new Map(); ps.docs.forEach(d => { const c = d.data().createdAt; if (c && c.toDate){ const x = c.toDate(); born.set(d.id, iso2(x.getFullYear(), x.getMonth(), x.getDate())); } });
-    mg.cache = { a, b, recs, born, at: new Date() };
+    const Y = new Date().getFullYear(), t0 = Date.now(), years = [Y - 3, Y - 2, Y - 1, Y], td = todayISO(), a = mgFrom();
+    let reads = 0; const maps = new Map(), dirty = new Set();
+    const meta = full ? null : await mgKvGet('meta');
+    const ok = !!meta && meta.ver === MG_VER && Number.isFinite(meta.sync);
+    if (ok) for (const y of years){ if (!meta.years.includes(y)) continue; const arr = await mgKvGet('y' + y); if (Array.isArray(arr)) maps.set(y, new Map(arr.map(r => [r.id, r]))); }
+    const put = (r) => { const y = +String(r.date).slice(0, 4); for (const [yy, m] of maps) if (yy !== y && m.delete(r.id)) dirty.add(yy); if (maps.has(y)){ maps.get(y).set(r.id, r); dirty.add(y); } };
+    const dropId = (id) => { for (const [y, m] of maps) if (m.delete(id)) dirty.add(y); };
+    /* 1 · зміни від останньої синхронізації (лише для років, що вже є в кеші) */
+    if (maps.size){
+      const since = new Date(meta.sync - 120000);
+      const rs = await getDocs(query(collection(db, 'records'), where('updatedAt', '>=', since))); reads += rs.size;
+      rs.docs.forEach(d => { const r = mgRec(d); if (String(r.date) <= td) put(r); });
+      try {   // видалені візити (журнал читає лише керівник)
+        const au = await getDocs(query(collection(db, 'audit_log'), where('timestamp', '>=', since))); reads += au.size;
+        au.docs.forEach(d => { const x = d.data(); if (x.action === 'delete' && x.collection === 'visits') (x.before?.records || []).forEach(dropId); });
+      } catch (e){ console.warn('mg audit:', e.code); }
+      const vs = await getDocs(query(collection(db, 'visits'), where('updatedAt', '>=', since))); reads += vs.size;   // візит став коротшим → перечитуємо його послуги
+      for (const vd of vs.docs){
+        const v = vd.data(), have = [...maps.values()].flatMap(m => [...m.values()]).filter(r => r.visitId === vd.id);
+        if (Number.isFinite(v.servicesCount) && have.length > v.servicesCount){
+          have.forEach(r => dropId(r.id));
+          const rr = await getDocs(query(collection(db, 'records'), where('visitId', '==', vd.id))); reads += rr.size; rr.docs.forEach(d => put(mgRec(d)));
+        }
+      }
+    }
+    /* 2 · роки, яких у кеші немає — читаємо повністю */
+    for (const y of years){
+      if (maps.has(y)) continue;
+      const hi = iso2(y, 11, 31) < td ? iso2(y, 11, 31) : td;
+      const rs = await getDocs(query(collection(db, 'records'), where('date', '>=', iso2(y, 0, 1)), where('date', '<=', hi))); reads += rs.size;
+      maps.set(y, new Map(rs.docs.map(d => { const r = mgRec(d); return [r.id, r]; }))); dirty.add(y);
+    }
+    /* 3 · пацієнти: createdAt незмінний, тож у кеші — лише нові */
+    const pc = ok ? await mgKvGet('born') : null, bornArr = pc && Array.isArray(pc.arr) && pc.from === a ? pc.arr : [];
+    let lastC = bornArr.length ? pc.last : 0;
+    const born = new Map(bornArr);
+    const pq = lastC ? query(collection(db, 'patients'), where('createdAt', '>', new Date(lastC))) : query(collection(db, 'patients'), where('createdAt', '>=', new Date(a + 'T00:00:00')));
+    try {
+      const ps = await getDocs(pq); reads += ps.size;
+      ps.docs.forEach(d => { const c = d.data().createdAt; if (c && c.toDate){ const x = c.toDate(); born.set(d.id, iso2(x.getFullYear(), x.getMonth(), x.getDate())); lastC = Math.max(lastC, x.getTime()); } });
+    } catch (e){ if (!pc) console.warn('mg patients:', e.code); }
+    const recs = [...maps.values()].flatMap(m => [...m.values()]).sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+    mg.cache = { a, b: td, recs, born, at: new Date(), reads, inc: !!(ok && !full && meta) };
+    /* збереження кешу (помилка збереження звіт не ламає) */
+    (async () => {
+      for (const y of dirty) await mgKvSet('y' + y, [...maps.get(y).values()]);
+      await mgKvSet('born', { from: a, last: lastC, arr: [...born] });
+      await mgKvSet('meta', { ver: MG_VER, sync: t0, years: [...maps.keys()] });
+    })().catch(() => {});
   } catch (e){ mg.cache = null; mg.err = e.code || 'помилка'; }
   mg.loading = false; mgDraw();
 }
@@ -3209,7 +3262,7 @@ function mgOpen(){
     <div class="rp-foot"><button class="b" id="mgClose">Закрити</button><span class="rp-ex"><button class="b" id="mgPdf" disabled>📄 PDF</button><button class="b" id="mgXls" disabled>📊 XLS</button><button class="b" id="mgDoc" disabled>📝 DOC</button></span></div></div>`;
   const back = () => { rp.cur = null; renderReports(); };
   $('mgX').onclick = back; $('mgClose').onclick = back;
-  $('mgGo').onclick = () => mgLoad(!!mg.cache);
+  $('mgGo').onclick = () => mgLoad(!!mg.cache);   // з кешем — лише зміни; повне читання — «перечитати все» під заголовком звіту
   $('mgPdf').onclick = mgExportPdf;
   $('mgXls').onclick = () => mgExportFile('xls'); $('mgDoc').onclick = () => mgExportFile('doc');
   const set = (ps) => () => { if (mg.ps === ps) return; mg.ps = ps; mgDraw(); };
@@ -3238,10 +3291,11 @@ function mgDraw(){
   mg.X = X;
   const MGT = MG_TABS.filter(t => !(t[0] === 'mon' && !(mgPaid() && X.money)));
   if (!MGT.some(t => t[0] === mg.tab)) mg.tab = 'ov';
-  box.innerHTML = `<div class="mg-top"><div class="rep-title">Управлінський звіт · ${esc(P.nm)}</div><div class="hint">${isoToUa(P.a)} – ${isoToUa(P.b)}${P.part ? ' · дані станом на сьогодні' : ''} · порівняння з ${esc(P.pv)}${X.nocmp ? ' — немає даних' : ''}</div></div>
+  box.innerHTML = `<div class="mg-top"><div class="rep-title">Управлінський звіт · ${esc(P.nm)}</div><div class="hint">${isoToUa(P.a)} – ${isoToUa(P.b)}${P.part ? ' · дані станом на сьогодні' : ''} · порівняння з ${esc(P.pv)}${X.nocmp ? ' — немає даних' : ''}</div><div class="hint">Дані станом на ${p2(mg.cache.at.getHours())}:${p2(mg.cache.at.getMinutes())} · з бази прочитано ${nfmt(mg.cache.reads || 0)} документів${mg.cache.inc ? ' (лише зміни)' : ' (повністю)'} · <a href="#" id="mgFull">перечитати все</a></div></div>
     <div class="stabs" id="mgTabs">${MGT.map(t => `<span data-t="${t[0]}" class="${t[0] === mg.tab ? 'on' : ''}"><b class="ti">${t[1]}</b><b class="tn">${t[2]}${t[0] === 'ov' ? ` <i id="mgSigN"></i>` : ''}</b><em>${t[3]}</em></span>`).join('')}</div>
     <div class="fsheet">${MGT.map(t => `<div class="pane ${t[0] === mg.tab ? 'on' : ''}" data-pane="${t[0]}" id="mgP_${t[0]}"></div>`).join('')}</div>`;
   $('mgTabs').onclick = (e) => { const s = e.target.closest('[data-t]'); if (!s) return; mg.tab = s.dataset.t; [...$('mgTabs').children].forEach(x => x.classList.toggle('on', x === s)); document.querySelectorAll('.mg .pane').forEach(p => p.classList.toggle('on', p.dataset.pane === mg.tab)); };
+  { const f = $('mgFull'); if (f) f.onclick = (e) => { e.preventDefault(); if (f.dataset.sure){ mgLoad(true, true); return; } f.dataset.sure = '1'; f.textContent = 'це десятки тисяч читань — натисніть ще раз'; setTimeout(() => { if (f.isConnected){ delete f.dataset.sure; f.textContent = 'перечитати все'; } }, 6000); }; }
   mgOv(X);
   mgSrcTab(X);
   mgIncTab(X); if (MGT.some(t => t[0] === 'mon')) mgMonTab(X); mgWrkTab(X); mgTrdTab(X); mgSeaTab(X);
