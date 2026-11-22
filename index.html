@@ -3646,6 +3646,17 @@ function mgExportPdf(){
   const body = $('mgBody').cloneNode(true);
   body.querySelectorAll('.stabs,.noexp,.mg-top,script,button,input,[data-go]').forEach(e => e.remove());
   body.querySelectorAll('.pane').forEach(p => { if (!p.textContent.trim()) p.remove(); });
+  /* переноси: заголовок + наступний елемент (таблиця до 18 рядків, діаграма, картки) — одним неподільним блоком; заголовок ніколи не лишається внизу сторінки сам.
+     Довгі таблиці (>18 рядків) розриваються, а шапка повторюється; рядки не розриваються. */
+  const keepWith = (h) => {
+    let n = h.nextElementSibling; if (!n) return;
+    const rows = n.querySelectorAll ? n.querySelectorAll('tbody tr').length : 0;
+    if (rows > 18) return;
+    const w = document.createElement('div'); w.className = 'kt'; h.parentNode.insertBefore(w, h); w.appendChild(h); w.appendChild(n);
+  };
+  [...body.querySelectorAll('.mini')].forEach(keepWith);
+  [...body.querySelectorAll('.blk>h3')].forEach(keepWith);
+  body.querySelectorAll('.tw').forEach(t => { if (t.querySelectorAll('tbody tr').length <= 18) t.classList.add('kt'); });
   const stamp = `${p2(t.getDate())}.${p2(t.getMonth() + 1)}.${t.getFullYear()} ${p2(t.getHours())}:${p2(t.getMinutes())}`;
   /* верхній колонтитул — у <thead> зовнішньої таблиці: повторюється на кожній сторінці (і в Chromium, і в Safari) */
   const head = `<div class="pgh"><div class="pgh-l"><b>Управлінський звіт</b>${settings?.facilityName ? ' · ' + PX(settings.facilityName) : ''}<br><span>Вибірка: ${PX(P.nm)} · ${isoToUa(P.a)} – ${isoToUa(P.b)}${P.part ? ' (дані станом на сьогодні)' : ''} · порівняння з ${PX(P.pv)}</span></div><div class="pgh-r">Сформовано<br><b>${stamp}</b></div></div>`;
@@ -3664,6 +3675,7 @@ function mgExportPdf(){
     .mg .pane>.blk:first-child{margin-top:0}
     .mg .blk>h3{font-size:17pt!important;line-height:1.2;margin:0 0 10px;color:var(--green);break-after:avoid}
     .mg .mini{font-size:10.5pt!important;font-weight:800;margin:12px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--rule);break-after:avoid}
+    .kt{break-inside:avoid;page-break-inside:avoid}.mg .mini,.mg .blk>h3{page-break-after:avoid}.mg .lt tr{page-break-inside:avoid}
     .mg .lt thead{display:table-header-group}.mg .kpi,.mg .al,.mg .dn,.mg .rule,.mg .sheat,.mg .omx{break-inside:avoid}`;
   const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><table class="pgw"><thead><tr><td>${head}</td></tr></thead><tbody><tr><td><div class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div></td></tr></tbody></table></body></html>`;
   const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
