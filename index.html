@@ -849,8 +849,8 @@ import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.
 import { initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmailAndPassword,
          createUserWithEmailAndPassword, sendPasswordResetEmail, signOut,
          reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc as fsGetDoc, setDoc,
-         writeBatch, serverTimestamp, collection, getDocs as fsGetDocs, query, where, limit, orderBy, runTransaction, onSnapshot as fsOnSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc,
+         writeBatch, serverTimestamp, collection, getDocs, query, where, limit, orderBy, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ═══ Firebase — проєкт ctmri-1 ═══ */
 const firebaseConfig = {
@@ -862,20 +862,6 @@ const firebaseConfig = {
   appId: "1:778627196387:web:284f6d478e8d033ef66cd6"
 };
 const fbApp = initializeApp(firebaseConfig);
-/* ═══ Лічильник читань бази (цей пристрій; Налаштування → Програма). Рахує документи, які прийшли з сервера (з локального кешу — ні).
-   Не враховує читання, які Firebase додає за перевірки правил (get/exists), тож загальна цифра в Firebase Console трохи більша. ═══ */
-const RD_QUOTA = 50000;
-const rdDay = () => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()); } catch (e){ return new Date().toISOString().slice(0, 10); } };   // квота Firebase скидається опівночі за тихоокеанським часом
-let RD = (() => { try { const o = JSON.parse(localStorage.getItem('ctmri-reads') || 'null'); if (o && o.days) return o; } catch (e){} return { days: {} }; })();
-let rdTimer = null;
-const rdSave = () => { clearTimeout(rdTimer); rdTimer = setTimeout(() => { try { const ks = Object.keys(RD.days).sort().slice(-14), d = {}; ks.forEach(k => { d[k] = RD.days[k]; }); RD.days = d; localStorage.setItem('ctmri-reads', JSON.stringify(RD)); } catch (e){} }, 800); };
-const rdLabel = (x) => { try { return String(x.path || x._query?.path?.canonicalString?.() || x._path?.canonicalString?.() || '').split('/')[0] || '?'; } catch (e){ return '?'; } };
-function rdAdd(x, n){ if (!n) return; const k = rdDay(), d = RD.days[k] || (RD.days[k] = { t: 0, by: {} }), l = rdLabel(x); d.t += n; d.by[l] = (d.by[l] || 0) + n; rdSave(); }
-const getDoc = async (r) => { const s = await fsGetDoc(r); rdAdd(r, s.metadata && s.metadata.fromCache ? 0 : 1); return s; };
-const getDocs = async (q) => { const s = await fsGetDocs(q); rdAdd(q, s.metadata && s.metadata.fromCache ? 0 : Math.max(1, s.size)); return s; };
-const onSnapshot = (q, next, ...rest) => typeof next !== 'function' ? fsOnSnapshot(q, next, ...rest)
-  : fsOnSnapshot(q, (s) => { if (!(s.metadata && s.metadata.fromCache)) rdAdd(q, s.docChanges ? Math.max(1, s.docChanges().length) : 1); next(s); }, ...rest);
-
 /* сесія не зберігається між запусками (architecture_v1, розділ 4) */
 const auth = initializeAuth(fbApp, { persistence: inMemoryPersistence });
 /* офлайн-персистентність, кілька вкладок (architecture_v1, розділ 5) */
@@ -4644,21 +4630,6 @@ function togglePerm(perms, k){
 }
 const noAccessBox = (t) => `<div class="al al-w" style="margin:12px 0 0"><span class="al-icon"><span>!</span></span><div><b>Немає доступу до цього розділу</b>${esc(t || 'Зверніться до Керівника, якщо потрібні зміни.')}</div></div>`;
 
-/* Налаштування → Програма: лічильник читань бази цього пристрою */
-const RD_NAMES = { records: 'Записи (послуги)', visits: 'Візити', patients: 'Пацієнти', workers: 'Працівники', settings: 'Налаштування закладу', services_catalog: 'Довідник послуг', extra_catalog: 'Додаткові послуги', discounts: 'Пільги', labels: 'Розподіли', institutions: 'Установи', institution_types: 'Типи установ', referring_doctors: 'Лікуючі лікарі', duty_days: 'Календар чергувань', audit_log: 'Журнал змін', counters: 'Лічильники' };
-function readsHtml(){
-  const f = (n) => Number(n).toLocaleString('uk-UA'), k = rdDay(), d = RD.days[k] || { t: 0, by: {} }, pct = Math.min(100, d.t / RD_QUOTA * 100);
-  const rows = Object.entries(d.by).sort((a, b) => b[1] - a[1]).map(([l, n]) => `<tr><td class="nm">${esc(RD_NAMES[l] || l)}</td><td class="nw">${f(n)}</td><td class="nw">${d.t ? Math.round(n / d.t * 100) : 0} %</td></tr>`).join('');
-  const hist = Object.keys(RD.days).sort().slice(-7).reverse().map(x => `<tr><td class="nm">${x}${x === k ? ' (сьогодні)' : ''}</td><td class="nw">${f(RD.days[x].t)}</td></tr>`).join('');
-  return `<div class="grp-h" style="margin-top:6px"><div class="grp-t">Читання бази даних · цей пристрій</div></div>
-    <div style="display:flex;align-items:baseline;gap:10px;margin:6px 0 4px"><b style="font-size:26px;color:var(--green)">${f(d.t)}</b><span style="color:var(--muted)">документів за добу з ${f(RD_QUOTA)} безкоштовних (${pct < 1 && d.t ? '<1' : Math.round(pct)} %)</span></div>
-    <div style="height:8px;border-radius:5px;background:var(--tile,#e3e8e6);overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:${pct > 80 ? 'var(--red)' : 'var(--green)'}"></i></div>
-    <div class="hint" style="margin:6px 0 12px">«Добою» вважається доба Firebase: квота скидається опівночі за тихоокеанським часом (≈ 10:00–11:00 за Києвом). Лічильник рахує лише цей браузер; загальна цифра всіх користувачів — у Firebase Console → Firestore → Usage (вона трохи більша: правила теж читають документи).</div>
-    <table class="lst"><colgroup><col><col style="width:110px"><col style="width:80px"></colgroup><tr><th class="l">Звідки</th><th>Документів</th><th>Частка</th></tr>${rows || '<tr><td colspan="3" style="padding:12px 10px;color:var(--muted)">Сьогодні ще нічого не читалось.</td></tr>'}</table>
-    <div class="grp-h" style="margin-top:18px"><div class="grp-t">Останні дні</div></div>
-    <table class="lst"><colgroup><col><col style="width:110px"></colgroup><tr><th class="l">Доба</th><th>Документів</th></tr>${hist || '<tr><td colspan="2" style="padding:12px 10px;color:var(--muted)">Немає даних.</td></tr>'}</table>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="b" data-rdrefresh>Оновити</button><button class="b" data-rdreset>Скинути за сьогодні</button></div>`;
-}
 /* ───── Налаштування (модальне вікно; поки працює вкладка «Доступи») ───── */
 function openSettings(tab){
   const tabs = [['zaklad', 'Заклад'], ['prog', 'Програма']];
@@ -4668,7 +4639,7 @@ function openSettings(tab){
   const draw = () => {
     ov.querySelector('.win').style.maxWidth = (cur === 'access' ? 1240 : 700) + 'px';
     ov.querySelector('[data-sb]').innerHTML = `<div class="tabs2" style="margin-top:0">${tabs.map(t => `<span class="tab2 ${t[0] === cur ? 'on' : ''}" data-st="${t[0]}">${t[1]}</span>`).join('')}</div>` +
-      (cur === 'access' ? matrixHtml() : cur === 'prog' ? readsHtml() : emptyBox('Цей розділ налаштувань — наступний крок розробки.'));
+      (cur === 'access' ? matrixHtml() : emptyBox('Цей розділ налаштувань — наступний крок розробки.'));
   };
   ov._render = draw; draw();
   ov.addEventListener('click', async (e) => {
@@ -4688,8 +4659,6 @@ function openSettings(tab){
     }
     if (nm){ const w = dir.workers.find(x => x.id === nm.dataset.card); if (w) w.role === 'Лаборант' || w.role === 'Лікар' ? openWorkerForm(w.id) : openUserForm(w.id); }
     if (e.target.closest('[data-adduser]')) openUserForm(null);
-    if (e.target.closest('[data-rdreset]')){ RD.days[rdDay()] = { t: 0, by: {} }; rdSave(); draw(); }
-    if (e.target.closest('[data-rdrefresh]')) draw();
   });
   if (cur === 'access'){ /* відкрито одразу після підтвердження пароля */ }
   return ov;
