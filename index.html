@@ -3180,6 +3180,7 @@ function mgOpen(){
   const back = () => { rp.cur = null; renderReports(); };
   $('mgX').onclick = back; $('mgClose').onclick = back;
   $('mgGo').onclick = () => mgLoad(!!mg.cache);
+  $('mgPdf').onclick = mgExportPdf;
   const set = (ps) => () => { if (mg.ps === ps) return; mg.ps = ps; mgDraw(); };
   mgPanel(); mgDraw();
 }
@@ -3196,6 +3197,7 @@ function mgPanel(){
 function mgDraw(){
   const box = $('mgBody'); if (!box) return;
   mgPanel();
+  { const ok = !!mg.cache && !mg.loading && !mg.err; $('mgPdf').disabled = !ok; $('mgPdf').title = ok ? '' : 'Спершу покажіть звіт'; for (const id of ['mgXls', 'mgDoc']) $(id).title = 'Буде додано окремим етапом'; }
   $('mgGo').innerHTML = mg.loading ? '<span class="spin"></span>' : (mg.cache ? '📊 Оновити дані' : '📊 Показати звіт'); $('mgGo').disabled = mg.loading;
   if (mg.loading){ box.innerHTML = '<div class="rp-ph"><span class="spin dk"></span></div>'; return; }
   if (mg.err){ box.innerHTML = `<div class="al al-e" style="margin:0"><span class="al-icon">✕</span><div><b>Не вдалося завантажити звіт</b>${esc(mg.err)}. Перевірте з'єднання й право «Дані» в Журналі.</div></div>`; return; }
@@ -3212,7 +3214,7 @@ function mgDraw(){
   mgOv(X);
   mgSrcTab(X);
   mgIncTab(X); if (MGT.some(t => t[0] === 'mon')) mgMonTab(X); mgWrkTab(X); mgTrdTab(X); mgSeaTab(X);
-  { const t = MG_TABS.find(x => x[0] === 'dev'); $('mgP_dev').innerHTML = `<section class="blk"><h3>${t[2]} · ${esc(P.nm)}</h3><div class="al al-i"><span class="al-icon">i</span><div><b class="al-t">Розділ у розробці</b>Потребує нових полів (тривалість послуги, пауза між дослідженнями) — наступним етапом.</div></div></section>`; }
+  { const t = MG_TABS.find(x => x[0] === 'dev'); $('mgP_dev').innerHTML = `<section class="blk noexp"><h3>${t[2]} · ${esc(P.nm)}</h3><div class="al al-i"><span class="al-icon">i</span><div><b class="al-t">Розділ у розробці</b>Потребує нових полів (тривалість послуги, пауза між дослідженнями) — наступним етапом.</div></div></section>`; }
 }
 /* ── «Огляд» ── */
 const mgKpiDef = (X) => {
@@ -3353,7 +3355,7 @@ function mgSigDraw(X){
   if (X.none){ el.innerHTML = '<div class="sc-e">За цей період даних немає, сигналів немає.</div>'; if (N) N.style.display = 'none'; return; }
   const S = mgSignals(X), ic = { red: ['al-e', '✕'], amber: ['al-w', '<span>!</span>'], blue: ['al-i', 'i'] };
   const reds = S.act.filter(s => s.l === 'red').length; if (N){ N.textContent = reds; N.style.display = reds ? '' : 'none'; }
-  el.innerHTML = `<div class="chips" id="mgSigF" style="margin-bottom:10px">${[['all', 'Усі'], ['red', '● Тривога'], ['amber', '● Увага'], ['blue', '● Інформація']].map(([k, t]) => `<span class="chip ${k === mg.sf ? 'on' : ''}" data-l="${k}">${t}</span>`).join('')}</div>`
+  el.innerHTML = `<div class="chips noexp" id="mgSigF" style="margin-bottom:10px">${[['all', 'Усі'], ['red', '● Тривога'], ['amber', '● Увага'], ['blue', '● Інформація']].map(([k, t]) => `<span class="chip ${k === mg.sf ? 'on' : ''}" data-l="${k}">${t}</span>`).join('')}</div>`
     + (S.act.length ? S.act.map(s => `<div class="al ${ic[s.l][0]}" data-l="${s.l}"><span class="al-icon">${ic[s.l][1]}</span><div><b class="al-t">${s.t}</b>${s.d}<div class="s-m">${s.m}</div></div><a class="s-lk" href="#" data-go="${s.tab}">${{ mon: 'Гроші', src: 'Джерела', inc: 'Дохід і пільги', sea: 'Сезонність', ov: 'Огляд' }[s.tab]} →</a></div>`).join('') : '<div class="sc-e">Сигналів немає — усе в межах порогів.</div>')
     + (S.quiet.length ? `<details class="quiet"><summary>Не спрацювало (${S.quiet.length})</summary>${S.quiet.map(x => `<div>○ ${esc(x)}</div>`).join('')}</details>` : '');
   const flt = () => el.querySelectorAll('.al[data-l]').forEach(d => { d.style.display = (mg.sf === 'all' || d.dataset.l === mg.sf) ? '' : 'none'; }); flt();
@@ -3630,6 +3632,28 @@ function mgSeaTab(X){
   el.onclick = (e) => { const a = e.target.closest('[data-sy]'), b = e.target.closest('[data-ss]'); if (a){ mg.seaYr = +a.dataset.sy; mgSeaTab(X); } else if (b){ mg.seaSel = b.dataset.ss; mgSeaTab(X); } };
 }
 
+
+/* PDF управлінського звіту: друк браузера («Зберегти як PDF»). Друкуються ВСІ розділи підряд; елементи .noexp не друкуються */
+function mgExportPdf(){
+  if (!mg.cache || !mg.X) return toast('i', 'Спершу покажіть звіт', 'Експортується те, що відображено на екрані.');
+  const X = mg.X, P = X.P, tk = rpPeriodToken(P.a, P.b), t = new Date(), name = `ZV-Mgmt-${tk}-${p2(t.getDate())}${p2(t.getMonth() + 1)}${p2(t.getFullYear() % 100)}`;
+  const body = $('mgBody').cloneNode(true);
+  body.querySelectorAll('.stabs,.noexp,script,button,input,[data-go]').forEach(e => e.remove());
+  body.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+  const css = [...document.querySelectorAll('style')].map(x => x.textContent).join('\n') + `
+    @page{size:A4 portrait;margin:10mm}
+    html,body{background:#fff!important;margin:0}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .mg .pane{display:block!important;break-inside:auto}.mg .blk{break-inside:avoid-page;margin-bottom:10px}.mg .fsheet{box-shadow:none;border:0;padding:0;background:none}
+    .mg *{box-shadow:none!important}`;
+  const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><div class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div></body></html>`;
+  const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
+  const d = f.contentDocument; d.open(); d.write(html); d.close();
+  const old = document.title; document.title = name;
+  const done = () => { document.title = old; setTimeout(() => f.remove(), 1000); };
+  f.contentWindow.addEventListener('afterprint', done);
+  (d.fonts && d.fonts.ready ? d.fonts.ready.catch(() => {}) : Promise.resolve()).then(() => setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e){ toast('e', 'Не вдалося відкрити друк', 'Спробуйте ще раз.'); done(); } }, 250));
+}
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
 const MON_ABBR = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
 const MON_FULL_G = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
