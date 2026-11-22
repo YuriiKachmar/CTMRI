@@ -3666,10 +3666,10 @@ function mgExportPdf(){
     .mg .exonly{display:block!important}.mg .noexp{display:none!important}
     .mg .pane{display:block!important}.mg .omx,.mg .sheat,.mg .heat,.mg .tw{overflow:visible!important;max-width:none!important}
     .mg .fsheet{box-shadow:none;border:0;padding:0;background:none}.mg *{box-shadow:none!important}
-    .mg .blk{margin:0 0 16px;padding:12px 0 0;border-top:3px solid var(--green)}
+    .mg .blk{margin:0 0 34px;padding:12px 0 0;border-top:3px solid var(--green)}
     .mg .blk.cont{border-top:0;padding-top:0}
     .mg .blk h3{font-size:17pt!important;line-height:1.2;margin:0 0 10px;color:var(--green)}
-    .bx{border:1px solid #b8c4c1;border-radius:8px;padding:8px 10px 3px;margin:0 0 14px;background:#fbfcfc}.bx.cont{border-top-style:dashed}.bx>.mini:first-child{margin-top:0}
+    .bx{border:1px solid #b8c4c1;border-radius:8px;padding:8px 10px 3px;margin:0 0 30px;background:#fbfcfc}.bx.cont{border-top-style:dashed}.bx>.mini:first-child{margin-top:0}
     .mg .mini{font-size:10.5pt!important;font-weight:800;margin:12px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--rule)}`;
   const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><div id="src" class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div><div id="out" class="mg"></div></body></html>`;
   const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
