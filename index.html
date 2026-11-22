@@ -3316,14 +3316,13 @@ function mgDevTab(X){
       const iso = iso2(y, m, d), wd = (lead + d - 1) % 7, n = cnt.get(iso) || 0, ti = isoToUa(iso);
       if (iso < P.a || iso > eD){ g += '<div></div>'; continue; }
       if (!capW[wd]){ g += `<div title="${ti} · вихідний за графіком${n ? ', досліджень: ' + n : ''}" style="background:var(--tile);${n ? 'outline:1px solid var(--green)' : ''}"></div>`; continue; }
-      if (!n){ g += iso === td ? `<div title="${ti} · сьогодні, ще немає досліджень" style="background:var(--tile)"></div>` : `<div title="${ti} · робочий день без досліджень" style="background:#F3D6D8"></div>`; continue; }
-      g += `<div title="${ti} · досліджень: ${n}" style="background:${mgHeatC(n / cmx)}"></div>`;
+      if (!n){ g += iso === td ? `<div title="${ti} · сьогодні, ще немає досліджень" style="background:var(--tile)"></div>` : `<div title="${ti} · робочий день без досліджень" style="background:#E9A9AF"></div>`; continue; }
+      g += `<div title="${ti} · досліджень: ${n}" style="background:var(--btn-main)"></div>`;
     }
     return `<div><div class="hint" style="margin:0 0 4px"><b>${MON_NAME[m]} ${y}</b></div><div class="sheat" style="grid-template-columns:repeat(7,minmax(0,1fr))">${g}</div></div>`;
   };
   const wkd = wk.length + (A.days.get(td)?.cap ? 1 : 0), withN = [...A.days.values()].filter(D => D.cap && D.n).length;
   const calBlk = `<div class="mini" style="margin-top:var(--s3)">Календар: дні з дослідженнями й без</div>
-    <div class="legend" style="align-items:center"><span>менше досліджень</span><span class="heatlg">${[0, .17, .34, .5, .67, .84, 1].map(t => `<i style="background:${mgHeatC(t)}"></i>`).join('')}</span><span>більше</span><span><i style="background:#F3D6D8"></i>робочий день без досліджень</span><span><i style="background:var(--tile);outline:1px solid var(--green)"></i>дослідження у вихідний</span><span><i style="background:var(--tile)"></i>вихідний за графіком</span></div>
     <div class="calg ${months.length === 1 ? 'one' : months.length > 6 ? 'many' : ''}">${months.map(calOne).join('')}</div>
     <div class="rule">Робочих днів у періоді (до сьогодні): <b>${A.wdays}</b>; з дослідженнями — <b>${withN}</b>; без жодного — <b>${emp.length}</b>${A.off ? `; досліджень у вихідні: <b>${A.off}</b>` : ''}.</div>`;
   el.innerHTML = `<section class="blk">${ttl}
