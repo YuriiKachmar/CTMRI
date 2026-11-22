@@ -3204,7 +3204,8 @@ function mgDraw(){
     <div class="fsheet">${MG_TABS.map(t => `<div class="pane ${t[0] === mg.tab ? 'on' : ''}" data-pane="${t[0]}" id="mgP_${t[0]}"></div>`).join('')}</div>`;
   $('mgTabs').onclick = (e) => { const s = e.target.closest('[data-t]'); if (!s) return; mg.tab = s.dataset.t; [...$('mgTabs').children].forEach(x => x.classList.toggle('on', x === s)); document.querySelectorAll('.mg .pane').forEach(p => p.classList.toggle('on', p.dataset.pane === mg.tab)); };
   mgOv(X);
-  for (const t of MG_TABS.slice(1)) $('mgP_' + t[0]).innerHTML = `<section class="blk"><h3>${t[2]} · ${esc(P.nm)}</h3><div class="al al-i"><span class="al-icon">i</span><div><b class="al-t">Розділ у розробці</b>Буде додано наступним етапом.</div></div></section>`;
+  mgSrcTab(X);
+  for (const t of MG_TABS.slice(2)) $('mgP_' + t[0]).innerHTML = `<section class="blk"><h3>${t[2]} · ${esc(P.nm)}</h3><div class="al al-i"><span class="al-icon">i</span><div><b class="al-t">Розділ у розробці</b>Буде додано наступним етапом.</div></div></section>`;
 }
 /* ── «Огляд» ── */
 const mgKpiDef = (X) => {
@@ -3353,6 +3354,114 @@ function mgSigDraw(X){
     const c = e.target.closest('#mgSigF [data-l]'); if (c){ mg.sf = c.dataset.l; [...c.parentNode.children].forEach(x => x.classList.toggle('on', x === c)); flt(); return; }
     const g = e.target.closest('[data-go]'); if (g){ e.preventDefault(); const t = $('mgTabs')?.querySelector(`[data-t="${g.dataset.go}"]`); if (t) t.click(); }
   };
+}
+
+/* ── спільні елементи вкладок ── */
+function mgDonutHtml(parts, c1, c2, fmt){
+  const R = 52, C = 2 * Math.PI * R, tot = parts.reduce((a, p) => a + p.v, 0);
+  if (!tot) return `<svg viewBox="0 0 140 140"><circle cx="70" cy="70" r="${R}" fill="none" class="tr" stroke-width="20"/><text x="70" y="68" text-anchor="middle" font-size="19" font-weight="800" class="tv">—</text><text x="70" y="84" text-anchor="middle" font-size="9" class="ts">немає даних</text></svg>`;
+  let off = 0, s = `<svg viewBox="0 0 140 140"><circle cx="70" cy="70" r="${R}" fill="none" class="tr" stroke-width="20"/>`;
+  parts.forEach(p => { const l = C * p.v / tot; if (l > 0) s += `<circle cx="70" cy="70" r="${R}" fill="none" style="stroke:${p.c}" stroke-width="20" stroke-dasharray="${Math.max(0, l - 1.5)} ${C - l + 1.5}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`; off += l; });
+  s += `<text x="70" y="68" text-anchor="middle" font-size="19" font-weight="800" class="tv">${c1}</text><text x="70" y="84" text-anchor="middle" font-size="9" class="ts">${c2 || ''}</text></svg>`;
+  return s + `<div class="lg">${parts.map(p => `<div><i style="background:${p.c}"></i>${esc(p.l)}<b>${fmt ? fmt(p) : Math.round(p.v / tot * 100) + ' %'}</b>${p.s ? `<small>${esc(p.s)}</small>` : ''}</div>`).join('')}</div>`;
+}
+const mgG = (t) => `color-mix(in srgb,var(--green) ${t}%,var(--bg))`;
+/* зміна у відсотках для таблиць: ▲/▼ (goodUp — зростання це добре); немає бази — «—», база 0 — «нове» */
+function mgChg(cur, prv, goodUp, noCmp){
+  if (noCmp || prv === null || prv === undefined) return '—';
+  if (!prv) return cur ? '<span class="chg up">нове</span>' : '—';
+  const v = Math.round((cur - prv) / prv * 100), f = Math.abs(v) < .5 ? 'flat' : ((v > 0) === !!goodUp ? 'up' : 'bad');
+  return `<span class="chg ${f}">${v > 0 ? '▲ +' : v < 0 ? '▼ −' : '● '}${Math.abs(v)} %</span>`;
+}
+/* таблиця: head — рядок заголовків (HTML), rows — масив масивів HTML-комірок; foot — рядок підсумку */
+function mgTable(head, rows, foot){
+  const n = head.length;
+  return `<div class="tw"><table class="lt"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${n}" style="color:var(--muted);white-space:normal">За цей період даних немає</td></tr>`}</tbody>${foot && rows.length ? `<tfoot><tr>${foot.map(c => `<td>${c}</td>`).join('')}</tr></tfoot>` : ''}</table></div>`;
+}
+const mgBar = (v, mx) => `<div class="shb"><i style="width:${mx ? v / mx * 100 : 0}%"></i></div>`;
+const mgPcs = (x, tot) => tot ? String(Math.round(x / tot * 1000) / 10).replace('.', ',') + ' %' : '—';
+const mgCmpHead = (X, w) => `Порівняння ${w}<br><small style="font-weight:400">до ${esc(X.P.pv)}</small>`;
+/* ── «Джерела» ── */
+function mgUnits(rs){   // джерела для «нових і втрачених»: установа або лікуючий лікар (пара «лікар — установа» / «лікар — від себе»)
+  const m = new Map();
+  const put = (k, name, kind, r) => { const o = m.get(k) || { k, name, kind, n: 0 }; o.n++; m.set(k, o); };
+  for (const r of rs){
+    const ref = r.referral || {}, s = mgSrc(r);
+    if (s.t === 'inst') put('i:' + ref.institutionId, s.name, 'установа', r);
+    if (s.t !== 'self' && (ref.doctorId || ref.doctorName)){ const dn = (dir.doctors.find(d => d.id === ref.doctorId)?.name) || ref.doctorName || ''; put('p:' + (ref.doctorId || dn) + ':' + (ref.institutionId || ''), `${dn} — ${s.t === 'inst' ? s.name : 'від себе'}`, 'лікуючий лікар', r); }
+  }
+  return m;
+}
+function mgSrcTab(X){
+  const P = X.P, money = X.money, by = money ? 'after' : 'n', cm = mgSrcAgg(X.cur), pm = mgSrcAgg(X.prv), noc = X.nocmp;
+  const val = (s) => s ? s[by] : 0, tot = [...cm.values()].reduce((s, x) => s + x[by], 0);
+  /* групи кругової діаграми */
+  const g = { i: { v: 0, c: 0 }, d: { v: 0, c: 0 }, s: { v: 0 } }, selfPats = new Set();
+  for (const s of cm.values()){ const k = s.t === 'inst' ? 'i' : s.t === 'doc' ? 'd' : 's'; g[k].v += s[by]; if (g[k].c !== undefined) g[k].c++; }
+  X.cur.forEach(r => { if (mgSrc(r).t === 'self' && r.patientId) selfPats.add(r.patientId); });
+  const parts = [{ l: 'Установи', v: g.i.v, c: 'var(--green)', s: plN(g.i.c, ['установа', 'установи', 'установ']) }, { l: 'Лікуючі лікарі (від себе)', v: g.d.v, c: mgG(70), s: plN(g.d.c, ['лікар', 'лікарі', 'лікарів']) }, { l: 'Самоскерування', v: g.s.v, c: mgG(40), s: plN(selfPats.size, ['пацієнт', 'пацієнти', 'пацієнтів']) }];
+  /* топ-5 установ */
+  const ins = [...cm.values()].filter(s => s.t === 'inst').sort((a, b) => b[by] - a[by]).slice(0, 5), imx = Math.max(1, ...ins.map(s => s[by]));
+  const head = (l) => money ? [l, 'Візити', 'Виручка · частка', mgCmpHead(X, 'візитів')] : [l, 'Візити', 'Частка візитів', mgCmpHead(X, 'візитів')];
+  const shareCell = (s) => `${money ? nfmt(s.after) : nfmt(s.n)}<span class="shv">${mgPcs(s[by], tot)}</span>${mgBar(s[by], imx)}`;
+  const tInst = mgTable(head('Установа'), ins.map(s => [esc(s.name), s.n, shareCell(s), mgChg(s.n, pm.get(s.k)?.n ?? 0, 1, noc)]));
+  /* топ-5 лікуючих лікарів (усі): пара «лікар — установа / від себе» */
+  const dm = new Map();
+  for (const r of X.cur){ const ref = r.referral || {}, s = mgSrc(r); if (s.t === 'self' || !(ref.doctorId || ref.doctorName)) continue; const dn = (dir.doctors.find(d => d.id === ref.doctorId)?.name) || ref.doctorName || '', k = (ref.doctorId || dn) + ':' + (ref.institutionId || ''), o = dm.get(k) || { name: `${dn} — ${s.t === 'inst' ? s.name : 'від себе'}`, n: 0, after: 0 }; o.n++; o.after += Number(r.totalAmount) || 0; dm.set(k, o); }
+  const pdm = new Map(); for (const r of X.prv){ const ref = r.referral || {}, s = mgSrc(r); if (s.t === 'self' || !(ref.doctorId || ref.doctorName)) continue; const dn = (dir.doctors.find(d => d.id === ref.doctorId)?.name) || ref.doctorName || '', k = (ref.doctorId || dn) + ':' + (ref.institutionId || ''); pdm.set(k, (pdm.get(k) || 0) + 1); }
+  const docs = [...dm].map(([k, o]) => ({ k, ...o })).sort((a, b) => b[by] - a[by]).slice(0, 5), dmx = Math.max(1, ...docs.map(s => s[by]));
+  const tDoc = mgTable(head('Лікуючий лікар'), docs.map(s => [esc(s.name), s.n, `${money ? nfmt(s.after) : nfmt(s.n)}<span class="shv">${mgPcs(s[by], tot)}</span>${mgBar(s[by], dmx)}`, mgChg(s.n, pdm.get(s.k) ?? 0, 1, noc)]));
+  /* концентрація */
+  const top = [...cm.values()].sort((a, b) => b[by] - a[by]).slice(0, 3), csh = tot ? top.reduce((s, x) => s + x[by], 0) / tot : 0, over = csh > MG_TH.conc;
+  const conc = tot ? `<div class="conc"><div class="conc-t">Концентрація: три найбільших джерела дають <b>${Math.round(csh * 100)} %</b> ${money ? 'виручки' : 'візитів'} ${over ? `<span class="warn-tag">вище порогу ${Math.round(MG_TH.conc * 100)} %</span>` : ''}</div><div class="meter"><div class="meter-f" style="width:${Math.min(100, csh * 100)}%"></div><div class="meter-m" style="left:${MG_TH.conc * 100}%"><span>поріг ${Math.round(MG_TH.conc * 100)} %</span></div></div></div>` : '';
+  const sideHint = `Частка у ${money ? 'виручці' : 'візитах'}. Партнерство — на дату візиту. «Лікуючі лікарі (від себе)» — лікуючий лікар без установи; самоскерування — пацієнт прийшов без установи й без лікуючого лікаря.`;
+  /* партнери */
+  const part = X.cur.filter(r => mgSrc(r).partner), pv = part.reduce((s, r) => s + (money ? Number(r.totalAmount) || 0 : 1), 0), allv = X.cur.reduce((s, r) => s + (money ? Number(r.totalAmount) || 0 : 1), 0);
+  const pg = new Map(); part.forEach(r => { const s = mgSrc(r), o = pg.get(s.k) || { k: s.k, name: s.name, n: 0, after: 0 }; o.n++; o.after += Number(r.totalAmount) || 0; pg.set(s.k, o); });
+  const ppg = new Map(); X.prv.filter(r => mgSrc(r).partner).forEach(r => { const s = mgSrc(r), o = ppg.get(s.k) || { n: 0, after: 0 }; o.n++; o.after += Number(r.totalAmount) || 0; ppg.set(s.k, o); });
+  const pl = [...pg.values()].sort((a, b) => b[by] - a[by]), pmx = Math.max(1, ...pl.map(s => s[by])), ptot = { n: pl.reduce((s, x) => s + x.n, 0), after: pl.reduce((s, x) => s + x.after, 0) }, pptot = { n: [...ppg.values()].reduce((s, x) => s + x.n, 0), after: [...ppg.values()].reduce((s, x) => s + x.after, 0) };
+  const phead = money ? ['Партнер', 'Візити', 'Виручка · частка', mgCmpHead(X, 'суми')] : ['Партнер', 'Візити', 'Частка візитів', mgCmpHead(X, 'візитів')];
+  const tPart = mgTable(phead, pl.map(s => [esc(s.name), s.n, `${money ? nfmt(s.after) : nfmt(s.n)}<span class="shv">${mgPcs(s[by], allv)}</span>${mgBar(s[by], pmx)}`, mgChg(money ? s.after : s.n, noc ? null : (money ? ppg.get(s.k)?.after : ppg.get(s.k)?.n) ?? 0, 1, noc)]),
+    ['Разом', ptot.n, `${money ? nfmt(ptot.after) : nfmt(ptot.n)}<span class="shv">${mgPcs(money ? ptot.after : ptot.n, allv)}</span>`, mgChg(money ? ptot.after : ptot.n, money ? pptot.after : pptot.n, 1, noc)]);
+  const dnPart = mgDonutHtml([{ l: 'Партнери', v: pv, c: 'var(--green)', s: money ? nfmt(Math.round(pv)) + ' грн' : nfmt(pv) + ' візитів' }, { l: 'Усі інші', v: allv - pv, c: mgG(40), s: money ? nfmt(Math.round(allv - pv)) + ' грн' : nfmt(allv - pv) + ' візитів' }], allv ? Math.round(pv / allv * 100) + ' %' : '—', 'від партнерів');
+  $('mgP_src').innerHTML = `<section class="blk"><h3>Джерела пацієнтів · ${esc(P.nm)}</h3>
+      <div class="dnrow"><div class="dn">${mgDonutHtml(parts, nfmt(X.cur.length), 'візитів')}</div><div class="dnside"><div class="mini">Звідки приходять пацієнти</div><div class="hint" style="margin-top:0">${sideHint}</div></div></div>
+      <div class="two"><div><div class="mini">Установи — топ-5 · ${esc(P.nm)}</div>${tInst}</div><div><div class="mini">Лікуючі лікарі (усі) — топ-5 · ${esc(P.nm)}</div>${tDoc}</div></div>
+      ${conc}<div class="hint">Партнерство — на дату візиту. Детально → звіт «По скеруваннях».</div></section>
+    <section class="blk"><h3>Партнери · ${esc(P.nm)}</h3>
+      <div class="mini">${money ? 'Дохід' : 'Візити'} від партнерів і від усіх інших · ${esc(P.nm)}</div><div class="dn sm">${dnPart}</div>
+      <div class="mini" style="margin-top:var(--s3)">Установи-партнери · ${esc(P.nm)}</div>${tPart}
+      <div class="al al-i" style="margin-top:var(--s2)"><span class="al-icon">i</span><div><b class="al-t">Як рахується партнерство</b>Партнерство визначається на дату візиту. До «Усіх інших» входять установи без партнерства, лікуючі лікарі (від себе) і самоскерування.</div></div></section>
+    <section class="blk" id="mgNL"><h3>Нові й втрачені джерела · ${esc(P.nm)}</h3><div id="mgNLb"></div></section>`;
+  mgNewLost(X);
+}
+const MG_THC = { m: { max: 20, def: 10, lab: [1, 5, 10, 15, 20] }, y: { max: 100, def: 50, lab: [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] } };
+function mgNewLost(X){
+  const m = X.P.year ? 'y' : 'm', c = MG_THC[m]; if (mg.thm !== m){ mg.thm = m; mg.th = c.def; }
+  const box = $('mgNLb');
+  if (X.none || X.nocmp){ box.innerHTML = `<div class="al al-i"><span class="al-icon">i</span><div><b class="al-t">${X.none ? 'За цей період даних немає' : 'Порівняння недоступне'}</b>${X.none ? 'Нових і втрачених джерел немає: у вибраному періоді немає жодного візиту.' : 'За період порівняння немає даних, тому нові й втрачені джерела визначити неможливо.'}</div></div>`; return; }
+  const cu = mgUnits(X.cur), pu = mgUnits(X.prv);
+  const render = () => {
+    const TH = mg.th, nw = [...cu.values()].filter(u => u.n >= TH && !pu.has(u.k)).sort((a, b) => b.n - a.n), ls = [...pu.values()].filter(u => u.n >= TH && !cu.has(u.k)).sort((a, b) => b.n - a.n), mx = Math.max(1, ...nw.map(u => u.n), ...ls.map(u => u.n));
+    const col = (cls, t, arr, lab) => `<div class="sc-c ${cls}"><div class="sc-h"><span class="sc-t">${t}</span><span class="sc-n">${arr.length}</span></div>${arr.length ? arr.map(u => `<div class="sc-r"><div class="sc-l"><span>${esc(u.name)}<div class="sc-k">${u.kind}</div></span><b>${lab(u.n)}</b></div><div class="sc-b"><i style="width:${u.n / mx * 100}%"></i></div></div>`).join('') : `<div class="sc-e">Немає джерел від ${TH} візитів</div>`}</div>`;
+    $('mgScBox').innerHTML = col('sc-new', '▲ Нові джерела', nw, n => plN(n, ['візит', 'візити', 'візитів'])) + col('sc-lost', '▼ Втрачені джерела', ls, n => 'було ' + n);
+    $('mgThV').textContent = TH; $('mgThV2').textContent = TH;
+    const p = (TH - 1) / (c.max - 1); $('mgThK').style.left = p * 100 + '%'; $('mgThf').style.left = p * 100 + '%'; $('mgThK').setAttribute('aria-valuenow', TH);
+  };
+  box.innerHTML = `<div class="sc-sub">Порівняння з періодом <b>${esc(X.P.pv)}</b> · враховано джерела від <b id="mgThV">${mg.th}</b> візитів</div>
+    <div class="noexp"><div class="nsl">Поріг: <b id="mgThV2">${mg.th}</b> візитів і більше</div>
+      <div class="nsw"><div class="nst" id="mgTht"><div class="nsf" id="mgThf" style="right:0"></div><div class="nsk" id="mgThK" role="slider" tabindex="0" aria-label="Поріг візитів" aria-valuemin="1" aria-valuemax="${c.max}"></div></div>
+        <div class="nstk">${Array.from({ length: c.max }, (_, q) => q + 1).map(v => `<i class="${c.lab.includes(v) ? 'big' : ''}" style="left:${(v - 1) / (c.max - 1) * 100}%"></i>`).join('')}${c.lab.map(v => `<span style="left:${(v - 1) / (c.max - 1) * 100}%">${v}</span>`).join('')}</div></div>
+      <div class="al al-i"><span class="al-icon">i</span><div><b class="al-t">Що означає поріг</b>Джерело враховується, якщо від нього було не менше вказаної кількості візитів. Для нових джерел це візити в цьому періоді, для втрачених — візити в періоді порівняння. Так випадкові одиничні візити не потрапляють у список. Джерело — установа або лікуючий лікар.</div></div></div>
+    <div class="sc" id="mgScBox"></div>`;
+  const tr = $('mgTht'); let act = false;
+  const at = (x) => { const r = tr.getBoundingClientRect(); return 1 + Math.round(Math.min(1, Math.max(0, (x - r.left) / r.width)) * (c.max - 1)); };
+  const set = (v) => { mg.th = Math.min(c.max, Math.max(1, v)); render(); };
+  tr.addEventListener('pointerdown', (e) => { e.preventDefault(); act = true; tr.setPointerCapture(e.pointerId); set(at(e.clientX)); });
+  tr.addEventListener('pointermove', (e) => { if (act) set(at(e.clientX)); });
+  const end = () => { act = false; }; tr.addEventListener('pointerup', end); tr.addEventListener('pointercancel', end);
+  $('mgThK').addEventListener('keydown', (e) => { const d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 0; if (!d) return; e.preventDefault(); set(mg.th + d); $('mgThK').focus(); });
+  render();
 }
 
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
