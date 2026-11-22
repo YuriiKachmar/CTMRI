@@ -3104,6 +3104,8 @@ function rpDraw(){
 /* ═══ УПРАВЛІНСЬКИЙ ЗВІТ (макет CT_MRI_ЗВІТ_zvit_upravlinskyi.html, специфікація docs/УПРАВЛІНСЬКИЙ_ЗВІТ_інструкція.md, розд. 11) ═══
    Читання бази: один раз «Показати звіт» — records за 4 календарні роки (до сьогодні) + patients (createdAt) за той самий час; далі зміна періоду/вкладки/чипів
    не робить запитів. Усе рахується в пам'яті. Порівняння автоматичне (попередній період тієї ж довжини). */
+/* усі суми й лічильники звіту — ціле число з пробілом-розділювачем (копійки не показуємо; округлення лише на екрані) */
+const mgN = (n) => Math.round(Number(n) || 0).toLocaleString('uk-UA');
 const MG_TABS = [['ov', '📋', 'Огляд', 'Результат і сигнали'], ['src', '🧭', 'Джерела', 'Звідки пацієнти'], ['dev', '🩻', 'Апарат', 'Завантаження, слоти'], ['inc', '💰', 'Дохід і пільги', 'Послуги, знижки'],
   ['mon', '💳', 'Гроші', 'Оплата, борги'], ['wrk', '👥', 'Працівники', 'Лаборанти, лікарі'], ['trd', '📈', 'Тенденції', '12 місяців'], ['sea', '🗓', 'Сезонність', 'Піки по місяцях']];
 const MG_MS = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
@@ -3153,7 +3155,7 @@ function mgAgg(rs, a, b){
   o.chk = o.n ? Math.round(o.after / o.n) : null;
   return o;
 }
-const mgFmt = (n) => (n === null || n === undefined || Number.isNaN(n)) ? '—' : nfmt(Math.round(n));
+const mgFmt = (n) => (n === null || n === undefined || Number.isNaN(n)) ? '—' : mgN(Math.round(n));
 /* стрілка зміни: goodUp — зростання це добре; null база = «немає порівняння», 0 база = «нове» */
 function mgDelta(cur, prv, goodUp, lbl, noCmp){
   if (noCmp) return `<div class="k-d flat cmpd">немає порівняння</div>`;
@@ -3268,7 +3270,7 @@ function mgMatrix(X){
   const ag = cols.map(c => mgAgg(mgIn(c.a, c.b), c.a, c.b));
   const unitOk = (mg.og === 'y' && P.year) || (mg.og === 'm' && !P.year), cur = unitOk ? cols.findIndex(c => c.a === P.a) : -1, prv = unitOk ? cols.findIndex(c => c.a === P.ca) : -1;   // підсвітка лише коли одиниця стовпця = одиниця періоду
   const gc = (t) => `color-mix(in srgb,var(--green) ${Math.round(t * 80)}%,var(--tile))`;
-  const sh = (v) => v === null || v === undefined ? '—' : (Math.abs(v) < 100 && v % 1 ? String(Math.round(v * 10) / 10).replace('.', ',') : nfmt(Math.round(v)));
+  const sh = (v) => v === null || v === undefined ? '—' : (Math.abs(v) < 100 && v % 1 ? String(Math.round(v * 10) / 10).replace('.', ',') : mgN(Math.round(v)));
   let h = '<div class="h"></div>' + cols.map((c, i) => `<div class="h ${i === cur ? 'ch-c' : i === prv ? 'ch-p' : ''}">${c.l}<br><small>${c.s}</small></div>`).join('');
   rows.forEach(([lbl, f]) => {
     const vs = ag.map(A => (A.n ? f(A) : null)), full = vs.filter((v, i) => v !== null && !cols[i].part), mn = Math.min(...full), mx = Math.max(...full);
@@ -3277,7 +3279,6 @@ function mgMatrix(X){
   const mx = $('mgOvMx'); mx.style.gridTemplateColumns = `112px repeat(${cols.length},minmax(${mg.og === 'y' ? 60 : 34}px,1fr))`; mx.innerHTML = h;
 }
 /* ── сигнали (алгоритми — у примітках макета «Алгоритми сигналів»; пороги MG_TH). Немає потрібних даних — сигналу немає взагалі ── */
-const mgMod = (r) => { const n = (r.serviceSnapshot?.name || '').trim(); return /^[МM][РPp][ТT]|^магнітно/i.test(n) ? 'МРТ' : /^[КK][ТT](?![A-Za-zА-Яа-яІіЇїЄєҐґ])|^комп.?ютерн\S*\s+томограф/i.test(n) ? 'КТ' : null; };   // тимчасово за назвою послуги: ознаки «КТ/МРТ» у довіднику ще немає (відкрите питання)
 const mgDays = (iso) => Math.round((new Date(todayISO() + 'T00:00:00') - new Date(iso + 'T00:00:00')) / 864e5);
 function mgSrcAgg(rs, by){   // by: 'after' | 'n'
   const m = new Map();
@@ -3292,7 +3293,7 @@ function mgSignals(X){
   /* Тривога №1 — неоплата понад 30 днів */
   if (paid){
     const un = X.cur.filter(r => !r.paid), U = un.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0), U30 = un.filter(r => mgDays(r.date) > 30).reduce((s, r) => s + (Number(r.totalAmount) || 0), 0), sh = U ? U30 / U : 0;
-    if (U && sh >= MG_TH.unpaid30){ const top = [...mgSrcAgg(un, 'after').values()].sort((a, b) => b.unp - a.unp)[0]; add('red', `Неоплачено понад 30 днів — ${nfmt(U30)} грн`, `Це ${pc(sh)} % усіх неоплат; поріг ${pc(MG_TH.unpaid30)} %.${top ? ` Найбільший боржник: ${esc(top.name)} (${nfmt(top.unp)} грн).` : ''}`, `Поріг: неоплат > 30 днів ≥ ${pc(MG_TH.unpaid30)} % від неоплат`, 'mon'); }
+    if (U && sh >= MG_TH.unpaid30){ const top = [...mgSrcAgg(un, 'after').values()].sort((a, b) => b.unp - a.unp)[0]; add('red', `Неоплачено понад 30 днів — ${mgN(U30)} грн`, `Це ${pc(sh)} % усіх неоплат; поріг ${pc(MG_TH.unpaid30)} %.${top ? ` Найбільший боржник: ${esc(top.name)} (${mgN(top.unp)} грн).` : ''}`, `Поріг: неоплат > 30 днів ≥ ${pc(MG_TH.unpaid30)} % від неоплат`, 'mon'); }
     else quiet.push('Неоплачено понад 30 днів');
   }
   /* Тривога №3 — втрачене джерело (партнерська установа, що мала ≥ N візитів у періоді порівняння, а тепер 0) */
@@ -3311,28 +3312,19 @@ function mgSignals(X){
     if (g > MG_TH.disc){
       const cnt = (rs) => { const m = new Map(); rs.forEach(r => { const nm = r.discountSnapshot?.name; if (nm) m.set(nm, (m.get(nm) || 0) + 1); }); return m; }, c1 = cnt(X.cur), c0 = cnt(X.prv);
       const top = [...c1].map(([k, v]) => [k, v - (c0.get(k) || 0)]).sort((a, b) => b[1] - a[1])[0];
-      add('amber', `Пільги зросли на ${pc(g)} %`, `Віддано ${nfmt(A.disc)} грн проти ${nfmt(B.disc)}.${top && top[1] > 0 ? ` Найбільше — «${esc(top[0])}» (+${top[1]} застосувань).` : ''}`, `Поріг: зростання > ${pc(MG_TH.disc)} %`, 'inc');
+      add('amber', `Пільги зросли на ${pc(g)} %`, `Віддано ${mgN(A.disc)} грн проти ${mgN(B.disc)}.${top && top[1] > 0 ? ` Найбільше — «${esc(top[0])}» (+${top[1]} застосувань).` : ''}`, `Поріг: зростання > ${pc(MG_TH.disc)} %`, 'inc');
     } else quiet.push('Зростання пільг');
   }
-  /* Увага №3 — середній чек КТ / МРТ (без порівняння — інформація із значенням) */
-  if (money){
-    for (const md of ['МРТ', 'КТ']){
-      const f = (rs) => { const x = rs.filter(r => mgMod(r) === md); return x.length ? Math.round(x.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0) / x.length) : null; }, c = f(X.cur), p = cmp ? f(X.prv) : null;
-      if (c === null) continue;
-      if (!cmp || p === null) { if (!cmp) add('blue', `Середній чек ${md}: ${nfmt(c)} грн`, 'Без порівняння з іншим періодом — лише значення.', 'Інформація', 'inc'); continue; }
-      const g = (c - p) / p;
-      if (Math.abs(g) >= MG_TH.chk) add('amber', `Середній чек ${md} ${g < 0 ? 'впав' : 'зріс'} на ${pc(Math.abs(g))} %`, `З ${nfmt(p)} до ${nfmt(c)} грн.`, `Поріг: зміна ≥ ${pc(MG_TH.chk)} %`, 'inc'); else quiet.push(`Зміна середнього чека ${md}`);
-    }
-  }
+  /* Увага №3 (середній чек за КТ / МРТ) — вимкнено: потрібна позначка виду обладнання в довіднику послуг (див. TODO.md, «Перспективи») */
   /* Увага №4 — частка лікуючих лікарів (від себе) впала на ≥ 5 % від попередньої частки */
   if (cmp){
     const sh = (rs) => rs.length ? rs.filter(r => mgSrc(r).t === 'doc').length / rs.length : null, c = sh(X.cur), p = sh(X.prv);
     if (p && c !== null){ const g = (c - p) / p; if (g <= -MG_TH.share) add('amber', `Частка лікуючих лікарів (від себе) впала на ${pc(-g)} %`, `Було ${pc(p)} % візитів, стало ${pc(c)} %.`, `Поріг: падіння частки ≥ ${pc(MG_TH.share)} % від попередньої`, 'src'); else quiet.push('Частка лікуючих лікарів (від себе)'); }
   }
   /* Увага №5 — нові пацієнти: будь-яке зниження */
-  if (cmp && B.npat > 0){ if (A.npat < B.npat) add('amber', `Нових пацієнтів менше на ${pc((B.npat - A.npat) / B.npat)} %`, `Було ${nfmt(B.npat)}, стало ${nfmt(A.npat)}.`, 'Без порогу: показується будь-яке зниження', 'ov'); else quiet.push('Нові пацієнти'); }
+  if (cmp && B.npat > 0){ if (A.npat < B.npat) add('amber', `Нових пацієнтів менше на ${pc((B.npat - A.npat) / B.npat)} %`, `Було ${mgN(B.npat)}, стало ${mgN(A.npat)}.`, 'Без порогу: показується будь-яке зниження', 'ov'); else quiet.push('Нові пацієнти'); }
   /* Увага №6 — падіння візитів ≥ 10 % */
-  if (cmp && B.n > 0){ const g = (A.n - B.n) / B.n; if (g <= -MG_TH.visits) add('amber', `Візитів менше на ${pc(-g)} %`, `Було ${nfmt(B.n)}, стало ${nfmt(A.n)}.`, `Поріг: падіння ≥ ${pc(MG_TH.visits)} %`, 'ov'); else quiet.push(`Падіння візитів ≥ ${pc(MG_TH.visits)} %`); }
+  if (cmp && B.n > 0){ const g = (A.n - B.n) / B.n; if (g <= -MG_TH.visits) add('amber', `Візитів менше на ${pc(-g)} %`, `Було ${mgN(B.n)}, стало ${mgN(A.n)}.`, `Поріг: падіння ≥ ${pc(MG_TH.visits)} %`, 'ov'); else quiet.push(`Падіння візитів ≥ ${pc(MG_TH.visits)} %`); }
   /* Увага №8 — зниження візитів кожного партнера окремо, без порогу */
   if (cmp){
     const cm = mgSrcAgg(X.cur), pm = mgSrcAgg(X.prv); let any = false;
@@ -3413,14 +3405,14 @@ function mgSrcTab(X){
   /* топ-5 установ */
   const ins = [...cm.values()].filter(s => s.t === 'inst').sort((a, b) => b[by] - a[by]).slice(0, 5), imx = Math.max(1, ...ins.map(s => s[by]));
   const head = (l) => money ? [l, 'Візити', 'Виручка · частка', mgCmpHead(X, 'візитів')] : [l, 'Візити', 'Частка візитів', mgCmpHead(X, 'візитів')];
-  const shareCell = (s) => `${money ? nfmt(s.after) : nfmt(s.n)}<span class="shv">${mgPcs(s[by], tot)}</span>${mgBar(s[by], imx)}`;
+  const shareCell = (s) => `${money ? mgN(s.after) : mgN(s.n)}<span class="shv">${mgPcs(s[by], tot)}</span>${mgBar(s[by], imx)}`;
   const tInst = mgTable(head('Установа'), ins.map(s => [esc(s.name), s.n, shareCell(s), mgChg(s.n, pm.get(s.k)?.n ?? 0, 1, noc)]));
   /* топ-5 лікуючих лікарів (усі): пара «лікар — установа / від себе» */
   const dm = new Map();
   for (const r of X.cur){ const ref = r.referral || {}, s = mgSrc(r); if (s.t === 'self' || !(ref.doctorId || ref.doctorName)) continue; const dn = (dir.doctors.find(d => d.id === ref.doctorId)?.name) || ref.doctorName || '', k = (ref.doctorId || dn) + ':' + (ref.institutionId || ''), o = dm.get(k) || { name: `${dn} — ${s.t === 'inst' ? s.name : 'від себе'}`, n: 0, after: 0 }; o.n++; o.after += Number(r.totalAmount) || 0; dm.set(k, o); }
   const pdm = new Map(); for (const r of X.prv){ const ref = r.referral || {}, s = mgSrc(r); if (s.t === 'self' || !(ref.doctorId || ref.doctorName)) continue; const dn = (dir.doctors.find(d => d.id === ref.doctorId)?.name) || ref.doctorName || '', k = (ref.doctorId || dn) + ':' + (ref.institutionId || ''); pdm.set(k, (pdm.get(k) || 0) + 1); }
   const docs = [...dm].map(([k, o]) => ({ k, ...o })).sort((a, b) => b[by] - a[by]).slice(0, 5), dmx = Math.max(1, ...docs.map(s => s[by]));
-  const tDoc = mgTable(head('Лікуючий лікар'), docs.map(s => [esc(s.name), s.n, `${money ? nfmt(s.after) : nfmt(s.n)}<span class="shv">${mgPcs(s[by], tot)}</span>${mgBar(s[by], dmx)}`, mgChg(s.n, pdm.get(s.k) ?? 0, 1, noc)]));
+  const tDoc = mgTable(head('Лікуючий лікар'), docs.map(s => [esc(s.name), s.n, `${money ? mgN(s.after) : mgN(s.n)}<span class="shv">${mgPcs(s[by], tot)}</span>${mgBar(s[by], dmx)}`, mgChg(s.n, pdm.get(s.k) ?? 0, 1, noc)]));
   /* концентрація */
   const top = [...cm.values()].sort((a, b) => b[by] - a[by]).slice(0, 3), csh = tot ? top.reduce((s, x) => s + x[by], 0) / tot : 0, over = csh > MG_TH.conc;
   const conc = tot ? `<div class="conc"><div class="conc-t">Концентрація: три найбільших джерела дають <b>${Math.round(csh * 100)} %</b> ${money ? 'виручки' : 'візитів'} ${over ? `<span class="warn-tag">вище порогу ${Math.round(MG_TH.conc * 100)} %</span>` : ''}</div><div class="meter"><div class="meter-f" style="width:${Math.min(100, csh * 100)}%"></div><div class="meter-m" style="left:${MG_TH.conc * 100}%"><span>поріг ${Math.round(MG_TH.conc * 100)} %</span></div></div></div>` : '';
@@ -3431,11 +3423,11 @@ function mgSrcTab(X){
   const ppg = new Map(); X.prv.filter(r => mgSrc(r).partner).forEach(r => { const s = mgSrc(r), o = ppg.get(s.k) || { n: 0, after: 0 }; o.n++; o.after += Number(r.totalAmount) || 0; ppg.set(s.k, o); });
   const pl = [...pg.values()].sort((a, b) => b[by] - a[by]), pmx = Math.max(1, ...pl.map(s => s[by])), ptot = { n: pl.reduce((s, x) => s + x.n, 0), after: pl.reduce((s, x) => s + x.after, 0) }, pptot = { n: [...ppg.values()].reduce((s, x) => s + x.n, 0), after: [...ppg.values()].reduce((s, x) => s + x.after, 0) };
   const phead = money ? ['Партнер', 'Візити', 'Виручка · частка', mgCmpHead(X, 'суми')] : ['Партнер', 'Візити', 'Частка візитів', mgCmpHead(X, 'візитів')];
-  const tPart = mgTable(phead, pl.map(s => [esc(s.name), s.n, `${money ? nfmt(s.after) : nfmt(s.n)}<span class="shv">${mgPcs(s[by], allv)}</span>${mgBar(s[by], pmx)}`, mgChg(money ? s.after : s.n, noc ? null : (money ? ppg.get(s.k)?.after : ppg.get(s.k)?.n) ?? 0, 1, noc)]),
-    ['Разом', ptot.n, `${money ? nfmt(ptot.after) : nfmt(ptot.n)}<span class="shv">${mgPcs(money ? ptot.after : ptot.n, allv)}</span>`, mgChg(money ? ptot.after : ptot.n, money ? pptot.after : pptot.n, 1, noc)]);
-  const dnPart = mgDonutHtml([{ l: 'Партнери', v: pv, c: 'var(--green)', s: money ? nfmt(Math.round(pv)) + ' грн' : nfmt(pv) + ' візитів' }, { l: 'Усі інші', v: allv - pv, c: mgG(40), s: money ? nfmt(Math.round(allv - pv)) + ' грн' : nfmt(allv - pv) + ' візитів' }], allv ? Math.round(pv / allv * 100) + ' %' : '—', 'від партнерів');
+  const tPart = mgTable(phead, pl.map(s => [esc(s.name), s.n, `${money ? mgN(s.after) : mgN(s.n)}<span class="shv">${mgPcs(s[by], allv)}</span>${mgBar(s[by], pmx)}`, mgChg(money ? s.after : s.n, noc ? null : (money ? ppg.get(s.k)?.after : ppg.get(s.k)?.n) ?? 0, 1, noc)]),
+    ['Разом', ptot.n, `${money ? mgN(ptot.after) : mgN(ptot.n)}<span class="shv">${mgPcs(money ? ptot.after : ptot.n, allv)}</span>`, mgChg(money ? ptot.after : ptot.n, money ? pptot.after : pptot.n, 1, noc)]);
+  const dnPart = mgDonutHtml([{ l: 'Партнери', v: pv, c: 'var(--green)', s: money ? mgN(Math.round(pv)) + ' грн' : mgN(pv) + ' візитів' }, { l: 'Усі інші', v: allv - pv, c: mgG(40), s: money ? mgN(Math.round(allv - pv)) + ' грн' : mgN(allv - pv) + ' візитів' }], allv ? Math.round(pv / allv * 100) + ' %' : '—', 'від партнерів');
   $('mgP_src').innerHTML = `<section class="blk"><h3>Джерела пацієнтів · ${esc(P.nm)}</h3>
-      <div class="dnrow"><div class="dn">${mgDonutHtml(parts, nfmt(X.cur.length), 'візитів')}</div><div class="dnside"><div class="mini">Звідки приходять пацієнти</div><div class="hint" style="margin-top:0">${sideHint}</div></div></div>
+      <div class="dnrow"><div class="dn">${mgDonutHtml(parts, mgN(X.cur.length), 'візитів')}</div><div class="dnside"><div class="mini">Звідки приходять пацієнти</div><div class="hint" style="margin-top:0">${sideHint}</div></div></div>
       <div class="two"><div><div class="mini">Установи — топ-5 · ${esc(P.nm)}</div>${tInst}</div><div><div class="mini">Лікуючі лікарі (усі) — топ-5 · ${esc(P.nm)}</div>${tDoc}</div></div>
       ${conc}<div class="hint">Партнерство — на дату візиту. Детально → звіт «По скеруваннях».</div></section>
     <section class="blk"><h3>Партнери · ${esc(P.nm)}</h3>
@@ -3483,10 +3475,7 @@ function mgIncTab(X){
   if (X.none){ $('mgP_inc').innerHTML = `<section class="blk"><h3>Дохід і пільги · ${esc(P.nm)}</h3><div class="sc-e">За цей період даних немає</div></section>`; return; }
   /* кругові: основні/додаткові та КТ/МРТ */
   const mainS = mgSum(cur, mgMain), extS = mgSum(cur, mgExtra), totS = mainS + extS;
-  const d1 = money ? mgDonutHtml([{ l: 'Основні послуги', v: mainS, c: 'var(--green)', s: nfmt(mainS) + ' грн' }, { l: 'Додаткові послуги', v: extS, c: mgG(40), s: nfmt(extS) + ' грн' }], totS ? Math.round(mainS / totS * 100) + ' %' : '—', 'основні') : '';
-  const kt = cur.filter(r => mgMod(r) === 'КТ'), mr = cur.filter(r => mgMod(r) === 'МРТ'), oth = cur.filter(r => !mgMod(r)), g = money ? mgTot : () => 1;
-  const parts2 = [{ l: 'МРТ', v: mgSum(mr, g), c: 'var(--green)', s: plN(mr.length, ['візит', 'візити', 'візитів']) }, { l: 'КТ', v: mgSum(kt, g), c: mgG(40), s: plN(kt.length, ['візит', 'візити', 'візитів']) }, ...(oth.length ? [{ l: 'Інші', v: mgSum(oth, g), c: mgG(20), s: plN(oth.length, ['візит', 'візити', 'візитів']) }] : [])];
-  const d2 = mgDonutHtml(parts2, nfmt(cur.length), 'візитів');
+  const d1 = money ? mgDonutHtml([{ l: 'Основні послуги', v: mainS, c: 'var(--green)', s: mgN(mainS) + ' грн' }, { l: 'Додаткові послуги', v: extS, c: mgG(40), s: mgN(extS) + ' грн' }], totS ? Math.round(mainS / totS * 100) + ' %' : '—', 'основні') : '';
   /* основні послуги — Парето від суми САМИХ основних (без грошей — від кількості) */
   const grp = (rs) => { const m = new Map(); rs.forEach(r => { const k = r.serviceSnapshot?.name || '(послугу видалено)', o = m.get(k) || { name: k, v: 0, n: 0 }; o.v += f(r); o.n++; m.set(k, o); }); return m; };
   const gc = grp(cur), gp = grp(prv), all = [...gc.values()].sort((a, b) => b.v - a.v), base = all.reduce((s, x) => s + x.v, 0);
@@ -3494,29 +3483,29 @@ function mgIncTab(X){
   if (cross < 0) cross = all.length - 1;
   const shown = all.slice(0, cross + 1), rest = all.slice(cross + 1), restV = rest.reduce((s, x) => s + x.v, 0), restP = rest.reduce((s, x) => s + (gp.get(x.name)?.v || 0), 0), smx = Math.max(1, ...shown.map(s => s.v), restV);
   const mh = [money ? 'Послуга' : 'Послуга', money ? 'Виручка · частка від основних' : 'Візити · частка', 'Накопич.', mgCmpHead(X, money ? 'суми' : 'візитів')];
-  let mrows = shown.map((s, i) => `<tr><td>${esc(s.name)}</td><td>${nfmt(s.v)}<span class="shv">${mgPcs(s.v, base)}</span>${mgBar(s.v, smx)}</td><td>${i === cross ? `<b>${Math.round(s.cum * 1000) / 10 + ''}`.replace('.', ',') + ' %</b>' : String(Math.round(s.cum * 1000) / 10).replace('.', ',') + ' %'}</td><td>${mgChg(s.v, gp.get(s.name)?.v ?? 0, 1, noc)}</td></tr>`).join('');
+  let mrows = shown.map((s, i) => `<tr><td>${esc(s.name)}</td><td>${mgN(s.v)}<span class="shv">${mgPcs(s.v, base)}</span>${mgBar(s.v, smx)}</td><td>${i === cross ? `<b>${Math.round(s.cum * 1000) / 10 + ''}`.replace('.', ',') + ' %</b>' : String(Math.round(s.cum * 1000) / 10).replace('.', ',') + ' %'}</td><td>${mgChg(s.v, gp.get(s.name)?.v ?? 0, 1, noc)}</td></tr>`).join('');
   if (shown.length) mrows += `<tr class="parl"><td colspan="4"><span>Лінія Парето · 80 % ${money ? 'виручки' : 'візитів'}</span></td></tr>`;
-  if (rest.length) mrows += `<tr><td>Інші (${plN(rest.length, ['позиція', 'позиції', 'позицій'])})</td><td>${nfmt(restV)}<span class="shv">${mgPcs(restV, base)}</span>${mgBar(restV, smx)}</td><td>100 %</td><td>${mgChg(restV, restP, 1, noc)}</td></tr>`;
+  if (rest.length) mrows += `<tr><td>Інші (${plN(rest.length, ['позиція', 'позиції', 'позицій'])})</td><td>${mgN(restV)}<span class="shv">${mgPcs(restV, base)}</span>${mgBar(restV, smx)}</td><td>100 %</td><td>${mgChg(restV, restP, 1, noc)}</td></tr>`;
   const tSvc = `<div class="tw"><table class="lt"><thead><tr>${mh.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${mrows || '<tr><td colspan="4" style="color:var(--muted)">За цей період даних немає</td></tr>'}</tbody></table></div>`;
   /* додаткові послуги: частка від загальної виручки */
   const ge = (rs) => { const m = new Map(); rs.forEach(r => (r.extras || []).forEach(e => { const k = e.name || '(без назви)', o = m.get(k) || { name: k, v: 0 }; o.v += Number(e.price) || 0; m.set(k, o); })); return m; };
   const xe = [...ge(cur).values()].sort((a, b) => b.v - a.v), pe = ge(prv), xs = xe.reduce((s, x) => s + x.v, 0), xmx = Math.max(1, ...xe.map(x => x.v)), pxs = [...pe.values()].reduce((s, x) => s + x.v, 0);
-  const tExtra = money ? mgTable(['Послуга', 'Виручка', 'Частка від загальної виручки', mgCmpHead(X, 'суми')], xe.map(x => [esc(x.name), `${nfmt(x.v)}${mgBar(x.v, xmx)}`, mgPcs(x.v, totS), mgChg(x.v, pe.get(x.name)?.v ?? 0, 1, noc)]), ['Разом', nfmt(xs), mgPcs(xs, totS), mgChg(xs, pxs, 1, noc)]) : '';
+  const tExtra = money ? mgTable(['Послуга', 'Виручка', 'Частка від загальної виручки', mgCmpHead(X, 'суми')], xe.map(x => [esc(x.name), `${mgN(x.v)}${mgBar(x.v, xmx)}`, mgPcs(x.v, totS), mgChg(x.v, pe.get(x.name)?.v ?? 0, 1, noc)]), ['Разом', mgN(xs), mgPcs(xs, totS), mgChg(xs, pxs, 1, noc)]) : '';
   /* пільги */
   const dsc = (rs) => rs.filter(r => mgDisc(r) > 0), dc = dsc(cur), dp = dsc(prv), dS = mgSum(dc, mgDisc), dSp = mgSum(dp, mgDisc), baseS = mgSum(cur, mgBase);
   const pat = (rs) => new Set(rs.map(r => r.patientId).filter(Boolean)).size, patC = pat(dc), patAll = pat(cur);
   const card = (l, v, of, w, cv, pv, up) => `<div class="kpi"><div class="k-l">${l}</div><div class="k-v sm">${v}<span class="k-of">${of}</span></div><div class="kpb"><i style="width:${Math.min(100, w)}%"></i></div>${mgDelta(cv, noc ? null : pv, up, P.pv, noc)}</div>`;
-  const cards = `<div class="kpis k2">${money ? card('Віддано знижками', nfmt(dS) + ' грн', `із ${nfmt(baseS)} грн нараховано`, baseS ? dS / baseS * 100 : 0, dS, dSp, 0) + card('% від суми без пільг', mgPcs(dS, baseS), 'із 100 % нарахованої суми', baseS ? dS / baseS * 100 : 0, baseS ? dS / baseS : 0, (() => { const b0 = mgSum(prv, mgBase); return b0 ? mgSum(dp, mgDisc) / b0 : null; })(), 0) : ''}
-      ${card('Застосувань пільг', nfmt(dc.length), `із ${nfmt(cur.length)} візитів`, cur.length ? dc.length / cur.length * 100 : 0, dc.length, dp.length, 0)}${card('Пацієнтів із пільгою', mgPcs(patC, patAll), `${nfmt(patC)} із ${nfmt(patAll)} пацієнтів`, patAll ? patC / patAll * 100 : 0, patAll ? patC / patAll : 0, pat(prv) ? pat(dp) / pat(prv) : null, 0)}</div>`;
+  const cards = `<div class="kpis k2">${money ? card('Віддано знижками', mgN(dS) + ' грн', `із ${mgN(baseS)} грн нараховано`, baseS ? dS / baseS * 100 : 0, dS, dSp, 0) + card('% від суми без пільг', mgPcs(dS, baseS), 'із 100 % нарахованої суми', baseS ? dS / baseS * 100 : 0, baseS ? dS / baseS : 0, (() => { const b0 = mgSum(prv, mgBase); return b0 ? mgSum(dp, mgDisc) / b0 : null; })(), 0) : ''}
+      ${card('Застосувань пільг', mgN(dc.length), `із ${mgN(cur.length)} візитів`, cur.length ? dc.length / cur.length * 100 : 0, dc.length, dp.length, 0)}${card('Пацієнтів із пільгою', mgPcs(patC, patAll), `${mgN(patC)} із ${mgN(patAll)} пацієнтів`, patAll ? patC / patAll * 100 : 0, patAll ? patC / patAll : 0, pat(prv) ? pat(dp) / pat(prv) : null, 0)}</div>`;
   const byK = (rs, kf) => { const m = new Map(); rs.forEach(r => { const k = kf(r), o = m.get(k) || { k, n: 0, v: 0 }; o.n++; o.v += mgDisc(r); m.set(k, o); }); return m; };
   const dk = (r) => r.discountSnapshot?.name || 'Індивідуальна', kc = [...byK(dc, dk).values()].sort((a, b) => b.v - a.v), kp = byK(dp, dk), kmx = Math.max(1, ...kc.map(x => x.v));
-  const tKind = money ? mgTable(['Пільга', 'Застос.', 'Сума знижки · частка від нарахованого', mgCmpHead(X, 'суми')], kc.map(x => [esc(x.k), x.n, `${nfmt(x.v)}<span class="shv">${mgPcs(x.v, dS)}</span>${mgBar(x.v, kmx)}`, mgChg(x.v, kp.get(x.k)?.v ?? 0, 0, noc)]), ['Разом', dc.length, `${nfmt(dS)}<span class="shv">100 %</span>`, mgChg(dS, dSp, 0, noc)])
+  const tKind = money ? mgTable(['Пільга', 'Застос.', 'Сума знижки · частка від нарахованого', mgCmpHead(X, 'суми')], kc.map(x => [esc(x.k), x.n, `${mgN(x.v)}<span class="shv">${mgPcs(x.v, dS)}</span>${mgBar(x.v, kmx)}`, mgChg(x.v, kp.get(x.k)?.v ?? 0, 0, noc)]), ['Разом', dc.length, `${mgN(dS)}<span class="shv">100 %</span>`, mgChg(dS, dSp, 0, noc)])
     : mgTable(['Пільга', 'Застосувань'], kc.map(x => [esc(x.k), x.n]), ['Разом', dc.length]);
   const sSrc = (rs) => { const m = new Map(); rs.forEach(r => { const s = mgSrc(r), o = m.get(s.k) || { name: s.t === 'doc' ? `${s.name} (від себе)` : s.name, v: 0, tot: 0 }; o.v += mgDisc(r); o.tot += mgBase(r); m.set(s.k, o); }); return m; };
   const sc = sSrc(cur), sp = sSrc(prv), sl = [...sc.values()].filter(x => x.v > 0).sort((a, b) => b.v - a.v).slice(0, 5), smx2 = Math.max(1, ...sl.map(x => x.v));
-  const tDS = money ? mgTable(['Джерело', 'Знижка', 'Знижка від нарахованого йому', mgCmpHead(X, 'суми')], sl.map(x => { const key = [...sc].find(([, o]) => o === x)[0]; return [esc(x.name), `${nfmt(x.v)}${mgBar(x.v, smx2)}`, mgPcs(x.v, x.tot), mgChg(x.v, sp.get(key)?.v ?? 0, 0, noc)]; })) : '';
+  const tDS = money ? mgTable(['Джерело', 'Знижка', 'Знижка від нарахованого йому', mgCmpHead(X, 'суми')], sl.map(x => { const key = [...sc].find(([, o]) => o === x)[0]; return [esc(x.name), `${mgN(x.v)}${mgBar(x.v, smx2)}`, mgPcs(x.v, x.tot), mgChg(x.v, sp.get(key)?.v ?? 0, 0, noc)]; })) : '';
   $('mgP_inc').innerHTML = `<section class="blk"><h3>Дохід і пільги · ${esc(P.nm)}</h3>
-      <div class="two">${money ? `<div><div class="mini">Основні й додаткові послуги</div><div class="dn sm">${d1}</div></div>` : ''}<div><div class="mini">КТ і МРТ</div><div class="dn sm">${d2}</div></div></div>
+      <div class="two">${money ? `<div><div class="mini">Основні й додаткові послуги</div><div class="dn sm">${d1}</div></div>` : ''}</div>
       <div class="mini" style="margin-top:var(--s3)">Основні послуги · ${esc(P.nm)}</div>${tSvc}
       ${money ? `<div class="mini" style="margin-top:var(--s3)">Додаткові послуги · ${esc(P.nm)}</div>${tExtra}` : ''}</section>
     <section class="blk"><h3>Пільги · ${esc(P.nm)}</h3>${cards}
@@ -3527,18 +3516,18 @@ function mgMonTab(X){
   const P = X.P, noc = X.nocmp;
   if (X.none){ $('mgP_mon').innerHTML = `<section class="blk"><h3>Гроші й дебіторка · ${esc(P.nm)}</h3><div class="sc-e">За цей період даних немає</div></section>`; return; }
   const pd = X.cur.filter(r => r.paid), cash = mgSum(pd.filter(r => r.paymentMethod === 'cash'), mgTot), cl = mgSum(pd.filter(r => r.paymentMethod === 'cashless'), mgTot), got = cash + cl, oth = got - cash - cl;
-  const d1 = mgDonutHtml([{ l: 'Безготівка', v: cl, c: 'var(--green)', s: nfmt(cl) }, { l: 'Готівка', v: cash, c: mgG(40), s: nfmt(cash) }], got ? Math.round(cl / got * 100) + ' %' : '—', 'безготівка', (p) => got ? Math.round(p.v / got * 100) + ' %' : '—');
+  const d1 = mgDonutHtml([{ l: 'Безготівка', v: cl, c: 'var(--green)', s: mgN(cl) }, { l: 'Готівка', v: cash, c: mgG(40), s: mgN(cash) }], got ? Math.round(cl / got * 100) + ' %' : '—', 'безготівка', (p) => got ? Math.round(p.v / got * 100) + ' %' : '—');
   const un = X.cur.filter(r => !r.paid), U = mgSum(un, mgTot), age = (a, b) => mgSum(un.filter(r => { const d = mgDays(r.date); return d >= a && d <= b; }), mgTot);
-  const d2 = mgDonutHtml([{ l: 'до 7 днів', v: age(0, 7), c: mgG(40), s: nfmt(age(0, 7)) }, { l: '8–30 днів', v: age(8, 30), c: 'color-mix(in srgb,var(--red) 40%,var(--bg))', s: nfmt(age(8, 30)) }, { l: 'понад 30 днів', v: age(31, 99999), c: 'var(--red)', s: nfmt(age(31, 99999)) }], U ? nfmt(Math.round(U / 100) / 10) : '—', 'тис. грн', (p) => U ? Math.round(p.v / U * 100) + ' %' : '—');
+  const d2 = mgDonutHtml([{ l: 'до 7 днів', v: age(0, 7), c: mgG(40), s: mgN(age(0, 7)) }, { l: '8–30 днів', v: age(8, 30), c: 'color-mix(in srgb,var(--red) 40%,var(--bg))', s: mgN(age(8, 30)) }, { l: 'понад 30 днів', v: age(31, 99999), c: 'var(--red)', s: mgN(age(31, 99999)) }], U ? nfmt(Math.round(U / 100) / 10) : '—', 'тис. грн', (p) => U ? Math.round(p.v / U * 100) + ' %' : '—');
   const lag = (rs) => { const a = rs.filter(r => r.paid && r.paidDate && r.paidDate >= r.date).map(r => (new Date(r.paidDate) - new Date(r.date)) / 864e5); return a.length ? a.reduce((s, x) => s + x, 0) / a.length : null; }, l1 = lag(X.cur), l0 = noc ? null : lag(X.prv);
   const lagTxt = l1 === null ? 'немає даних про дату оплати' : `<b>${String(Math.round(l1 * 10) / 10).replace('.', ',')} дн.</b>` + (l0 === null ? '' : ` <span class="chg ${l1 < l0 ? 'up' : l1 > l0 ? 'bad' : 'flat'}">${l1 < l0 ? '▼ −' : l1 > l0 ? '▲ +' : '● '}${String(Math.abs(Math.round((l1 - l0) * 10) / 10)).replace('.', ',')} дн. <small style="font-weight:400;color:var(--muted)">до ${esc(P.pv)}</small></span>`);
   const dm = new Map(); un.forEach(r => { const s = mgSrc(r), o = dm.get(s.k) || { name: s.t === 'doc' ? `${s.name} (від себе)` : s.name, n: 0, v: 0, old: 0 }; o.n++; o.v += mgTot(r); o.old = Math.max(o.old, mgDays(r.date)); dm.set(s.k, o); });
   const dl = [...dm.values()].sort((a, b) => b.v - a.v).slice(0, 5), dmx = Math.max(1, ...dl.map(x => x.v));
   $('mgP_mon').innerHTML = `<section class="blk"><h3>Гроші й дебіторка · ${esc(P.nm)}</h3>
-    <div class="two"><div><div class="mini">Безготівка і готівка (отримано ${nfmt(got)} грн)</div><div class="dn sm">${d1}</div>
-      <div class="mini" style="margin-top:var(--s3)">Старіння неоплат (${nfmt(U)} грн, за датою візиту, станом на сьогодні)</div><div class="dn sm">${d2}</div>
+    <div class="two"><div><div class="mini">Безготівка і готівка (отримано ${mgN(got)} грн)</div><div class="dn sm">${d1}</div>
+      <div class="mini" style="margin-top:var(--s3)">Старіння неоплат (${mgN(U)} грн, за датою візиту, станом на сьогодні)</div><div class="dn sm">${d2}</div>
       <div class="hint" style="margin-top:var(--s1)">Середній час від візиту до оплати: ${lagTxt}</div></div>
-    <div><div class="mini">Найбільші боржники · ${esc(P.nm)}</div>${mgTable(['Боржник', 'Неоплат', 'Сума', 'Найстаріше'], dl.map(x => [esc(x.name), x.n, `${nfmt(x.v)}${mgBar(x.v, dmx)}`, x.old + ' дн.']))}</div></div></section>`;
+    <div><div class="mini">Найбільші боржники · ${esc(P.nm)}</div>${mgTable(['Боржник', 'Неоплат', 'Сума', 'Найстаріше'], dl.map(x => [esc(x.name), x.n, `${mgN(x.v)}${mgBar(x.v, dmx)}`, x.old + ' дн.']))}</div></div></section>`;
 }
 /* ── «Працівники» ── */
 function mgWrkTab(X){
@@ -3546,11 +3535,11 @@ function mgWrkTab(X){
   const lab = (rs) => { const m = new Map(); rs.forEach(r => { if (!r.labTechId) return; const k = wNorm(r.labTechId), o = m.get(k) || { k, n: 0, v: 0 }; o.n++; o.v += mgTot(r); m.set(k, o); }); return m; };
   const lc = lab(X.cur), lp = lab(X.prv), ll = [...lc.values()].sort((a, b) => b.n - a.n), lmx = Math.max(1, ...ll.map(x => x.v));
   const lh = ['Лаборант', 'Візитів', ...(money ? ['Сума основних і дод. послуг', 'Середній чек'] : []), mgCmpHead(X, 'візитів')];
-  const tLab = mgTable(lh, ll.map(x => [esc(nameOfW(x.k)), x.n, ...(money ? [`${nfmt(x.v)}${mgBar(x.v, lmx)}`, nfmt(Math.round(x.v / x.n))] : []), mgChg(x.n, lp.get(x.k)?.n ?? 0, 1, noc)]));
+  const tLab = mgTable(lh, ll.map(x => [esc(nameOfW(x.k)), x.n, ...(money ? [`${mgN(x.v)}${mgBar(x.v, lmx)}`, mgN(Math.round(x.v / x.n))] : []), mgChg(x.n, lp.get(x.k)?.n ?? 0, 1, noc)]));
   const doc = (rs) => { const m = new Map(); rs.forEach(r => { if (!r.describerId) return; const k = wNorm(r.describerId), o = m.get(k) || { k, d: 0, p: 0, v: 0 }; if (r.described) o.d++; else o.p++; o.v += mgMain(r); m.set(k, o); }); return m; };
   const dc = doc(X.cur), dp = doc(X.prv), dl = [...dc.values()].sort((a, b) => b.d - a.d), dmx = Math.max(1, ...dl.map(x => x.v));
   const dh = ['Лікар', 'Не описано', 'Описів', ...(money ? ['Сума основних послуг'] : []), mgCmpHead(X, 'описів')];
-  const tDr = mgTable(dh, dl.map(x => [esc(nameOfW(x.k)), x.p ? `<span class="pend">${x.p}</span>` : '', x.d, ...(money ? [`${nfmt(x.v)}${mgBar(x.v, dmx)}`] : []), mgChg(x.d, dp.get(x.k)?.d ?? 0, 1, noc)]));
+  const tDr = mgTable(dh, dl.map(x => [esc(nameOfW(x.k)), x.p ? `<span class="pend">${x.p}</span>` : '', x.d, ...(money ? [`${mgN(x.v)}${mgBar(x.v, dmx)}`] : []), mgChg(x.d, dp.get(x.k)?.d ?? 0, 1, noc)]));
   $('mgP_wrk').innerHTML = `<section class="blk"><h3>Працівники · ${esc(P.nm)}</h3>
     <div class="two"><div><div class="mini">Лаборанти · ${esc(P.nm)}</div>${tLab}</div></div>
     <div class="mini" style="margin-top:var(--s3)">Лікарі (описи) · ${esc(P.nm)}</div>${tDr.replace('<table class="lt"', '<table class="lt" id="tDr"')}
