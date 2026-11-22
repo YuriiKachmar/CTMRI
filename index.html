@@ -3140,7 +3140,7 @@ const MG_TH = { unpaid30: .20, conc: .60, disc: .15, chk: .05, share: .05, visit
 const mg = { ps: null, tab: 'ov', og: 'm', sf: 'all', cache: null, loading: false, err: null, th: null, thm: '' };
 const mgDim = (y, m) => new Date(y, m + 1, 0).getDate();
 const mgML = (m) => MON_NAME[m].toLowerCase();
-const mgDef = () => (new Date().getMonth() === 0 ? 'py' : 'cy');   // у січні — попередній рік, інакше поточний рік станом на сьогодні
+const mgDef = () => 'pm';   // за замовчуванням — попередній місяць (повний, з порівнянням із попереднім)
 function mgPer(ps){
   const n = new Date(), Y = n.getFullYear(), M = n.getMonth(), D = n.getDate(), t = todayISO(), dm = (d) => p2(d) + '.' + p2(M + 1);
   if (ps === 'cy') return { ps, year: true, a: iso2(Y, 0, 1), b: t, ca: iso2(Y - 1, 0, 1), cb: iso2(Y - 1, M, Math.min(D, mgDim(Y - 1, M))), nm: `${Y} рік`, pv: `${Y - 1}`, label: 'Поточний рік', top: String(Y), short: `${Y} (до ${dm(D)})`, part: true };
