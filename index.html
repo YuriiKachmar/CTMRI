@@ -187,8 +187,8 @@
   .lst td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:center;vertical-align:top;overflow-wrap:anywhere}
   .lst .l{text-align:left}
   .lst td.nm{text-align:left;font-weight:700}
-  .pz-row{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:8px 10px;border-radius:var(--r8);background:var(--bg);box-shadow:var(--bump)}
-  .pz-row .pz-l{color:var(--muted);font-size:var(--t-sm)}.pz-row .pz-v{font-weight:700}
+  .pz-row{display:inline-flex;align-items:center;gap:10px;width:fit-content;max-width:100%;margin:0 0 12px;padding:6px 14px 6px 8px;border-radius:var(--r8);background:var(--soft);box-shadow:var(--in-on);white-space:nowrap}
+  .pz-row .pz-l{color:var(--green);font-size:var(--t-sm);font-weight:600}.pz-row .pz-v{font-weight:800;color:var(--green)}
   .pz-sl{width:100%;accent-color:var(--green);margin:10px 0 2px}.pz-big{font-size:28px;font-weight:700;text-align:center;color:var(--green)}.pz-sc{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
   .lst td.ds{text-align:left;font-weight:400;color:var(--muted);font-size:11.5px;line-height:1.5}
   .lst tr:last-child td{border-bottom:none}
@@ -1273,7 +1273,7 @@ function openServicesWin(){
     const sv = [...dir.services].sort(byName), ex = [...dir.extras].sort(byName), edit = canEditDirs();
     const svRows = sv.length ? sv.map(s => `<tr class="${s.status === 'inactive' ? 'inact' : ''}">${penCell(`data-edit="services:${s.id}"`)}<td class="nm">${esc(s.name)}</td><td class="ds">${esc([s.description, Number.isInteger(s.duration) ? 'Час дослідження: ' + s.duration + ' хв' : ''].filter(Boolean).join(' · ') || '—')}</td><td class="price nw">${fmtMoney(s.price)}</td><td>${pill(s.status)}</td></tr>`).join('') : emptyRow(5, 'Жодної основної послуги ще не додано. Додайте першу — вона з\'явиться тут.');
     const exRows = ex.length ? ex.map(s => `<tr class="${s.status === 'inactive' ? 'inact' : ''}">${penCell(`data-edit="extras:${s.id}"`)}<td class="nm">${esc(s.name)}</td><td class="price nw">${fmtMoney(s.price)}</td><td>${pill(s.status)}</td></tr>`).join('') : emptyRow(4, 'Жодної додаткової послуги ще не додано. Додайте першу — вона з\'явиться тут.');
-    return `<div class="pz-row">${edit ? '<span class="pen" data-pause>✎</span>' : ''}<span class="pz-l">Пауза між дослідженнями:</span><span class="pz-v">${studyPause()} хв</span></div>
+    return `<div style="display:flex"><div class="pz-row">${edit ? '<span class="pen" data-pause>✎</span>' : ''}<span class="pz-l">Пауза між дослідженнями:</span><span class="pz-v">${studyPause()} хв</span></div></div>
       <div class="grp-h"><div class="grp-t">Основні послуги</div></div>
       <table class="lst"><colgroup><col style="width:54px"><col style="width:200px"><col><col style="width:110px"><col style="width:110px"></colgroup>
         <tr><th></th><th class="l">Назва</th><th class="l">Опис</th><th>Вартість</th><th>Статус</th></tr>${svRows}</table>
