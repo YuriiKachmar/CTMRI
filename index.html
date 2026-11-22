@@ -3609,10 +3609,10 @@ function mgSeaTab(X){
   ord.forEach(i => { h += `<div class="rn">${esc(names[i])}</div>` + M[i].map((v, m) => { if (v === null) return '<div class="sc-nm" style="color:var(--muted)">—</div>'; const t = (v - cm[m][0]) / ((cm[m][1] - cm[m][0]) || 1); return `<div style="background:${mgHeatC(t, yc)};color:${t > .5 ? '#fff' : 'var(--ink)'}">${v}</div>`; }).join(''); });
   /* 2 · один розподіл: по роках */
   const one = (sn) => {
-  const data = yrs.map(y => MG_MS.map((_, m) => vis(sn, y, m))), fv = data.flat().filter(x => x !== null), mxv = Math.max(1, ...fv), top = Math.ceil(mxv * 1.12 / 10) * 10 || 10;
+  const data = yrs.map(y => MG_MS.map((_, m) => vis(sn, y, m))), fv = data.flat().filter(x => x !== null), mxv = Math.max(0, ...fv), stp = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000].find(x => Math.ceil(mxv / x) <= 5) || 10000, top = Math.max(stp, Math.ceil(mxv / stp) * stp);
   const W = 640, H = 200, L = 34, B = 24, T = 16, pw = (W - L - 8) / 12, yy = (v) => T + (H - T - B) * (1 - v / top), cols = yrs.map(mgYc);
   let s = `<svg viewBox="0 0 ${W} ${H}" width="100%">`;
-  [0, .5, 1].forEach(f => { s += `<line x1="${L}" x2="${W - 8}" y1="${yy(f * top)}" y2="${yy(f * top)}" class="gl"/><text x="${L - 4}" y="${yy(f * top) + 3}" font-size="9" text-anchor="end" class="tx">${Math.round(f * top)}</text>`; });
+  for (let v = 0; v <= top; v += stp) s += `<line x1="${L}" x2="${W - 8}" y1="${yy(v)}" y2="${yy(v)}" class="gl"/><text x="${L - 4}" y="${yy(v) + 3}" font-size="9" text-anchor="end" class="tx">${v}</text>`;
   MG_MS.forEach((m, i) => { const gx = L + i * pw; yrs.forEach((yr, yi) => { const v = data[yi][i]; if (v === null) return; const bw = pw * .26, x = gx + pw * .1 + yi * bw; s += `<rect x="${x}" y="${yy(v)}" width="${bw - 1}" height="${yy(0) - yy(v)}" rx="2" style="fill:${cols[yi]}"/>`; }); s += `<text x="${gx + pw / 2}" y="${H - 8}" font-size="9" text-anchor="middle" class="tx">${m}</text>`; });
   s += '</svg>';
   const tmn = Math.min(...fv), tmx = Math.max(...fv), hc = (v, c) => { if (v === null) return '<td style="text-align:center;color:var(--muted)">—</td>'; const t = (v - tmn) / ((tmx - tmn) || 1); return `<td style="text-align:center;background:${mgHeatC(t, c)};color:${t > .5 ? '#fff' : 'var(--ink)'}">${v}</td>`; };
@@ -3646,44 +3646,92 @@ function mgExportPdf(){
   const body = $('mgBody').cloneNode(true);
   body.querySelectorAll('.stabs,.noexp,.mg-top,script,button,input,[data-go]').forEach(e => e.remove());
   body.querySelectorAll('.pane').forEach(p => { if (!p.textContent.trim()) p.remove(); });
-  /* переноси: заголовок + наступний елемент (таблиця до 18 рядків, діаграма, картки) — одним неподільним блоком; заголовок ніколи не лишається внизу сторінки сам.
-     Довгі таблиці (>18 рядків) розриваються, а шапка повторюється; рядки не розриваються. */
+  /* заголовок + наступний елемент — одним блоком (mgPaginate не відриває заголовок від таблиці/діаграми); довгу таблицю (>18 рядків) позначаємо як «splittable» */
   const keepWith = (h) => {
-    let n = h.nextElementSibling; if (!n) return;
-    const rows = n.querySelectorAll ? n.querySelectorAll('tbody tr').length : 0;
-    if (rows > 18) return;
+    const n = h.nextElementSibling; if (!n) return;
     const w = document.createElement('div'); w.className = 'kt'; h.parentNode.insertBefore(w, h); w.appendChild(h); w.appendChild(n);
+    const tb = w.querySelector('tbody'); if (tb && tb.rows.length > 18) w.classList.add('splittable');
   };
+  body.querySelectorAll('.exonly,.two').forEach(e => e.replaceWith(...e.childNodes));
   [...body.querySelectorAll('.mini')].forEach(keepWith);
   [...body.querySelectorAll('.blk>h3')].forEach(keepWith);
-  body.querySelectorAll('.tw').forEach(t => { if (t.querySelectorAll('tbody tr').length <= 18) t.classList.add('kt'); });
   const stamp = `${p2(t.getDate())}.${p2(t.getMonth() + 1)}.${t.getFullYear()} ${p2(t.getHours())}:${p2(t.getMinutes())}`;
   /* верхній колонтитул — у <thead> зовнішньої таблиці: повторюється на кожній сторінці (і в Chromium, і в Safari) */
   const head = `<div class="pgh"><div class="pgh-l"><b>Управлінський звіт</b>${settings?.facilityName ? ' · ' + PX(settings.facilityName) : ''}<br><span>Вибірка: ${PX(P.nm)} · ${isoToUa(P.a)} – ${isoToUa(P.b)}${P.part ? ' (дані станом на сьогодні)' : ''} · порівняння з ${PX(P.pv)}</span></div><div class="pgh-r">Сформовано<br><b>${stamp}</b></div></div>`;
   const css = [...document.querySelectorAll('style')].map(x => x.textContent).join('\n') + `
-    @page{size:A4 portrait;margin:10mm 10mm 14mm;@bottom-right{content:"Сторінка " counter(page) " з " counter(pages);font:8pt sans-serif;color:#667}}
+    @page{size:A4 portrait;margin:0}
     html,body{background:#fff!important;margin:0}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    table.pgw{width:100%;border-collapse:collapse}table.pgw>thead,table.pgw>tbody>tr>td{padding:0;border:0;background:none}
-    thead{display:table-header-group}tr{break-inside:avoid}
+    #src{position:absolute;visibility:hidden;width:190mm;left:0;top:0}
+    .pg{width:210mm;height:297mm;box-sizing:border-box;padding:10mm 10mm 14mm;position:relative;overflow:hidden;break-after:page;page-break-after:always;background:#fff}
+    .pg:last-child{break-after:auto;page-break-after:auto}
+    .pgc{overflow:visible}.pgf{position:absolute;bottom:6mm;right:10mm;font:8pt sans-serif;color:#667}
     .pgh{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;border-bottom:2px solid var(--green);padding:0 0 5px;margin-bottom:12px;font-size:9pt;line-height:1.35;color:var(--ink)}
     .pgh b{font-size:11pt;color:var(--green)}.pgh span{color:var(--muted)}.pgh-r{text-align:right;white-space:nowrap;color:var(--muted)}.pgh-r b{font-size:9pt;color:var(--ink)}
     .mg .exonly{display:block!important}.mg .noexp{display:none!important}
-    .mg .pane{display:block!important;break-inside:auto;break-before:page}.mg .pane:first-of-type{break-before:auto}.mg .omx,.mg .sheat,.mg .heat,.mg .tw{overflow:visible!important;max-width:none!important}
+    .mg .pane{display:block!important}.mg .omx,.mg .sheat,.mg .heat,.mg .tw{overflow:visible!important;max-width:none!important}
     .mg .fsheet{box-shadow:none;border:0;padding:0;background:none}.mg *{box-shadow:none!important}
-    .mg .blk{break-inside:auto;margin:0 0 16px;padding:12px 0 0;border-top:3px solid var(--green)}
-    .mg .pane>.blk:first-child{margin-top:0}
-    .mg .blk h3{font-size:17pt!important;line-height:1.2;margin:0 0 10px;color:var(--green);break-after:avoid}
-    .mg .mini{font-size:10.5pt!important;font-weight:800;margin:12px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--rule);break-after:avoid}
-    .kt{break-inside:avoid;page-break-inside:avoid}.mg .mini,.mg .blk h3{page-break-after:avoid}.mg .lt tr{page-break-inside:avoid}
-    .mg .lt thead{display:table-header-group}.mg .kpi,.mg .al,.mg .dn,.mg .rule,.mg .sheat,.mg .omx{break-inside:avoid}`;
-  const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><table class="pgw"><thead><tr><td>${head}</td></tr></thead><tbody><tr><td><div class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div></td></tr></tbody></table></body></html>`;
+    .mg .blk{margin:0 0 16px;padding:12px 0 0;border-top:3px solid var(--green)}
+    .mg .blk.cont{border-top:0;padding-top:0}
+    .mg .blk h3{font-size:17pt!important;line-height:1.2;margin:0 0 10px;color:var(--green)}
+    .mg .mini{font-size:10.5pt!important;font-weight:800;margin:12px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--rule)}`;
+  const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><div id="src" class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div><div id="out" class="mg"></div></body></html>`;
   const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
   const d = f.contentDocument; d.open(); d.write(html); d.close();
   const old = document.title; document.title = name;
   const done = () => { document.title = old; setTimeout(() => f.remove(), 1000); };
   f.contentWindow.addEventListener('afterprint', done);
-  (d.fonts && d.fonts.ready ? d.fonts.ready.catch(() => {}) : Promise.resolve()).then(() => setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e){ toast('e', 'Не вдалося відкрити друк', 'Спробуйте ще раз.'); done(); } }, 250));
+  (d.fonts && d.fonts.ready ? d.fonts.ready.catch(() => {}) : Promise.resolve()).then(() => setTimeout(() => { try { mgPaginate(d, head); f.contentWindow.focus(); f.contentWindow.print(); } catch (e){ toast('e', 'Не вдалося відкрити друк', 'Спробуйте ще раз.'); done(); } }, 250));
+}
+
+/* Власна розбивка на сторінки A4 (однакова в Chrome і Safari): блоки по черзі кладемо на сторінку; не вміщується — нова сторінка;
+   довга таблиця ділиться по рядках із повтором шапки; кожна сторінка має колонтитул і «Сторінка X з Y». Кожен розділ (вкладка) — з нової сторінки. */
+function mgPaginate(d, head){
+  const MM = 96 / 25.4, pageH = 297 * MM, src = d.getElementById('src'), out = d.getElementById('out'), pages = [];
+  let pc = null;
+  const newPage = () => {
+    const pg = d.createElement('div'); pg.className = 'pg'; pg.innerHTML = head + '<div class="pgc"></div><div class="pgf"></div>'; out.appendChild(pg); pages.push(pg);
+    const c = pg.querySelector('.pgc'), h = pg.querySelector('.pgh'); c.style.height = Math.floor(pageH - 24 * MM - h.offsetHeight - 12) + 'px';
+    return c;
+  };
+  const over = () => pc.scrollHeight > pc.clientHeight + 1;
+  const shellOf = (cont) => { const sh = d.createElement('section'); sh.className = 'blk' + (cont ? ' cont' : ''); pc.appendChild(sh); return sh; };
+  for (const pane of [...src.querySelectorAll('.pane')]){
+    pc = newPage();
+    for (const blk of [...pane.querySelectorAll(':scope > .blk')]){
+      let sh = shellOf(false), cont = false;
+      for (const u of [...blk.children]){
+        sh.appendChild(u);
+        if (!over()) continue;
+        const big = [...u.querySelectorAll('tbody')].find(t => t.rows.length > 18);
+        if (big){
+          let tb = big; const bi = [...u.querySelectorAll('tbody')].indexOf(big), rows = [...tb.rows]; rows.forEach(r => tb.removeChild(r));
+          let cur = u;
+          for (const r of rows){
+            tb.appendChild(r);
+            if (!over()) continue;
+            tb.removeChild(r);
+            const empty = !tb.rows.length;
+            if (empty && pc.children.length > 1 || empty && sh.children.length > 1){   // на сторінці вже є інше — переносимо весь блок
+              cur.parentNode.removeChild(cur); if (!sh.children.length) sh.remove();
+              pc = newPage(); sh = shellOf(true); sh.appendChild(cur);
+            } else if (!empty){
+              const cl = cur.cloneNode(true); cl.querySelectorAll('h3,.mini').forEach(x => x.remove()); const ct = cl.querySelectorAll('tbody')[bi]; [...ct.rows].forEach(x => x.remove());
+              pc = newPage(); sh = shellOf(true); sh.appendChild(cl); cur = cl; tb = ct;
+            }
+            tb.appendChild(r);
+          }
+          cont = true; continue;
+        }
+        sh.removeChild(u);
+        if (!sh.children.length) sh.remove();
+        if (pc.children.length){ pc = newPage(); cont = true; }
+        sh = shellOf(cont); sh.appendChild(u);
+      }
+    }
+  }
+  pages.forEach((pg, i) => { pg.querySelector('.pgf').textContent = `Сторінка ${i + 1} з ${pages.length}`; });
+  src.remove();
 }
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
 const MON_ABBR = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
