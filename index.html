@@ -3673,9 +3673,9 @@ function mgExportPdf(){
     .mg .fsheet{box-shadow:none;border:0;padding:0;background:none}.mg *{box-shadow:none!important}
     .mg .blk{break-inside:auto;margin:0 0 16px;padding:12px 0 0;border-top:3px solid var(--green)}
     .mg .pane>.blk:first-child{margin-top:0}
-    .mg .blk>h3{font-size:17pt!important;line-height:1.2;margin:0 0 10px;color:var(--green);break-after:avoid}
+    .mg .blk h3{font-size:17pt!important;line-height:1.2;margin:0 0 10px;color:var(--green);break-after:avoid}
     .mg .mini{font-size:10.5pt!important;font-weight:800;margin:12px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--rule);break-after:avoid}
-    .kt{break-inside:avoid;page-break-inside:avoid}.mg .mini,.mg .blk>h3{page-break-after:avoid}.mg .lt tr{page-break-inside:avoid}
+    .kt{break-inside:avoid;page-break-inside:avoid}.mg .mini,.mg .blk h3{page-break-after:avoid}.mg .lt tr{page-break-inside:avoid}
     .mg .lt thead{display:table-header-group}.mg .kpi,.mg .al,.mg .dn,.mg .rule,.mg .sheat,.mg .omx{break-inside:avoid}`;
   const html = `<!DOCTYPE html><html lang="uk" class="${document.documentElement.className}"><head><meta charset="utf-8"><title>${PX(name)}</title><style>${css}</style></head><body class="${document.body.className}"><table class="pgw"><thead><tr><td>${head}</td></tr></thead><tbody><tr><td><div class="rp-win mg" style="max-width:none;padding:0">${body.innerHTML}</div></td></tr></tbody></table></body></html>`;
   const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
