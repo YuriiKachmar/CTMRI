@@ -572,6 +572,233 @@
     .week{gap:4px}.wt{font-size:10px;padding:7px 1px}
     .step{gap:10px}.wcard{padding:18px 14px}
   }
+
+  /* ═══ УПРАВЛІНСЬКИЙ ЗВІТ (макет CT_MRI_ЗВІТ_zvit_upravlinskyi.html): усе в межах .mg ═══ */
+  .mg .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .mg .chips.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+  .mg .chips.grid .chip{text-align:center;padding:10px 8px}
+  .mg .chip{padding:9px 13px;border-radius:11px;background:var(--bg);box-shadow:var(--bump);
+          font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .mg .chip:active{box-shadow:var(--in)}
+  .mg .chip.active,.mg .chip.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .mg table.lt{width:100%;border-collapse:collapse;font-size:12px}
+  .mg table.lt th{background:var(--green);color:#fff;padding:9px 10px;font-size:9.5px;font-weight:700;
+                text-transform:uppercase;letter-spacing:.3px;text-align:center}
+  .mg table.lt th:first-child{text-align:left}
+  .mg table.lt td{padding:9px 10px;border-bottom:1px solid var(--line);color:var(--ink)}
+  .mg table.lt td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+  .mg .cb-a i{background:var(--green)}
+  .mg .cb-b i{background:color-mix(in srgb,var(--green) 28%,var(--bg))}
+  .mg .cb-vs{color:var(--muted);font-size:var(--t-cap);font-weight:700;text-transform:uppercase}
+  .mg .stabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:var(--s1);margin:0 0 var(--s2);padding:0}
+  .mg .stabs span{display:grid;grid-template-columns:auto 1fr;column-gap:var(--s1);align-items:center;text-align:left;padding:10px var(--s1) 10px 12px;border-radius:var(--r12);
+       background:var(--card);box-shadow:var(--bump);color:var(--muted);cursor:pointer}
+  .mg .stabs span:active{box-shadow:var(--in)}
+  .mg .stabs span.on{background:var(--soft);color:var(--green);box-shadow:var(--in-on)}
+  .mg .stabs .ti{grid-row:1/3;font-size:var(--h2,17px);font-weight:400;line-height:1}
+  .mg .stabs .tn{font-size:var(--t-sm);font-weight:800;color:var(--ink);display:flex;align-items:center;gap:4px;white-space:nowrap}
+  .mg .stabs span.on .tn{color:var(--green)}
+  .mg .stabs em{font-style:normal;font-size:var(--t-cap);color:var(--muted);font-weight:400;line-height:1.3}
+  .mg .stabs i{font-style:normal;background:var(--err);color:#fff;border-radius:var(--r8);padding:0 6px;font-size:var(--t-cap)}
+  .mg .pane{display:none}
+  .mg .pane.on{display:block}
+  .mg .fsheet{padding:0}
+  .mg .rep{padding:0}
+  .mg .blk{padding:var(--s2) 0 var(--s1)}
+  .mg .pane .blk+.blk{border-top:1px solid var(--line);margin-top:var(--s1)}
+  .mg .blk h3{margin:0 0 var(--s2);font-size:var(--t-h3);font-weight:700;color:var(--green)}
+  .mg .blk h3 .sub{font-size:var(--t-sm);font-weight:400;color:var(--muted);margin-left:6px}
+  .mg .hint{font-size:var(--t-sm);color:var(--muted);margin-top:var(--s1);line-height:1.5}
+  .mg .mini{font-size:var(--t-cap);font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin:0 0 var(--s1)}
+  .mg .two{display:grid;grid-template-columns:1fr;gap:var(--s2)}
+  .mg .tw{overflow-x:auto}
+  .mg .tw table.lt{min-width:100%}
+  .mg .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:var(--s1)}
+  .mg .kpis.k3{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+  .mg .kpis.k2{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .mg .k-of{font-size:var(--t-sm);font-weight:400;color:var(--muted);margin-left:var(--s1)}
+  .mg .kpis.k4{grid-template-columns:repeat(auto-fill,minmax(146px,1fr))}
+  .mg .kpi{background:var(--tile);border:1px solid var(--line);border-radius:var(--r12);padding:12px var(--s2) 12px}
+  .mg .k-l{font-size:var(--t-cap);color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+  .mg .k-v{font-size:var(--t-h2);font-weight:800;margin:4px 0;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mg .k-v.sm{font-size:var(--t-h3)}
+  .mg .k-d{font-size:var(--t-sm);font-weight:800;white-space:nowrap}
+  .mg .k-d.up{color:var(--ok)}
+  .mg .k-d.bad{color:var(--red)}
+  .mg .k-d.flat{color:var(--muted)}
+  .mg .kpi .cmpd{display:inline-flex;flex-wrap:wrap;max-width:100%;white-space:normal;gap:0 6px;align-items:baseline;padding:2px var(--s1);border-radius:var(--r8)}
+  .mg .k-d.up.cmpd{background:var(--ok-bg)}
+  .mg .k-d.bad.cmpd{background:var(--err-bg)}
+  .mg .k-d.flat.cmpd{background:var(--field-ro)}
+  .mg .cmpd small{font-weight:400;color:var(--muted);font-size:var(--t-cap)}
+  .mg .k-s{font-size:var(--t-cap);color:var(--muted);margin-top:4px}
+  .mg .est{font-size:var(--t-cap);font-weight:700;background:var(--soft);color:var(--green);border-radius:var(--r8);padding:1px 6px;text-transform:none;letter-spacing:0;vertical-align:middle}
+  .mg .twb{margin-top:var(--s1)}
+  .mg .twb div{height:5px;border-radius:3px;margin-top:3px}
+  .mg .twb .c{background:var(--green)}
+  .mg .twb .p{background:color-mix(in srgb,var(--green) 28%,var(--bg))}
+  .mg .twb-l{font-size:var(--t-cap);color:var(--muted);margin-top:4px;display:flex;flex-direction:column;gap:1px}
+  .mg .twb-l span:last-child{color:var(--ink);font-weight:700}
+  .mg .chg{font-size:var(--t-sm);font-weight:800;white-space:nowrap}
+  .mg .chg.up{color:var(--ok)}
+  .mg .chg.bad{color:var(--red)}
+  .mg .chg.flat{color:var(--muted)}
+  .mg .chg small{font-weight:400;color:var(--muted);font-size:var(--t-cap)}
+  .mg .pill{display:inline-block;padding:4px 10px;border-radius:var(--r8);font-size:var(--t-sm);font-weight:700;background:var(--tile);border:1px solid var(--line);color:var(--ink)}
+  .mg .pill.g{color:var(--green)}
+  .mg .pill.r{color:var(--red)}
+  .mg .pill.lo{background:color-mix(in srgb,var(--red) 16%,var(--tile));border-color:color-mix(in srgb,var(--red) 30%,var(--line));color:var(--red)}
+  .mg .pill.hi{background:color-mix(in srgb,var(--green) 80%,var(--tile));border-color:var(--green);color:#fff}
+  .mg table.lt td{white-space:nowrap}
+  .mg table.lt td:first-child{white-space:normal}
+  .mg .al{display:flex;gap:9px;align-items:flex-start;padding:12px 14px;border-radius:var(--r12);font-size:var(--t-sm);background:var(--tile);box-shadow:var(--up);border:1.5px solid;margin-bottom:9px}
+  .mg .al b.al-t{display:block;font-size:var(--t-body);font-weight:800;margin-bottom:1px;color:var(--ink)}
+  .mg .al-icon{flex-shrink:0;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;margin-top:1px}
+  .mg .al-ok{border-color:var(--ok);background:#fff}
+  .mg .al-ok .al-icon{background:var(--ok)}
+  .mg .al-i{border-color:var(--info);background:#fff;color:var(--ink)}
+  .mg .al-i .al-icon{background:var(--info)}
+  .mg .al-w{border-color:var(--warn);background:var(--warn-bg)}
+  .mg .al-w .al-icon{width:19px;height:17px;border-radius:0;background:none;position:relative;margin-top:0}
+  .mg .al-w .al-icon::before{content:'';position:absolute;inset:0;background:var(--warn);clip-path:polygon(50% 4%,4% 96%,96% 96%);border-radius:3px}
+  .mg .al-w .al-icon span{position:relative;z-index:1;margin-top:3px;font-size:9px}
+  .mg .al-e{border-color:var(--err);background:var(--err-bg)}
+  .mg .al-e .al-icon{background:var(--err)}
+  .mg .al .s-m{font-size:var(--t-cap);color:var(--muted);margin-top:3px}
+  .mg .al .s-lk{margin-left:auto;font-size:var(--t-sm);font-weight:800;color:var(--green);white-space:nowrap;text-decoration:none;padding-left:var(--s1)}
+  .mg details.quiet{font-size:var(--t-sm);color:var(--muted);margin-top:4px}
+  .mg details.quiet summary{cursor:pointer;font-weight:700;padding:6px 0}
+  .mg details.quiet div div{padding:3px 0 3px var(--s1)}
+  .mg .dn{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+  .mg .dn svg{flex:0 0 auto}
+  .mg .dn.sm svg{width:120px;height:120px}
+  .mg .dn:not(.sm) svg{width:160px;height:160px}
+  .mg .dn .lg{font-size:var(--t-sm);display:flex;flex-direction:column;gap:6px;flex:1;min-width:170px}
+  .mg .dn .lg div{display:flex;align-items:center;gap:var(--s1)}
+  .mg .dn .lg i{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+  .mg .dn .lg b{margin-left:auto;padding-left:var(--s1);font-variant-numeric:tabular-nums}
+  .mg .dn .lg small{color:var(--muted);font-size:var(--t-cap);margin-left:6px}
+  .mg .dnrow{display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap;margin-bottom:var(--s2)}
+  .mg .dnside{flex:1;min-width:220px}
+  .mg .dn svg .tv{fill:var(--ink)}
+  .mg .dn svg .ts{fill:var(--muted)}
+  .mg .dn svg .tr{stroke:var(--field-ro)}
+  .mg .conc{margin-top:var(--s2);padding-bottom:var(--s2)}
+  .mg .conc-t{font-size:var(--t-sm);margin-bottom:var(--s1)}
+  .mg .warn-tag{font-size:var(--t-sm);font-weight:800;color:var(--red);margin-left:6px}
+  .mg .meter{position:relative;height:12px;border-radius:var(--r8);background:var(--bg);box-shadow:var(--in)}
+  .mg .meter-f{height:100%;border-radius:var(--r8);background:var(--red)}
+  .mg .meter-m{position:absolute;top:-4px;bottom:-4px;border-left:2px dashed var(--muted)}
+  .mg .meter-m span{position:absolute;top:18px;left:-26px;font-size:var(--t-cap);color:var(--muted);white-space:nowrap}
+  .mg .nl{display:grid;grid-template-columns:1fr 1fr;border-radius:var(--r12);background:var(--bg);box-shadow:var(--in);margin-top:var(--s2);overflow:hidden}
+  .mg .nl-c{padding:12px var(--s2)}
+  .mg .nl-c+.nl-c{border-left:1px solid var(--line)}
+  .mg .nl-h{font-size:var(--t-cap);font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .mg .nl-h small{display:block;font-size:var(--t-cap);font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);margin-top:2px}
+  .mg .nl-new .nl-h{color:var(--green)}
+  .mg .nl-lost .nl-h{color:var(--red)}
+  .mg .nl-r{display:flex;justify-content:space-between;gap:var(--s1);font-size:var(--t-sm);padding:6px 0;border-top:1px solid var(--line)}
+  .mg .nl-r b{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mg .nl-new .nl-r b{color:var(--green)}
+  .mg .nl-lost .nl-r b{color:var(--red)}
+  .mg .heat{display:grid;grid-template-columns:44px repeat(6,1fr);gap:3px;font-size:var(--t-cap)}
+  .mg .heat div{padding:var(--s1) 0;text-align:center;border-radius:6px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .mg .shb{height:5px;border-radius:3px;background:var(--tile);margin-top:4px;overflow:hidden;min-width:120px;margin-left:auto}
+  .mg .shb i{display:block;height:100%;background:var(--green);border-radius:3px}
+  .mg .kpb{height:5px;border-radius:3px;background:color-mix(in srgb,var(--green) 16%,var(--tile));margin:2px 0 8px;overflow:hidden}
+  .mg .kpb i{display:block;height:100%;background:var(--green);border-radius:3px}
+  .mg .shv{color:var(--muted);margin-left:var(--s1)}
+  .mg .cum.b{font-weight:800}
+  .mg table.lt tr.parl td{padding:4px 10px;text-align:right!important;white-space:normal;background:var(--soft);color:var(--green);font-weight:800;font-size:var(--t-cap);border-bottom:2px solid var(--green)}
+  .mg .sc-sub{font-size:var(--t-sm);color:var(--muted);margin:var(--s1) 0 var(--s2)}
+  .mg .sc-sub b{color:var(--ink)}
+  .mg .sc{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin-top:var(--s2)}
+  .mg .sc-c{border:1px solid var(--line);border-radius:var(--r12);padding:var(--s2);background:var(--tile)}
+  .mg .sc-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s1);margin-bottom:var(--s1)}
+  .mg .sc-t{font-size:var(--t-cap);font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+  .mg .sc-n{font-size:var(--t-h3);font-weight:800;font-variant-numeric:tabular-nums}
+  .mg .sc-new .sc-t,.mg .sc-new .sc-n{color:var(--green)}
+  .mg .sc-lost .sc-t,.mg .sc-lost .sc-n{color:var(--red)}
+  .mg .sc-r{padding:7px 0;border-top:1px solid var(--line)}
+  .mg .sc-r:first-of-type{border-top:none}
+  .mg .sc-l{display:flex;justify-content:space-between;gap:var(--s1);font-size:var(--t-sm)}
+  .mg .sc-l b{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mg .sc-k{font-size:var(--t-cap);color:var(--muted)}
+  .mg .sc-b{height:5px;border-radius:3px;margin-top:5px;background:color-mix(in srgb,var(--ink) 8%,var(--tile));overflow:hidden}
+  .mg .sc-b i{display:block;height:100%;border-radius:3px}
+  .mg .sc-new .sc-b i{background:var(--green)}
+  .mg .sc-lost .sc-b i{background:var(--red)}
+  .mg .sc-e{font-size:var(--t-sm);color:var(--muted);padding:var(--s1) 0}
+  @media(max-width:640px){.mg .sc{grid-template-columns:1fr}}
+  .mg #tDr td.pendc,.mg #tDr td.pendc .pend{text-align:center}
+  .mg #tDr td.pendc{background:var(--err-bg);color:var(--red);font-weight:800}
+  .mg .ydot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+  .mg .two>*{min-width:0}
+  .mg .omx,.mg .sheat,.mg .heat{overflow-x:auto;max-width:100%}
+  @media print{.mg .noexp{display:none!important}}
+  .mg .nsl{margin:var(--s1) 0 var(--s2);font-size:var(--t-sm);color:var(--muted)}
+  .mg .nsl b{color:var(--ink)}
+  .mg .nsw{padding:0 16px;margin-bottom:var(--s3)}
+  .mg .nst{position:relative;height:24px;border-radius:12px;background:var(--bg);box-shadow:var(--in);touch-action:none;cursor:pointer}
+  .mg .nsf{position:absolute;top:0;bottom:0;border-radius:12px;background:var(--soft);box-shadow:var(--in-on);pointer-events:none}
+  .mg .nsk{position:absolute;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:var(--bg);box-shadow:var(--bump);cursor:grab;touch-action:none;display:flex;align-items:center;justify-content:center}
+  .mg .nsk::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--green)}
+  .mg .nsk:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .mg .nsk:active{cursor:grabbing}
+  .mg .nstk i{position:absolute;top:0;width:1px;height:5px;background:var(--muted);opacity:.55}
+  .mg .nstk i.big{height:8px;opacity:1}
+  .mg .nstk{position:relative;height:30px;margin-top:6px;font-size:var(--t-cap);color:var(--muted)}
+  .mg .nstk span{position:absolute;top:11px;transform:translateX(-50%);font-variant-numeric:tabular-nums}
+  .mg .heat .h{background:none;color:var(--muted);font-weight:700;padding:4px 0}
+  .mg .hc0{background:var(--tile)}
+  .mg .hc-lo{background:color-mix(in srgb,var(--red) 16%,var(--tile))}
+  .mg .hc-hi{background:color-mix(in srgb,var(--green) 80%,var(--tile));color:#fff!important}
+  .mg .hc1{background:color-mix(in srgb,var(--green) 18%,var(--tile))}
+  .mg .hc2{background:color-mix(in srgb,var(--green) 34%,var(--tile))}
+  .mg .hc3{background:color-mix(in srgb,var(--green) 52%,var(--tile));color:#fff!important}
+  .mg .hc4{background:color-mix(in srgb,var(--green) 68%,var(--tile));color:#fff!important}
+  .mg .bars{display:flex;gap:10px;align-items:flex-end;height:140px;padding-top:10px}
+  .mg .bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:var(--t-sm);height:100%}
+  .mg .bars i{display:block;width:70%;background:var(--green);border-radius:6px 6px 0 0;margin-bottom:4px}
+  .mg .legend{display:flex;gap:var(--s2);flex-wrap:wrap;font-size:var(--t-sm);color:var(--muted);margin:2px 0 var(--s1)}
+  .mg .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px;border:1px solid var(--line)}
+  .mg .sheat{display:grid;grid-template-columns:120px repeat(12,minmax(34px,1fr));gap:3px;font-size:var(--t-cap);overflow-x:auto}
+  .mg .sheat div{padding:7px 0;text-align:center;border-radius:6px;font-variant-numeric:tabular-nums}
+  .mg .sheat .h{background:none;color:var(--muted);font-weight:700;padding:3px 0}
+  .mg .sheat .rn{text-align:left;padding-left:4px;font-weight:700;background:none;min-width:120px;font-size:var(--t-sm)}
+  .mg .sc-lo{background:var(--soft)}
+  .mg .sc-nm{background:var(--tile)}
+  .mg .sc-hi{background:color-mix(in srgb,var(--red) 20%,var(--tile))}
+  .mg .sc-pk{background:color-mix(in srgb,var(--red) 45%,var(--tile))}
+  .mg .rule{background:var(--tile);border-left:4px solid var(--green);border-radius:0 var(--r12) var(--r12) 0;padding:12px 15px;font-size:var(--t-sm);box-shadow:var(--in);margin-top:12px}
+  .mg .rep-foot{font-size:var(--t-sm);color:var(--muted);border-top:1px solid var(--line);padding-top:var(--s1);margin-top:var(--s3)}
+  .mg svg .gl{stroke:var(--line)}
+  .mg svg .tx{fill:var(--muted)}
+  @media(max-width:640px){.mg .nl{grid-template-columns:1fr}.mg .nl-c+.nl-c{border-left:none;border-top:1px solid var(--line)}}
+  .mg .al-ok,.mg .al-i,.mg .al-w,.mg .al-e{color:var(--ink)}
+  .mg .dn .lg div{display:grid;grid-template-columns:10px minmax(0,1fr) 48px 96px;column-gap:var(--s1);align-items:center}
+  .mg .dn .lg b{margin:0;padding:0;text-align:right;white-space:nowrap}
+  .mg .dn .lg small{margin:0;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .mg .dn .lg{min-width:300px}
+  .mg .legend .grad{display:inline-block;width:120px;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--tile),color-mix(in srgb,var(--green) 78%,var(--tile)));border:1px solid var(--line)}
+  .mg .heatlg{display:inline-flex;gap:0;border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+  .mg .heatlg i{display:block;width:20px;height:10px}
+  .mg table.lt.hm td{border-bottom:2px solid var(--bg);border-left:2px solid var(--bg);font-variant-numeric:tabular-nums}
+  .mg table.lt.hm td:first-child{background:none;font-weight:700}
+  .mg .omx{display:grid;grid-template-columns:112px repeat(13,minmax(34px,1fr));gap:2px;font-size:var(--t-cap);overflow-x:auto;padding:3px}
+  .mg .omx div{padding:7px 0;text-align:center;border-radius:5px;font-variant-numeric:tabular-nums;min-width:34px}
+  .mg .omx .h{background:none;color:var(--muted);font-weight:700;padding:2px 0;line-height:1.1}
+  .mg .omx .h small{font-weight:400}
+  .mg .omx .rn{text-align:left;padding-left:2px;background:none;font-weight:700;min-width:112px;font-size:var(--t-cap);line-height:1.15}
+  .mg .omx .oc{outline:2px solid var(--green);outline-offset:1px}
+  .mg .omx .op{outline:2px dashed var(--muted);outline-offset:1px}
+  .mg .omx .h.ch-c{color:var(--green)}
+  .mg .omx .h.ch-p{color:var(--ink)}
+  .mg .mk-c,.mg .mk-p{margin-left:var(--s2);padding:0 6px;border-radius:4px}
+  .mg .mk-c{outline:2px solid var(--green)}
+  .mg .mk-p{outline:2px dashed var(--muted)}
+  .mg .heatlg.gr i{width:20px}
+  .mg .omx .pt{font-style:italic}
 </style>
 </head>
 <body>
@@ -600,7 +827,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 20.11.2026 · XLSX: підсумки формулами</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 22.11.2026 · Управлінський звіт: Огляд і сигнали</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -1836,7 +2063,7 @@ const REPORTS = [
   ['rCtor', 'Конструктор', 'Групування + показники + фільтр', '🔎'],
   ['rMgmt', 'Управлінський', 'Зведення загальних показників', '📈']
 ];
-const RP_READY = { rLab: true, rDoc: true, rDisc: true, rPat: true, rLbl: true, rSvc: true, rRef: true, rPay: true, rCtor: true };   // звіти, що вже реалізовані
+const RP_READY = { rMgmt: true, rLab: true, rDoc: true, rDisc: true, rPat: true, rLbl: true, rSvc: true, rRef: true, rPay: true, rCtor: true };   // звіти, що вже реалізовані
 const rp = { cur: null, per: null, data: null, detail: 'short', lab: '', cols: { main: true, extra: true, pay: true }, vyd: 'usi', scols: { pat: 1, hist: 1, rz: 1, doc: 1, price: 1, net: 1, disc: 1, pay: 1 }, pq: '', pres: null, pact: null, pmsg: null, ptoo: false, rz: 'ust', vib: 'par', oz: 'ust', pfq: '', cg: { main: 'lab', sub: 'day', m: { n: 1, price: 1, net: 1 }, ust: 'all', cond: '', cval: '' }, rcols: { dt: 1, doc: 1, pat: 1, rz: 1, hist: 1, svc: 1, sum: 1, ex: 1, exs: 1, pm: 1, pay: 1 }, src: 'usi', itype: '', partner: 'all', inst: '', loading: false, err: null };
 const rpAllowed = () => REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
 const iso2 = (y, m, d) => `${y}-${p2(m + 1)}-${p2(d)}`;
@@ -1864,6 +2091,7 @@ function rpHub(){
   };
 }
 function rpOpen(){
+  if (rp.cur === 'rMgmt') return mgOpen();
   const name = REPORTS.find(r => r[0] === rp.cur)[1];
   const pay = FACILITY_TRACKS_PAYMENT && can('jSums');
   $('sheet').innerHTML = `<div class="rp-win"><div class="j-actions"><div class="rp-h" style="margin:0">Звіт ${esc(name.toLowerCase())}</div>${ppMarkup('rp')}<button class="win-x" id="rpX" style="justify-self:end">✕</button></div>
@@ -2866,6 +3094,265 @@ function rpDraw(){
     + `<div class="rp-leg">Позначки: <span class="sh sd">Д</span> денна · <span class="sh sn">Н</span> нічна · <span class="sh s24">Доба</span> ${esc(settings?.shiftWindows?.dayFrom || '08:00')}–${esc(settings?.shiftWindows?.dayFrom || '08:00')} · ⚠️ поза вікном графіку${rp.lab ? '' : ''}</div>`
     + notes.map(n => `<div class="al ${n.crit ? 'al-w' : 'al-i'}" style="margin:8px 0 0"><span class="al-icon"><span>${n.crit ? '!' : 'i'}</span></span><div><b>${esc(n.h)}</b> ${n.crit && n.h.startsWith('Чергування') ? n.t : esc(n.t)}</div></div>`).join('')
     + (rp.lab ? '<div class="rp-hint">Вибрано одного лаборанта — загальний підсумок «Разом усі» приховано.</div>' : '');
+}
+
+/* ═══ УПРАВЛІНСЬКИЙ ЗВІТ (макет CT_MRI_ЗВІТ_zvit_upravlinskyi.html, специфікація docs/УПРАВЛІНСЬКИЙ_ЗВІТ_інструкція.md, розд. 11) ═══
+   Читання бази: один раз «Показати звіт» — records за 4 календарні роки (до сьогодні) + patients (createdAt) за той самий час; далі зміна періоду/вкладки/чипів
+   не робить запитів. Усе рахується в пам'яті. Порівняння автоматичне (попередній період тієї ж довжини). */
+const MG_TABS = [['ov', '📋', 'Огляд', 'Результат і сигнали'], ['src', '🧭', 'Джерела', 'Звідки пацієнти'], ['dev', '🩻', 'Апарат', 'Завантаження, слоти'], ['inc', '💰', 'Дохід і пільги', 'Послуги, знижки'],
+  ['mon', '💳', 'Гроші', 'Оплата, борги'], ['wrk', '👥', 'Працівники', 'Лаборанти, лікарі'], ['trd', '📈', 'Тенденції', '12 місяців'], ['sea', '🗓', 'Сезонність', 'Піки по місяцях']];
+const MG_MS = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
+const MG_TH = { unpaid30: .20, conc: .60, disc: .15, chk: .05, share: .05, visits: .10 };   // пороги сигналів (початкові пропозиції; змінює керівник — пізніше)
+const mg = { ps: null, tab: 'ov', og: 'm', sf: 'all', cache: null, loading: false, err: null, th: null, thm: '' };
+const mgDim = (y, m) => new Date(y, m + 1, 0).getDate();
+const mgML = (m) => MON_NAME[m].toLowerCase();
+const mgDef = () => (new Date().getMonth() === 0 ? 'py' : 'cy');   // у січні — попередній рік, інакше поточний рік станом на сьогодні
+function mgPer(ps){
+  const n = new Date(), Y = n.getFullYear(), M = n.getMonth(), D = n.getDate(), t = todayISO(), dm = (d) => p2(d) + '.' + p2(M + 1);
+  if (ps === 'cy') return { ps, year: true, a: iso2(Y, 0, 1), b: t, ca: iso2(Y - 1, 0, 1), cb: iso2(Y - 1, M, Math.min(D, mgDim(Y - 1, M))), nm: `${Y} рік`, pv: `${Y - 1}`, label: 'Поточний рік', top: 'ПОТОЧНИЙ РІК', short: `${Y} (до ${dm(D)})`, part: true };
+  if (ps === 'py') return { ps, year: true, a: iso2(Y - 1, 0, 1), b: iso2(Y - 1, 11, 31), ca: iso2(Y - 2, 0, 1), cb: iso2(Y - 2, 11, 31), nm: `${Y - 1} рік`, pv: `${Y - 2}`, label: 'Попередній рік', top: String(Y - 1), short: `${Y - 1} рік` };
+  if (ps === 'cm'){ const pm = (M + 11) % 12, py = M ? Y : Y - 1; return { ps, year: false, a: iso2(Y, M, 1), b: t, ca: iso2(py, pm, 1), cb: iso2(py, pm, Math.min(D, mgDim(py, pm))), nm: `${mgML(M)} ${Y}`, pv: `${MG_MS[pm]} ${py} (01–${p2(Math.min(D, mgDim(py, pm)))})`, label: 'Поточний місяць', top: MON_NAME[M].toUpperCase(), short: `${MG_MS[M]} ${Y} (до ${dm(D)})`, part: true }; }
+  const pm = (M + 11) % 12, py = M ? Y : Y - 1, qm = (pm + 11) % 12, qy = pm ? py : py - 1;
+  return { ps: 'pm', year: false, a: iso2(py, pm, 1), b: iso2(py, pm, mgDim(py, pm)), ca: iso2(qy, qm, 1), cb: iso2(qy, qm, mgDim(qy, qm)), nm: `${mgML(pm)} ${py}`, pv: `${MG_MS[qm]} ${qy}`, label: 'Попередній місяць', top: MON_NAME[pm].toUpperCase(), short: `${MG_MS[pm]} ${py}` };
+}
+/* ── дані ── */
+const mgFrom = () => iso2(new Date().getFullYear() - 3, 0, 1);
+async function mgLoad(force){
+  if (mg.cache && !force) return;
+  mg.loading = true; mg.err = null; mgDraw();
+  try {
+    const a = mgFrom(), b = todayISO();
+    const [rs, ps] = await Promise.all([
+      getDocs(query(collection(db, 'records'), where('date', '>=', a), where('date', '<=', b))),
+      getDocs(query(collection(db, 'patients'), where('createdAt', '>=', new Date(a + 'T00:00:00')))).catch(() => ({ docs: [] }))
+    ]);
+    const recs = rs.docs.map(d => ({ id: d.id, ...d.data() })).sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+    const born = new Map(); ps.docs.forEach(d => { const c = d.data().createdAt; if (c && c.toDate){ const x = c.toDate(); born.set(d.id, iso2(x.getFullYear(), x.getMonth(), x.getDate())); } });
+    mg.cache = { a, b, recs, born, at: new Date() };
+  } catch (e){ mg.cache = null; mg.err = e.code || 'помилка'; }
+  mg.loading = false; mgDraw();
+}
+const mgIn = (a, b) => (mg.cache ? mg.cache.recs.filter(r => r.date >= a && r.date <= b) : []);
+const mgPaid = () => FACILITY_TRACKS_PAYMENT;
+/* агрегат за набором записів. «Нараховано» = сума до знижки (основна + додаткові); «Сума» = після знижки (totalAmount); знижка = discountAmount */
+function mgAgg(rs, a, b){
+  const o = { n: 0, base: 0, after: 0, disc: 0, got: 0, unp: 0, pats: new Set(), npat: 0 };
+  for (const r of rs){
+    o.n++; const tot = Number(r.totalAmount) || 0, ex = Number(r.extrasTotal) || 0, dsc = Number(r.discountAmount) || ((Number(r.servicePrice) || 0) - (Number(r.servicePriceAfterDiscount) || 0));
+    o.base += (Number(r.servicePrice) || 0) + ex; o.after += tot; o.disc += dsc;
+    if (r.paid) o.got += tot; else o.unp += tot;
+    if (r.patientId) o.pats.add(r.patientId);
+  }
+  if (mg.cache) for (const [id, d] of mg.cache.born) if (d >= a && d <= b) o.npat++;
+  o.rpat = Math.max(0, o.pats.size - [...o.pats].filter(id => { const d = mg.cache.born.get(id); return d && d >= a && d <= b; }).length);
+  o.chk = o.n ? Math.round(o.after / o.n) : null;
+  return o;
+}
+const mgFmt = (n) => (n === null || n === undefined || Number.isNaN(n)) ? '—' : nfmt(Math.round(n));
+/* стрілка зміни: goodUp — зростання це добре; null база = «немає порівняння», 0 база = «нове» */
+function mgDelta(cur, prv, goodUp, lbl, noCmp){
+  if (noCmp) return `<div class="k-d flat cmpd">немає порівняння</div>`;
+  if (prv === null || prv === undefined) return `<div class="k-d flat cmpd">немає порівняння</div>`;
+  if (!prv) return cur ? `<div class="k-d up cmpd">нове <small>до ${esc(lbl)}</small></div>` : `<div class="k-d flat cmpd">● 0 % <small>до ${esc(lbl)}</small></div>`;
+  const v = Math.round((cur - prv) / prv * 1000) / 10, f = Math.abs(v) < .5 ? 'flat' : ((v > 0) === !!goodUp ? 'up' : 'bad');
+  return `<div class="k-d ${f} cmpd">${v > 0 ? '▲ +' : v < 0 ? '▼ −' : '● '}${String(Math.abs(v)).replace('.', ',')} % <small>до ${esc(lbl)}</small></div>`;
+}
+/* ── джерело запису: установа / лікуючий лікар (без установи) / самоскерування ── */
+function mgSrc(r){
+  const ref = r.referral || {}, self = !!ref.self || (!ref.doctorId && !ref.institutionId && !ref.doctorName);
+  if (self) return { k: 'self', name: SELF_L, t: 'self', inst: null };
+  const inst = ref.institutionId ? dir.institutions.find(x => x.id === ref.institutionId) : null;
+  const dn = (dir.doctors.find(d => d.id === ref.doctorId)?.name) || ref.doctorName || '';
+  if (ref.institutionId) return { k: 'i:' + ref.institutionId, name: inst?.name || ref.institutionName || '(установу видалено)', t: 'inst', inst, partner: !!inst && partnerOn(inst, r.date), doc: dn };
+  return { k: 'd:' + (ref.doctorId || dn), name: dn || '(лікаря видалено)', t: 'doc', inst: null };
+}
+/* ── вкладки: тіло ── */
+function mgOpen(){
+  mg.ps = mg.ps || mgDef();
+  $('sheet').innerHTML = `<div class="rp-win mg"><div class="j-actions"><div class="rp-h" style="margin:0">Управлінський звіт</div>${ppMarkup('mg')}<button class="win-x" id="mgX" style="justify-self:end">✕</button></div>
+    <div class="rp-act"><button class="b pri" id="mgGo"></button></div>
+    <div id="mgBody"></div>
+    <div class="rp-foot"><button class="b" id="mgClose">Закрити</button><span class="rp-ex"><button class="b" id="mgPdf" disabled>📄 PDF</button><button class="b" id="mgXls" disabled>📊 XLS</button><button class="b" id="mgDoc" disabled>📝 DOC</button></span></div></div>`;
+  const back = () => { rp.cur = null; renderReports(); };
+  $('mgX').onclick = back; $('mgClose').onclick = back;
+  $('mgGo').onclick = () => mgLoad(!!mg.cache);
+  const set = (ps) => () => { if (mg.ps === ps) return; mg.ps = ps; mgDraw(); };
+  mgPanel(); mgDraw();
+}
+function mgPanel(){
+  const slots = (mg.ps === 'cy' || mg.ps === 'py') ? ['py', 'cy', 'cm'] : ['cy', 'pm', 'cm'];
+  ['L', 'M', 'R'].forEach((k, i) => {
+    const ps = slots[i], P = mgPer(ps), on = ps === mg.ps;
+    const el = $('mg' + k); if (!el) return;
+    el.className = 'pp-b' + (on ? ' on' : '');
+    el.innerHTML = on ? ppCell(P.top, `${isoToUa(P.a)} – ${isoToUa(P.b)}`) : ppCell(P.label, '');
+    el.onclick = () => { mg.ps = ps; mgDraw(); };
+  });
+}
+function mgDraw(){
+  const box = $('mgBody'); if (!box) return;
+  mgPanel();
+  $('mgGo').innerHTML = mg.loading ? '<span class="spin"></span>' : (mg.cache ? '📊 Оновити дані' : '📊 Показати звіт'); $('mgGo').disabled = mg.loading;
+  if (mg.loading){ box.innerHTML = '<div class="rp-ph"><span class="spin dk"></span></div>'; return; }
+  if (mg.err){ box.innerHTML = `<div class="al al-e" style="margin:0"><span class="al-icon">✕</span><div><b>Не вдалося завантажити звіт</b>${esc(mg.err)}. Перевірте з'єднання й право «Дані» в Журналі.</div></div>`; return; }
+  if (!mg.cache){ box.innerHTML = '<div class="rp-ph">Тут з\'явиться звіт після натискання «Показати звіт».<br><span>Завантажуються візити за 4 роки (до сьогодні) — потрібні для динаміки й сезонності; далі період змінюється без нових запитів.</span></div>'; return; }
+  const P = mgPer(mg.ps), cur = mgIn(P.a, P.b), prv = mgIn(P.ca, P.cb);
+  const X = { P, cur, prv, A: mgAgg(cur, P.a, P.b), B: mgAgg(prv, P.ca, P.cb), none: !cur.length, nocmp: !prv.length, money: can('jSums') };
+  mg.X = X;
+  box.innerHTML = `<div class="mg-top"><div class="rep-title">Управлінський звіт · ${esc(P.nm)}</div><div class="hint">${isoToUa(P.a)} – ${isoToUa(P.b)}${P.part ? ' · дані станом на сьогодні' : ''} · порівняння з ${esc(P.pv)}${X.nocmp ? ' — немає даних' : ''}</div></div>
+    <div class="stabs" id="mgTabs">${MG_TABS.map(t => `<span data-t="${t[0]}" class="${t[0] === mg.tab ? 'on' : ''}"><b class="ti">${t[1]}</b><b class="tn">${t[2]}${t[0] === 'ov' ? ` <i id="mgSigN"></i>` : ''}</b><em>${t[3]}</em></span>`).join('')}</div>
+    <div class="fsheet">${MG_TABS.map(t => `<div class="pane ${t[0] === mg.tab ? 'on' : ''}" data-pane="${t[0]}" id="mgP_${t[0]}"></div>`).join('')}</div>`;
+  $('mgTabs').onclick = (e) => { const s = e.target.closest('[data-t]'); if (!s) return; mg.tab = s.dataset.t; [...$('mgTabs').children].forEach(x => x.classList.toggle('on', x === s)); document.querySelectorAll('.mg .pane').forEach(p => p.classList.toggle('on', p.dataset.pane === mg.tab)); };
+  mgOv(X);
+  for (const t of MG_TABS.slice(1)) $('mgP_' + t[0]).innerHTML = `<section class="blk"><h3>${t[2]} · ${esc(P.nm)}</h3><div class="al al-i"><span class="al-icon">i</span><div><b class="al-t">Розділ у розробці</b>Буде додано наступним етапом.</div></div></section>`;
+}
+/* ── «Огляд» ── */
+const mgKpiDef = (X) => {
+  const A = X.A, B = X.B, m = X.money, paid = mgPaid() && m;
+  return [
+    ...(m ? [['Нараховано', A.base, B.base, 1, 1, 'грн']] : []),
+    ...(paid ? [['Отримано', A.got, B.got, 1, 1, 'грн']] : []),
+    ['Візитів', A.n, B.n, 1, 0, ''],
+    ...(m ? [['Середній чек', A.chk, B.chk, 1, 1, 'грн']] : []),
+    ...(paid ? [['Неоплачено', A.unp, B.unp, 0, 1, 'грн']] : []),
+    ...(m ? [['Пільги', A.disc, B.disc, 0, 1, 'грн']] : []),
+    ['Нові пацієнти', A.npat, B.npat, 1, 0, ''], ['Повторні пацієнти', A.rpat, B.rpat, 1, 0, '']
+  ];
+};
+function mgKpis(X){
+  const P = X.P;
+  return `<div class="kpis">` + mgKpiDef(X).map(([l, v, pv, up, , u]) => {
+    const mxv = Math.max(v || 0, pv || 0, 1), noc = X.nocmp;
+    return `<div class="kpi"><div class="k-l">${l}</div><div class="k-v">${X.none ? '—' : mgFmt(v) + (u ? ' ' + u : '')}</div>`
+      + (X.none ? `<div class="k-d flat cmpd">немає даних</div>` : mgDelta(v || 0, noc ? null : pv, up, P.pv, noc))
+      + (X.none ? '' : `<div class="twb"><div class="c"><i style="width:${(v || 0) / mxv * 100}%"></i></div>${noc ? '' : `<div class="p"><i style="width:${(pv || 0) / mxv * 100}%"></i></div>`}</div><div class="twb-l"><span>${esc(P.short)}</span><span>${noc ? 'порівняння: —' : `${esc(P.pv)}: <b>${mgFmt(pv)}</b>`}</span></div>`)
+      + `</div>`;
+  }).join('') + `</div>`;
+}
+function mgOv(X){
+  const P = X.P;
+  $('mgP_ov').innerHTML = `<section class="blk"><h3>Результат періоду · ${esc(P.nm)}</h3>${mgKpis(X)}
+      <div class="hint" style="margin-top:var(--s1)">«Нараховано» — сума до знижок; «Середній чек» — сума після знижок ÷ візитів; «Отримано» і «Неоплачено» — суми після знижок за прапором оплати; «Пільги» — сума знижок. Візит = запис послуги в журналі.</div>
+      <div class="mini" style="margin-top:var(--s3)" id="mgOvT"></div>
+      <div class="chips" id="mgOvG" style="margin-bottom:var(--s1)"><span class="chip" data-g="m">Місяці</span><span class="chip" data-g="q">Квартали</span><span class="chip" data-g="y">Роки</span></div>
+      <div id="mgOvMx" class="omx"></div></section>
+    <section class="blk"><h3>Сигнали · ${esc(P.nm)} <span class="sub">що потребує уваги</span></h3><div id="mgSig"></div></section>`;
+  $('mgOvG').onclick = (e) => { const c = e.target.closest('[data-g]'); if (c){ mg.og = c.dataset.g; mgMatrix(X); } };
+  mgMatrix(X); mgSigDraw(X);
+}
+function mgCols(og){
+  const n = new Date(), Y = n.getFullYear(), M = n.getMonth(), t = todayISO(), cols = [];
+  if (og === 'm') for (let i = 12; i >= 0; i--){ const d = new Date(Y, M - i, 1), y = d.getFullYear(), m = d.getMonth(); cols.push({ l: MG_MS[m], s: "'" + String(y).slice(2), a: iso2(y, m, 1), b: i ? iso2(y, m, mgDim(y, m)) : t, part: i === 0 }); }
+  else if (og === 'q'){ const cq = Math.floor(M / 3); for (let i = 11; i >= 0; i--){ const q = cq - i, y = Y + Math.floor(q / 4), qq = ((q % 4) + 4) % 4, e = iso2(y, qq * 3 + 2, mgDim(y, qq * 3 + 2)); cols.push({ l: ['I', 'II', 'III', 'IV'][qq] + ' кв.', s: "'" + String(y).slice(2), a: iso2(y, qq * 3, 1), b: e > t ? t : e, part: e > t }); } }
+  else for (let y = Y - 3; y <= Y; y++) cols.push({ l: String(y), s: y === Y ? 'до сьогодні' : '', a: iso2(y, 0, 1), b: y === Y ? t : iso2(y, 11, 31), part: y === Y });
+  return cols;
+}
+function mgMatrix(X){
+  const cols = mgCols(mg.og), P = X.P, m = X.money, paid = mgPaid() && m;
+  [...$('mgOvG').children].forEach(c => c.classList.toggle('on', c.dataset.g === mg.og));
+  $('mgOvT').textContent = mg.og === 'm' ? 'Динаміка за 13 місяців' : mg.og === 'q' ? 'Динаміка за 12 кварталів (3 роки)' : 'Динаміка за 4 роки';
+  const rows = [...(m ? [['Нараховано, тис. грн', (A) => A.base / 1000, 1]] : []), ...(paid ? [['Отримано, тис. грн', (A) => A.got / 1000, 1]] : []), ['Візитів', (A) => A.n, 0],
+    ...(m ? [['Середній чек, грн', (A) => A.chk, 1]] : []), ...(paid ? [['Неоплачено, тис. грн', (A) => A.unp / 1000, 1]] : []), ...(m ? [['Пільги, тис. грн', (A) => A.disc / 1000, 1]] : []),
+    ['Нові пацієнти', (A) => A.npat, 0], ['Повторні пацієнти', (A) => A.rpat, 0]];
+  const ag = cols.map(c => mgAgg(mgIn(c.a, c.b), c.a, c.b));
+  const unitOk = (mg.og === 'y' && P.year) || (mg.og === 'm' && !P.year), cur = unitOk ? cols.findIndex(c => c.a === P.a) : -1, prv = unitOk ? cols.findIndex(c => c.a === P.ca) : -1;   // підсвітка лише коли одиниця стовпця = одиниця періоду
+  const gc = (t) => `color-mix(in srgb,var(--green) ${Math.round(t * 80)}%,var(--tile))`;
+  const sh = (v) => v === null || v === undefined ? '—' : (Math.abs(v) < 100 && v % 1 ? String(Math.round(v * 10) / 10).replace('.', ',') : nfmt(Math.round(v)));
+  let h = '<div class="h"></div>' + cols.map((c, i) => `<div class="h ${i === cur ? 'ch-c' : i === prv ? 'ch-p' : ''}">${c.l}<br><small>${c.s}</small></div>`).join('');
+  rows.forEach(([lbl, f]) => {
+    const vs = ag.map(A => (A.n ? f(A) : null)), full = vs.filter((v, i) => v !== null && !cols[i].part), mn = Math.min(...full), mx = Math.max(...full);
+    h += `<div class="rn">${lbl}</div>` + vs.map((v, i) => { const tt = v === null || !full.length ? 0 : Math.max(0, Math.min(1, (v - mn) / ((mx - mn) || 1))); return `<div class="${i === cur ? 'oc' : i === prv ? 'op' : ''} ${cols[i].part ? 'pt' : ''}" style="background:${v === null ? 'var(--tile)' : gc(tt)};color:${tt > .5 && v !== null ? '#fff' : 'var(--ink)'}">${sh(v)}</div>`; }).join('');
+  });
+  const mx = $('mgOvMx'); mx.style.gridTemplateColumns = `112px repeat(${cols.length},minmax(${mg.og === 'y' ? 60 : 34}px,1fr))`; mx.innerHTML = h;
+}
+/* ── сигнали (алгоритми — у примітках макета «Алгоритми сигналів»; пороги MG_TH). Немає потрібних даних — сигналу немає взагалі ── */
+const mgMod = (r) => { const n = (r.serviceSnapshot?.name || '').trim(); return /^[МM][РPp][ТT]/i.test(n) ? 'МРТ' : /^[КK][ТT]\b/i.test(n) ? 'КТ' : null; };   // тимчасово за назвою послуги: ознаки «КТ/МРТ» у довіднику ще немає (відкрите питання)
+const mgDays = (iso) => Math.round((new Date(todayISO() + 'T00:00:00') - new Date(iso + 'T00:00:00')) / 864e5);
+function mgSrcAgg(rs, by){   // by: 'after' | 'n'
+  const m = new Map();
+  for (const r of rs){ const s = mgSrc(r), o = m.get(s.k) || { ...s, n: 0, after: 0, unp: 0, sd: r.date }; o.n++; o.after += Number(r.totalAmount) || 0; if (!r.paid) o.unp += Number(r.totalAmount) || 0; m.set(s.k, o); }
+  return m;
+}
+const mgThrN = (X) => (X.P.year ? 50 : 10);
+function mgSignals(X){
+  const act = [], quiet = [], P = X.P, A = X.A, B = X.B, money = X.money, paid = mgPaid() && money, cmp = !X.nocmp;
+  const add = (l, t, d, m, tab) => act.push({ l, t, d, m, tab });
+  const pc = (x) => String(Math.round(x * 100)).replace('.', ',');
+  /* Тривога №1 — неоплата понад 30 днів */
+  if (paid){
+    const un = X.cur.filter(r => !r.paid), U = un.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0), U30 = un.filter(r => mgDays(r.date) > 30).reduce((s, r) => s + (Number(r.totalAmount) || 0), 0), sh = U ? U30 / U : 0;
+    if (U && sh >= MG_TH.unpaid30){ const top = [...mgSrcAgg(un, 'after').values()].sort((a, b) => b.unp - a.unp)[0]; add('red', `Неоплачено понад 30 днів — ${nfmt(U30)} грн`, `Це ${pc(sh)} % усіх неоплат; поріг ${pc(MG_TH.unpaid30)} %.${top ? ` Найбільший боржник: ${esc(top.name)} (${nfmt(top.unp)} грн).` : ''}`, `Поріг: неоплат > 30 днів ≥ ${pc(MG_TH.unpaid30)} % від неоплат`, 'mon'); }
+    else quiet.push('Неоплачено понад 30 днів');
+  }
+  /* Тривога №3 — втрачене джерело (партнерська установа, що мала ≥ N візитів у періоді порівняння, а тепер 0) */
+  if (cmp){
+    const thr = mgThrN(X), cm = mgSrcAgg(X.cur), pm = mgSrcAgg(X.prv); let any = false;
+    for (const s of pm.values()){ if (s.t !== 'inst' || s.n < thr || !s.inst || !isPartnerNow(s.inst)) continue; if (!cm.has(s.k)){ any = true; add('red', `Втрачено джерело: ${esc(s.name)}`, `У періоді порівняння ${s.n} візитів, зараз — 0. Партнерство діє.`, `Поріг: джерело з ≥ ${thr} візитами дало 0`, 'src'); } }
+    if (!any) quiet.push('Втрачені джерела');
+  }
+  /* Увага №1 — концентрація джерел (три найбільших, самоскерування — окреме джерело) */
+  { const m = mgSrcAgg(X.cur), by = money ? 'after' : 'n', tot = [...m.values()].reduce((s, x) => s + x[by], 0), top = [...m.values()].sort((a, b) => b[by] - a[by]).slice(0, 3), sh = tot ? top.reduce((s, x) => s + x[by], 0) / tot : 0;
+    if (tot && sh > MG_TH.conc) add('amber', `Концентрація джерел ${pc(sh)} %`, `Три найбільших джерела дають ${pc(sh)} % ${money ? 'виручки' : 'візитів'}: ${top.map(x => `${esc(x.name)} ${pc(x[by] / tot)} %`).join(', ')}; поріг ${pc(MG_TH.conc)} %.`, `Поріг: > ${pc(MG_TH.conc)} %`, 'src');
+    else if (tot) quiet.push('Концентрація джерел'); }
+  /* Увага №2 — зростання пільг */
+  if (money && cmp && B.disc > 0){
+    const g = (A.disc - B.disc) / B.disc;
+    if (g > MG_TH.disc){
+      const cnt = (rs) => { const m = new Map(); rs.forEach(r => { const nm = r.discountSnapshot?.name; if (nm) m.set(nm, (m.get(nm) || 0) + 1); }); return m; }, c1 = cnt(X.cur), c0 = cnt(X.prv);
+      const top = [...c1].map(([k, v]) => [k, v - (c0.get(k) || 0)]).sort((a, b) => b[1] - a[1])[0];
+      add('amber', `Пільги зросли на ${pc(g)} %`, `Віддано ${nfmt(A.disc)} грн проти ${nfmt(B.disc)}.${top && top[1] > 0 ? ` Найбільше — «${esc(top[0])}» (+${top[1]} застосувань).` : ''}`, `Поріг: зростання > ${pc(MG_TH.disc)} %`, 'inc');
+    } else quiet.push('Зростання пільг');
+  }
+  /* Увага №3 — середній чек КТ / МРТ (без порівняння — інформація із значенням) */
+  if (money){
+    for (const md of ['МРТ', 'КТ']){
+      const f = (rs) => { const x = rs.filter(r => mgMod(r) === md); return x.length ? Math.round(x.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0) / x.length) : null; }, c = f(X.cur), p = cmp ? f(X.prv) : null;
+      if (c === null) continue;
+      if (!cmp || p === null) { if (!cmp) add('blue', `Середній чек ${md}: ${nfmt(c)} грн`, 'Без порівняння з іншим періодом — лише значення.', 'Інформація', 'inc'); continue; }
+      const g = (c - p) / p;
+      if (Math.abs(g) >= MG_TH.chk) add('amber', `Середній чек ${md} ${g < 0 ? 'впав' : 'зріс'} на ${pc(Math.abs(g))} %`, `З ${nfmt(p)} до ${nfmt(c)} грн.`, `Поріг: зміна ≥ ${pc(MG_TH.chk)} %`, 'inc'); else quiet.push(`Зміна середнього чека ${md}`);
+    }
+  }
+  /* Увага №4 — частка лікуючих лікарів (від себе) впала на ≥ 5 % від попередньої частки */
+  if (cmp){
+    const sh = (rs) => rs.length ? rs.filter(r => mgSrc(r).t === 'doc').length / rs.length : null, c = sh(X.cur), p = sh(X.prv);
+    if (p && c !== null){ const g = (c - p) / p; if (g <= -MG_TH.share) add('amber', `Частка лікуючих лікарів (від себе) впала на ${pc(-g)} %`, `Було ${pc(p)} % візитів, стало ${pc(c)} %.`, `Поріг: падіння частки ≥ ${pc(MG_TH.share)} % від попередньої`, 'src'); else quiet.push('Частка лікуючих лікарів (від себе)'); }
+  }
+  /* Увага №5 — нові пацієнти: будь-яке зниження */
+  if (cmp && B.npat > 0){ if (A.npat < B.npat) add('amber', `Нових пацієнтів менше на ${pc((B.npat - A.npat) / B.npat)} %`, `Було ${nfmt(B.npat)}, стало ${nfmt(A.npat)}.`, 'Без порогу: показується будь-яке зниження', 'ov'); else quiet.push('Нові пацієнти'); }
+  /* Увага №6 — падіння візитів ≥ 10 % */
+  if (cmp && B.n > 0){ const g = (A.n - B.n) / B.n; if (g <= -MG_TH.visits) add('amber', `Візитів менше на ${pc(-g)} %`, `Було ${nfmt(B.n)}, стало ${nfmt(A.n)}.`, `Поріг: падіння ≥ ${pc(MG_TH.visits)} %`, 'ov'); else quiet.push(`Падіння візитів ≥ ${pc(MG_TH.visits)} %`); }
+  /* Увага №8 — зниження візитів кожного партнера окремо, без порогу */
+  if (cmp){
+    const cm = mgSrcAgg(X.cur), pm = mgSrcAgg(X.prv); let any = false;
+    for (const s of pm.values()){ if (s.t !== 'inst' || !s.inst || !partnerOn(s.inst, X.P.b)) continue; const n1 = cm.get(s.k)?.n || 0; if (n1 > 0 && n1 < s.n){ any = true; add('amber', `Партнер «${esc(s.name)}»: візитів −${pc((s.n - n1) / s.n)} %`, `Було ${s.n}, стало ${n1}. Партнерство діє.`, 'Без порогу: показується будь-яке зниження', 'src'); } }
+    if (!any) quiet.push('Зниження візитів партнерів');
+  }
+  /* Інформація №1 — сезонність: той самий місяць / день тижня — пік у кожному повному році (потрібно ≥ 2 повних роки) */
+  { const Y = new Date().getFullYear(), first = mg.cache.recs[0]?.date || '9999', ys = [Y - 3, Y - 2, Y - 1].filter(y => first <= iso2(y, 0, 31));
+    if (ys.length >= 2){
+      const pk = (f, n) => ys.map(y => { const c = Array(n).fill(0), d = Array.from({ length: n }, () => new Set()); mg.cache.recs.filter(r => r.date.slice(0, 4) === String(y)).forEach(r => { const k = f(r); c[k]++; d[k].add(r.date); }); const a = c.map((v, i) => d[i].size ? v / d[i].size : 0); return a.indexOf(Math.max(...a)); });
+      const pm = pk(r => +r.date.slice(5, 7) - 1, 12), pw = pk(r => (new Date(r.date + 'T00:00:00').getDay() + 6) % 7, 7), wd = ['понеділок', 'вівторок', 'середа', 'четвер', 'пʼятниця', 'субота', 'неділя'];
+      if (pm.every(x => x === pm[0])) add('blue', `Сезонність: ${mgML(pm[0])} — пік візитів`, `Місяць із найбільшою кількістю візитів збігається в кожному з ${ys.length} років (${ys.join(', ')}). Заздалегідь підготуйте графік.`, 'Інформаційний', 'sea');
+      if (pw.every(x => x === pw[0])) add('blue', `Найзавантаженіший день тижня — ${wd[pw[0]]}`, `У кожному з ${ys.length} років (${ys.join(', ')}) найбільше візитів у цей день тижня.`, 'Інформаційний', 'sea');
+    }
+  }
+  const ord = { red: 0, amber: 1, blue: 2 }; act.sort((a, b) => ord[a.l] - ord[b.l]);
+  return { act, quiet };
+}
+function mgSigDraw(X){
+  const el = $('mgSig'), N = $('mgSigN');
+  if (X.none){ el.innerHTML = '<div class="sc-e">За цей період даних немає, сигналів немає.</div>'; if (N) N.style.display = 'none'; return; }
+  const S = mgSignals(X), ic = { red: ['al-e', '✕'], amber: ['al-w', '<span>!</span>'], blue: ['al-i', 'i'] };
+  const reds = S.act.filter(s => s.l === 'red').length; if (N){ N.textContent = reds; N.style.display = reds ? '' : 'none'; }
+  el.innerHTML = `<div class="chips" id="mgSigF" style="margin-bottom:10px">${[['all', 'Усі'], ['red', '● Тривога'], ['amber', '● Увага'], ['blue', '● Інформація']].map(([k, t]) => `<span class="chip ${k === mg.sf ? 'on' : ''}" data-l="${k}">${t}</span>`).join('')}</div>`
+    + (S.act.length ? S.act.map(s => `<div class="al ${ic[s.l][0]}" data-l="${s.l}"><span class="al-icon">${ic[s.l][1]}</span><div><b class="al-t">${s.t}</b>${s.d}<div class="s-m">${s.m}</div></div><a class="s-lk" href="#" data-go="${s.tab}">${{ mon: 'Гроші', src: 'Джерела', inc: 'Дохід і пільги', sea: 'Сезонність', ov: 'Огляд' }[s.tab]} →</a></div>`).join('') : '<div class="sc-e">Сигналів немає — усе в межах порогів.</div>')
+    + (S.quiet.length ? `<details class="quiet"><summary>Не спрацювало (${S.quiet.length})</summary>${S.quiet.map(x => `<div>○ ${esc(x)}</div>`).join('')}</details>` : '');
+  const flt = () => el.querySelectorAll('.al[data-l]').forEach(d => { d.style.display = (mg.sf === 'all' || d.dataset.l === mg.sf) ? '' : 'none'; }); flt();
+  el.onclick = (e) => {
+    const c = e.target.closest('#mgSigF [data-l]'); if (c){ mg.sf = c.dataset.l; [...c.parentNode.children].forEach(x => x.classList.toggle('on', x === c)); flt(); return; }
+    const g = e.target.closest('[data-go]'); if (g){ e.preventDefault(); const t = $('mgTabs')?.querySelector(`[data-t="${g.dataset.go}"]`); if (t) t.click(); }
+  };
 }
 
 /* ═══ ЕКСПОРТ ЗВІТУ (export_template): PDF — друк браузера («Зберегти як PDF»), DOC — Word-сумісний файл ═══ */
