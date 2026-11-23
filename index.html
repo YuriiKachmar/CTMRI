@@ -101,6 +101,8 @@
   .ph-x{flex:0 0 auto;width:36px;border-radius:9px;background:var(--bg);box-shadow:var(--bump);color:var(--red);font-weight:900;font-size:var(--t-sm);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .ph-add-btn{width:100%;padding:11px;border:1.5px dashed var(--dark);border-radius:10px;background:transparent;color:var(--green);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:6px;font-family:inherit}
   .ph-add-btn:active{background:var(--soft)}
+  .zk-stat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 4px}.zk-stat>div{padding:12px 10px;border-radius:12px;background:var(--bg);box-shadow:var(--in);text-align:center}.zk-v{font-size:16px;font-weight:800;color:var(--green)}.zk-l{font-size:10.5px;color:var(--muted);margin-top:3px}
+  .fac-val:disabled,.fac-name input:disabled,.ph-num:disabled,.ph-name:disabled{opacity:1;color:var(--muted);cursor:default}
   .week{display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
   .wd{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
   .dn{font-size:10.5px;font-weight:800;color:var(--green)}.dn .d-f{display:none}
@@ -850,7 +852,7 @@ import { initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmai
          createUserWithEmailAndPassword, sendPasswordResetEmail, signOut,
          reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc,
-         writeBatch, serverTimestamp, collection, getDocs, query, where, limit, orderBy, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+         writeBatch, serverTimestamp, collection, getDocs, query, where, limit, orderBy, runTransaction, onSnapshot, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ═══ Firebase — проєкт ctmri-1 ═══ */
 const firebaseConfig = {
@@ -1720,28 +1722,30 @@ function renderStaff(){
     else if (e.target.closest('[data-aw]')) openWorkerForm(null, role);
     else if (st && isBoss){ toggleDay(st.closest('.wd'), st.dataset.st); weekChanged(); }
   };
-  bindDayInputs(sh.querySelector('.week'), weekChanged);
+  bindDayInputs(sh.querySelector('.week'), () => weekChanged());
   sh.onchange = (e) => { if (e.target.closest('.week')) weekChanged(); };
 }
 const pill2 = (st) => st === 'inactive' ? '<span class="pill gray">не активний</span>' : '<span class="pill">активний</span>';
 
 /* Графік закладу: зберігається одразу при зміні (settings/main.schedule), лише Керівник */
-function weekChanged(){
-  const wk = [...$('sheet').querySelectorAll('.week .wd')].map(wd => { const [a, b] = wd.querySelectorAll('.wt'); return { from: dayVal(a), to: dayVal(b), off: wd.classList.contains('closed'), full: wd.classList.contains('full') }; });
-  if (wk.some(d => !d.off && !d.full && (!d.from || !d.to))){ toast('e', 'Некоректний час', 'Вкажіть години для кожного робочого дня.'); return renderStaff(); }
+function weekChanged(root, redo){
+  redo = redo || renderStaff;
+  const wk = [...(root || $('sheet')).querySelectorAll('.week .wd')].map(wd => { const [a, b] = wd.querySelectorAll('.wt'); return { from: dayVal(a), to: dayVal(b), off: wd.classList.contains('closed'), full: wd.classList.contains('full') }; });
+  if (wk.some(d => !d.off && !d.full && (!d.from || !d.to))){ toast('e', 'Некоректний час', 'Вкажіть години для кожного робочого дня.'); return redo(); }
   if (wk.every(d => d.off)){
-    confirmWin({ type: 'w', title: 'Усі 7 днів позначено вихідними.', details: 'Заклад не працюватиме взагалі — усі записи в журналі потраплятимуть поза вікном.', action: 'Зберегти все одно', onOk: () => saveWeek(wk), onCancel: renderStaff });
+    confirmWin({ type: 'w', title: 'Усі 7 днів позначено вихідними.', details: 'Заклад не працюватиме взагалі — усі записи в журналі потраплятимуть поза вікном.', action: 'Зберегти все одно', onOk: () => saveWeek(wk, redo, !!root), onCancel: redo });
     return;
   }
-  saveWeek(wk);
+  saveWeek(wk, redo, !!root);
 }
-async function saveWeek(wk){
+async function saveWeek(wk, redo, fromSettings){
   const before = settings?.schedule || null;
   try {
     await setDoc(doc(db, 'settings', 'main'), { schedule: wk, updatedAt: serverTimestamp() }, { merge: true });
     settings = { ...(settings || {}), schedule: wk };
     audit('update', 'settings', 'main', { schedule: before }, { schedule: wk });
-  } catch (e){ toast('e', 'Не вдалося зберегти графік закладу', e.code || ''); renderStaff(); }
+    if (fromSettings && sheetRerender) sheetRerender();   // відкритий екран «Працівники» бачить новий графік
+  } catch (e){ toast('e', 'Не вдалося зберегти графік закладу', e.code || ''); (redo || renderStaff)(); }
 }
 
 /* ─── Картка працівника ─── */
@@ -4653,6 +4657,59 @@ function togglePerm(perms, k){
 }
 const noAccessBox = (t) => `<div class="al al-w" style="margin:12px 0 0"><span class="al-icon"><span>!</span></span><div><b>Немає доступу до цього розділу</b>${esc(t || 'Зверніться до Керівника, якщо потрібні зміни.')}</div></div>`;
 
+/* ─── Налаштування → Заклад: назва, адреса, e-mail, телефони, графік закладу; зберігається одразу при зміні поля. Змінює лише Керівник ─── */
+const zkPhRow = (p, dis) => `<div class="ph-row"><input class="ph-num" type="tel" placeholder="+380…" value="${esc(p.number || '')}" ${dis}><input class="ph-name" placeholder="Підпис, напр. Реєстратура" value="${esc(p.label || '')}" ${dis}>${dis ? '' : '<span class="ph-x" data-phx title="Видалити">✕</span>'}</div>`;
+function zakladHtml(){
+  const boss = profile?.role === 'Керівник', dis = boss ? '' : 'disabled', st = settings || {};
+  const sched = st.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
+  const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}">${dnHtml(i)}${dayCtl(dayState(d), d.from, d.to, !boss)}</div>`).join('');
+  return `<div class="fac-row"><div class="fac-logo" title="Лого (додамо пізніше)">ЛОГО</div><div class="fac-name"><input data-zk="name" placeholder="Назва закладу" value="${esc(st.facilityName || '')}" ${dis}></div></div>
+    <div class="fac-line"><span class="fac-lbl">Адреса</span><input class="fac-val" data-zk="addr" placeholder="м. Львів, вул. …" value="${esc(st.facilityAddress || '')}" ${dis}></div>
+    <div class="fac-line"><span class="fac-lbl">Email</span><input class="fac-val" data-zk="mail" type="email" placeholder="clinic@example.com" value="${esc(st.facilityEmail || '')}" ${dis}></div>
+    <div class="hint" style="margin:10px 0 4px">Email використовується як адреса за замовчуванням для автоматичних звітів.${boss ? '' : ' Змінювати дані закладу може лише Керівник.'}</div>
+    <div class="sub2-t">Телефони</div>
+    <div id="zkPhones">${(st.phones || []).map(p => zkPhRow(p, dis)).join('')}</div>
+    ${boss ? '<button type="button" class="ph-add-btn" data-phadd>+ Додати телефон</button>' : ''}
+    <div class="sub2-t" style="margin-top:18px">Графік закладу</div>
+    <div class="week ${boss ? '' : 'locked'}" id="zkWeek">${week}</div>
+    <div class="al al-i"><span class="al-icon">i</span><div>Графік закладу — коли заклад приймає пацієнтів. <strong>Не пов'язаний напряму</strong> з типами змін працівників (Денна/Нічна/Доба) — ті налаштовуються в картці кожного, у розділі «Працівники». Графік потрібен звіту «Апарат» (потужність) і календарю чергувань.</div></div>
+    <div class="al al-i"><span class="al-icon">i</span><div><strong>Довідково — норми робочого часу (не перевіряється автоматично):</strong> базовий тиждень — 40 год (ст. 50 КЗпП); для лікарів — 38,5 год (стаціонар/швидка/лабораторії) чи 33 год (лише амбулаторний прийом, наказ МОЗ №319); скорочені норми для неповнолітніх (24–36 год), шкідливих умов та інвалідності I–II груп (36 год). Нічний час — 22:00–06:00 (ст. 54).</div></div>
+    <div class="zk-stat" id="zkStat"><div><div class="zk-v">…</div><div class="zk-l">Період наповнення бази</div></div><div><div class="zk-v">…</div><div class="zk-l">Унікальних пацієнтів</div></div><div><div class="zk-v">…</div><div class="zk-l">Наданих послуг</div></div></div>`;
+}
+let zkStats = null;   // на сесію: за вікно відкривається кілька разів, а підрахунок коштує ≈ 1 читання на 1000 документів
+async function zkLoadStats(ov){
+  const put = (v) => { const el = ov.querySelector('#zkStat'); if (!el) return; const f = (n) => Number(n).toLocaleString('uk-UA'); const vs = el.querySelectorAll('.zk-v'); vs[0].textContent = v.range; vs[1].textContent = f(v.pat); vs[2].textContent = f(v.rec); };
+  if (zkStats && Date.now() - zkStats.t < 600000) return put(zkStats);
+  try {
+    const [a, b, np, nr] = await Promise.all([
+      getDocs(query(collection(db, 'records'), orderBy('date'), limit(1))), getDocs(query(collection(db, 'records'), orderBy('date', 'desc'), limit(1))),
+      getCountFromServer(collection(db, 'patients')), getCountFromServer(collection(db, 'records'))]);
+    const d1 = a.docs[0]?.data().date, d2 = b.docs[0]?.data().date;
+    zkStats = { t: Date.now(), range: d1 ? `${isoToUa(d1)} – ${isoToUa(d2)}` : '—', pat: np.data().count, rec: nr.data().count };
+    put(zkStats);
+  } catch (e){ const el = ov.querySelector('#zkStat'); if (el) el.querySelectorAll('.zk-v').forEach(x => { x.textContent = '—'; }); }
+}
+function zkBind(ov){
+  const w = ov.querySelector('#zkWeek'); if (w) bindDayInputs(w, () => zkWeek(ov));
+  zkLoadStats(ov);
+}
+const zkWeek = (ov) => weekChanged(ov.querySelector('#zkWeek').parentElement, () => { const b = ov.querySelector('[data-sb]'); if (b && ov._render) ov._render(); });
+async function zkSave(ov){
+  if (profile?.role !== 'Керівник') return;
+  const g = (k) => (ov.querySelector(`[data-zk="${k}"]`)?.value || '').trim();
+  const name = g('name'), mail = g('mail'), addr = g('addr');
+  if (!name){ toast('e', 'Вкажіть назву закладу', ''); ov._render(); return; }
+  if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){ toast('e', 'Некоректний e-mail', 'Перевірте адресу.'); return; }
+  const phones = [...ov.querySelectorAll('#zkPhones .ph-row')].map(r => ({ number: r.querySelector('.ph-num').value.trim(), label: r.querySelector('.ph-name').value.trim() })).filter(p => p.number);
+  const before = { facilityName: settings?.facilityName || '', facilityAddress: settings?.facilityAddress || '', facilityEmail: settings?.facilityEmail || '', phones: settings?.phones || [] };
+  const after = { facilityName: name, facilityAddress: addr, facilityEmail: mail, phones };
+  if (JSON.stringify(before) === JSON.stringify(after)) return;
+  try {
+    await setDoc(doc(db, 'settings', 'main'), { ...after, updatedAt: serverTimestamp() }, { merge: true });
+    settings = { ...(settings || {}), ...after }; $('hFac').textContent = name;
+    audit('update', 'settings', 'main', before, after);
+  } catch (e){ toast('e', 'Не вдалося зберегти дані закладу', e.code || ''); }
+}
 /* ───── Налаштування (модальне вікно; поки працює вкладка «Доступи») ───── */
 function openSettings(tab){
   const tabs = [['zaklad', 'Заклад'], ['prog', 'Програма']];
@@ -4662,9 +4719,9 @@ function openSettings(tab){
   const draw = () => {
     ov.querySelector('.win').style.maxWidth = (cur === 'access' ? 1240 : 700) + 'px';
     ov.querySelector('[data-sb]').innerHTML = `<div class="tabs2" style="margin-top:0">${tabs.map(t => `<span class="tab2 ${t[0] === cur ? 'on' : ''}" data-st="${t[0]}">${t[1]}</span>`).join('')}</div>` +
-      (cur === 'access' ? matrixHtml() : emptyBox('Цей розділ налаштувань — наступний крок розробки.'));
+      (cur === 'access' ? matrixHtml() : cur === 'zaklad' ? zakladHtml() : emptyBox('Цей розділ налаштувань — наступний крок розробки.'));
   };
-  ov._render = draw; draw();
+  ov._render = () => { draw(); if (cur === 'zaklad') zkBind(ov); }; ov._render();
   ov.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-st]'), c = e.target.closest('[data-cb]'), nm = e.target.closest('[data-card]');
     if (t && t.dataset.st !== cur){
@@ -4682,7 +4739,11 @@ function openSettings(tab){
     }
     if (nm){ const w = dir.workers.find(x => x.id === nm.dataset.card); if (w) w.role === 'Лаборант' || w.role === 'Лікар' ? openWorkerForm(w.id) : openUserForm(w.id); }
     if (e.target.closest('[data-adduser]')) openUserForm(null);
+    if (e.target.closest('[data-phadd]')){ const l = ov.querySelector('#zkPhones'); l.insertAdjacentHTML('beforeend', zkPhRow({}, '')); l.lastElementChild.querySelector('.ph-num').focus(); }
+    const px = e.target.closest('[data-phx]'); if (px){ px.closest('.ph-row').remove(); zkSave(ov); }
+    const zs = e.target.closest('#zkWeek [data-st]'); if (zs && profile?.role === 'Керівник'){ toggleDay(zs.closest('.wd'), zs.dataset.st); zkWeek(ov); }
   });
+  ov.addEventListener('change', (e) => { if (e.target.closest('[data-zk],#zkPhones')) zkSave(ov); else if (e.target.closest('#zkWeek')) zkWeek(ov); });
   if (cur === 'access'){ /* відкрито одразу після підтвердження пароля */ }
   return ov;
 }
