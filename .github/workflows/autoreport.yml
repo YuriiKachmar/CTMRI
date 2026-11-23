@@ -1,0 +1,38 @@
+name: Автозвіти
+# Кожні 30 хвилин перевіряє розклад (auto_reports у Firestore) і надсилає листи, час яких настав.
+# Секрети: FIREBASE_SERVICE_ACCOUNT, SMTP_USER, SMTP_PASS (Settings → Secrets and variables → Actions). Інструкція: docs/АВТОЗВІТ_інструкція.md
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Пробний запуск: нічого не надсилати, лише показати'
+        type: boolean
+        default: true
+concurrency: autoreport
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Встановлення залежностей
+        working-directory: autoreport
+        run: npm install --no-audit --no-fund
+      - name: Перевірка логіки
+        working-directory: autoreport
+        run: npm test
+      - name: Надсилання
+        working-directory: autoreport
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then echo "Секрети ще не налаштовано — пропуск."; exit 0; fi
+          npm start
