@@ -4869,7 +4869,7 @@ function openSettings(tab){
         if (await confirmPassword('Доступи')) openSettings('access'); else openSettings('zaklad');
         return;
       }
-      cur = t.dataset.st; draw();
+      cur = t.dataset.st; ov._render();
     }
     if (c){
       const w = dir.workers.find(x => x.id === c.dataset.cb.split(':')[0]), k = c.dataset.cb.split(':')[1];
