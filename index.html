@@ -318,6 +318,29 @@
 
   /* ── Журнал + форма візиту (main.html, forma_vizytu.html) ── */
   :root{--rule:#B9C4C2;--tile:#e6ebf0;--field-ro:#E4E9EA;--card:#e9edf2}
+  /* теми (Налаштування → Програма → Вигляд); Neo — без атрибута */
+  [data-theme="ocean"]{--ink:#1D3557;--green:#457B9D;--soft:#A8DADC;--red:#E63946;--bg:#dde5ee;--panel:#EDF1F5;--card:#F1F5F8;--tile:#F5F8FA;--muted:#6F8296;--line:#DBE3EA;--btn-main:#6FA3C0;--dark:#9fb0c6;--lite:#ffffff}
+  [data-theme="mint"]{--ink:#012B3A;--green:#007978;--soft:rgba(178,255,198,.30);--red:#FF4C46;--bg:#dfeae5;--panel:#E9F4F0;--card:#EEF7F3;--tile:#F3FAF7;--muted:#5F7B75;--line:#D6E6E0;--btn-main:#3FA3A2;--dark:#a0b8b0;--lite:#ffffff}
+  [data-theme="lilac"]{--ink:#3D2B2F;--green:#6F527E;--soft:#F3EBF5;--red:#A84F58;--bg:#eee2e4;--panel:#F4E9EA;--card:#F7EEEF;--tile:#FAF3F4;--muted:#6A555A;--line:#E6D5D8;--btn-main:#856696;--dark:#c9adb3;--lite:#ffffff}
+  .theme-grid{display:flex;gap:10px;flex-wrap:wrap}
+  .theme-btn{flex:1;min-width:110px;height:64px;border-radius:14px;box-shadow:var(--bump);cursor:pointer;display:flex;align-items:center;justify-content:center;border:none;font-family:inherit}
+  .theme-btn.sel{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--green)}
+  .theme-btn span{font-size:13px;font-weight:800;letter-spacing:.3px}
+  .theme-grid.lock .theme-btn{cursor:default}
+  .sect2-t{font-size:13px;font-weight:800;color:var(--green);margin:18px 0 10px}
+  .jrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .jrow:last-child{border-bottom:none}
+  .jrow-info{flex:1;font-size:12.5px;color:var(--ink)}
+  .seg2{display:inline-flex;border-radius:11px;background:var(--bg);box-shadow:var(--in);padding:3px;gap:2px}
+  .seg2 span{padding:8px 13px;border-radius:9px;font-size:11.5px;font-weight:800;color:var(--muted);cursor:pointer}
+  .seg2 span.on{background:var(--btn-main);color:#fff}
+  .seg2.lock span{cursor:default}
+  .bkp-t{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .bkp-s{font-size:10.5px;color:var(--muted);margin-top:3px}
+  .bkp-btn{display:inline-flex;align-items:center;gap:7px;padding:11px 16px;border:none;border-radius:11px;background:var(--bg);box-shadow:var(--bump);color:var(--green);font-size:12px;font-weight:800;cursor:pointer;margin-top:6px;font-family:inherit}
+  .bkp-btn:active{box-shadow:var(--in)}
+  .bkp-btn[disabled]{opacity:.45;cursor:default;box-shadow:none}
+  .bkp-hint{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5}
   .pen.off{opacity:.35;cursor:default;box-shadow:none;pointer-events:none}
   .j-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,460px) minmax(0,1fr);gap:10px;align-items:center;margin-bottom:14px}
   @media (max-width:1000px){.j-actions{grid-template-columns:minmax(0,1fr);justify-items:center}.j-actions>*{max-width:100%}}
@@ -840,7 +863,7 @@
       </div>
     </div>
     <div class="folder" id="folder"><div class="sheet" id="sheet"></div></div>
-    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 23.11.2026 · кеш довідників і звіту</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted);opacity:.7;padding:6px 0 2px">збірка 23.11.2026 · налаштування «Програма»</div>
   </div>
 </div>
 <div id="modals"></div>
@@ -875,6 +898,19 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 const ROLES = ['Керівник','Адміністратор','Користувач','Лаборант','Лікар'];
 const APP_NAME = 'Облік послуг КТ/МРТ';
 let settings = null;      // settings/main
+let FACILITY_TRACKS_PAYMENT = true, JOURNAL_DESC = true;   // Налаштування → Програма → Журнал
+const THEMES = [['neo', 'Neo', '#E8ECEF', '#1E6B4F'], ['ocean', 'Ocean', '#dde5ee', '#457B9D'], ['mint', 'Mint', '#dfeae5', '#007978'], ['lilac', 'Lilac', '#eee2e4', '#6F527E']];
+function applyTheme(name){
+  const n = THEMES.some(t => t[0] === name) ? name : 'neo';
+  if (n === 'neo') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', n);
+  try { localStorage.setItem('ctmri-theme', n); } catch (e){}
+}
+function applyPrefs(){
+  const st = settings || {};
+  FACILITY_TRACKS_PAYMENT = st.journalPay !== false; JOURNAL_DESC = st.journalDesc !== false;
+  if (st.theme) applyTheme(st.theme);
+}
+try { const t = localStorage.getItem('ctmri-theme'); if (t) applyTheme(t); } catch (e){}
 let firstRun = false;     // true лише коли settings/main достеменно відсутній (не при помилці читання)
 let profile = null;       // workers/{uid}
 let bootstrapping = false;
@@ -1077,7 +1113,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function loadSettings(){
-  try { const s = await getDoc(doc(db, 'settings', 'main')); settings = s.exists() ? s.data() : null; firstRun = !s.exists(); }
+  try { const s = await getDoc(doc(db, 'settings', 'main')); settings = s.exists() ? s.data() : null; firstRun = !s.exists(); applyPrefs(); }
   catch (e){ firstRun = false; console.warn('settings:', e.code); }
 }
 async function showLogin(){
@@ -4711,6 +4747,66 @@ async function zkSave(ov){
   } catch (e){ toast('e', 'Не вдалося зберегти дані закладу', e.code || ''); }
 }
 /* ───── Налаштування (модальне вікно; поки працює вкладка «Доступи») ───── */
+/* ───── Налаштування → Програма: вигляд, стовпці журналу, резервна копія. Змінює лише Керівник ───── */
+function programHtml(){
+  const boss = profile?.role === 'Керівник', st = settings || {}, th = st.theme || 'neo', lk = boss ? '' : ' lock';
+  const seg = (k, on) => `<div class="seg2${lk}"><span data-pf="${k}:1" class="${on ? 'on' : ''}">Увімкнено</span><span data-pf="${k}:0" class="${on ? '' : 'on'}">Вимкнено</span></div>`;
+  return `<div class="sect2-t" style="margin-top:6px">Вигляд</div>
+    <div class="theme-grid${lk}">${THEMES.map(t => `<button type="button" class="theme-btn ${t[0] === th ? 'sel' : ''}" data-th="${t[0]}" style="background:${t[2]}"><span style="color:${t[3]}">${t[1]}</span></button>`).join('')}</div>
+    <div class="hint" style="margin-top:8px">Вигляд єдиний для всіх користувачів закладу.${boss ? '' : ' Змінювати його може лише Керівник.'}</div>
+    <div class="sect2-t">Журнал</div>
+    <div class="sect">
+      <div class="jrow"><div class="jrow-info">Стовпець «Оплата» (відмітка про оплату)<div class="hint">Також керує плиткою «По оплаті» у звітах та стовпцями оплати у звітах.</div></div>${seg('journalPay', st.journalPay !== false)}</div>
+      <div class="jrow"><div class="jrow-info">Стовпець «Опис»</div>${seg('journalDesc', st.journalDesc !== false)}</div>
+    </div>
+    <div class="sect2-t">Резервне копіювання</div>
+    <div class="sect">
+      <div class="bkp-t">Автоматичний бекап</div>
+      <div class="bkp-s">Поки не налаштований: потрібна серверна частина (Cloud Functions), а вона доступна лише на платному плані Firebase. Дані у Firestore зберігаються надійно, але окремої копії немає — тому раз на місяць робіть ручний експорт нижче.</div>
+      <div class="bkp-t" style="margin-top:14px">Ручний експорт (JSON + CSV)</div>
+      <button type="button" class="bkp-btn" data-bkp ${boss ? '' : 'disabled'}>⬇ Експортувати базу зараз</button>
+      <div class="bkp-hint" id="bkpMsg"><b>JSON</b> — повна копія всіх даних. <b>CSV</b> — таблиця послуг для Excel. Експорт читає всю базу: кожен документ — одне читання з добового ліміту (50 000), тому перед початком програма покаже кількість.${boss ? '' : ' Експорт доступний лише Керівнику.'}</div>
+      <button type="button" class="bkp-btn" disabled style="margin-top:12px;width:100%;justify-content:center">Відновити з копії (поки недоступно)</button>
+      <div class="bkp-hint">Відновлення замінює поточні дані, тому його робимо окремим кроком і лише разом із перевіркою файлу копії.</div>
+    </div>`;
+}
+async function saveProgram(ov, patch){
+  if (profile?.role !== 'Керівник') return;
+  const before = {}; Object.keys(patch).forEach(k => before[k] = settings?.[k] ?? null);
+  try {
+    await setDoc(doc(db, 'settings', 'main'), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
+    settings = { ...(settings || {}), ...patch }; applyPrefs(); audit('update', 'settings', 'main', before, patch);
+    if (ov && ov._render) ov._render(); if (typeof rerenderWins === 'function') rerenderWins();
+  } catch (e){ toast('e', 'Не вдалося зберегти', e.code || ''); }
+}
+const CSVQ = (v) => { v = v == null ? '' : String(v); return /[";\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+async function exportDb(ov){
+  const msg = ov.querySelector('#bkpMsg'), btn = ov.querySelector('[data-bkp]');
+  const cols = ['workers', 'referring_doctors', 'institutions', 'institution_types', 'services_catalog', 'extra_catalog', 'discounts', 'labels', 'duty_days', 'counters', 'patients', 'visits', 'records', 'payments'];
+  try {
+    btn.disabled = true; msg.textContent = 'Рахую документи…';
+    const big = ['patients', 'visits', 'records', 'payments'];
+    const cnt = (await Promise.all(big.map(c => getCountFromServer(collection(db, c))))).reduce((a, x) => a + x.data().count, 0);
+    if (!confirm(`Експорт прочитає приблизно ${cnt.toLocaleString('uk-UA')} документів (+ довідники) з добового ліміту 50 000 читань. Продовжити?`)){ msg.textContent = 'Скасовано.'; btn.disabled = false; return; }
+    const out = {}; let n = 0;
+    { const sd = await getDoc(doc(db, 'settings', 'main')); out.settings = sd.exists() ? [{ id: 'main', ...sd.data() }] : []; n++; }
+    for (const c of cols){
+      msg.textContent = `Читаю: ${c}… (${n})`;
+      const sn = await getDocs(collection(db, c)); out[c] = sn.docs.map(d => ({ id: d.id, ...d.data() })); n += sn.size;
+    }
+    const iso = (v) => v && typeof v.toDate === 'function' ? v.toDate().toISOString() : v;
+    const json = JSON.stringify({ exportedAt: new Date().toISOString(), app: 'ctmri', data: out }, (k, v) => iso(v), 1);
+    const stamp = new Date().toISOString().slice(0, 10);
+    mgDl(new Blob([json], { type: 'application/json' }), `ctmri_backup_${stamp}.json`);
+    const pay = Object.fromEntries((out.payments || []).map(p => [p.id, p]));
+    const H = ['Дата', 'Час', '№', 'Пацієнт', 'Дата народж.', '№ іст. хв.', 'Послуга', 'Ціна', 'Сума', 'Оплата', 'Форма оплати', 'Описано'];
+    const rows = (out.records || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.time || '').localeCompare(String(b.time || ''))).map(r => [r.date, r.time, r.sequentialNumber, r.patientName, r.patientBirth, r.historyNo, r.serviceSnapshot?.name, r.servicePrice, r.totalAmount, r.paid ? 'так' : 'ні', r.paymentMethod === 'cash' ? 'готівка' : r.paymentMethod === 'cashless' ? 'безготівк.' : '', r.described ? 'так' : 'ні']);
+    mgDl(new Blob(['\ufeff' + [H, ...rows].map(r => r.map(CSVQ).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), `ctmri_poslugy_${stamp}.csv`);
+    msg.innerHTML = `<b style="color:var(--green)">✓ Готово:</b> ${n.toLocaleString('uk-UA')} документів, збережено 2 файли. Прочитано з ліміту ≈ ${n.toLocaleString('uk-UA')}.`;
+    audit('export', 'settings', 'backup', null, { docs: n });
+  } catch (e){ console.warn('export:', e); msg.textContent = 'Не вдалося: ' + (e.code || e.message || ''); }
+  btn.disabled = false;
+}
 function openSettings(tab){
   const tabs = [['zaklad', 'Заклад'], ['prog', 'Програма']];
   if (canSeeAccess()) tabs.push(['access', 'Доступи']);
@@ -4719,7 +4815,7 @@ function openSettings(tab){
   const draw = () => {
     ov.querySelector('.win').style.maxWidth = (cur === 'access' ? 1240 : 700) + 'px';
     ov.querySelector('[data-sb]').innerHTML = `<div class="tabs2" style="margin-top:0">${tabs.map(t => `<span class="tab2 ${t[0] === cur ? 'on' : ''}" data-st="${t[0]}">${t[1]}</span>`).join('')}</div>` +
-      (cur === 'access' ? matrixHtml() : cur === 'zaklad' ? zakladHtml() : emptyBox('Цей розділ налаштувань — наступний крок розробки.'));
+      (cur === 'access' ? matrixHtml() : cur === 'zaklad' ? zakladHtml() : programHtml());
   };
   ov._render = () => { draw(); if (cur === 'zaklad') zkBind(ov); }; ov._render();
   ov.addEventListener('click', async (e) => {
@@ -4739,6 +4835,9 @@ function openSettings(tab){
     }
     if (nm){ const w = dir.workers.find(x => x.id === nm.dataset.card); if (w) w.role === 'Лаборант' || w.role === 'Лікар' ? openWorkerForm(w.id) : openUserForm(w.id); }
     if (e.target.closest('[data-adduser]')) openUserForm(null);
+    const th = e.target.closest('[data-th]'); if (th && profile?.role === 'Керівник') saveProgram(ov, { theme: th.dataset.th });
+    const pf = e.target.closest('[data-pf]'); if (pf && profile?.role === 'Керівник'){ const [k, v] = pf.dataset.pf.split(':'); saveProgram(ov, { [k]: v === '1' }); }
+    if (e.target.closest('[data-bkp]')) exportDb(ov);
     if (e.target.closest('[data-phadd]')){ const l = ov.querySelector('#zkPhones'); l.insertAdjacentHTML('beforeend', zkPhRow({}, '')); l.lastElementChild.querySelector('.ph-num').focus(); }
     const px = e.target.closest('[data-phx]'); if (px){ px.closest('.ph-row').remove(); zkSave(ov); }
     const zs = e.target.closest('#zkWeek [data-st]'); if (zs && profile?.role === 'Керівник'){ toggleDay(zs.closest('.wd'), zs.dataset.st); zkWeek(ov); }
@@ -4900,7 +4999,6 @@ const activeWorkers = (role) => dir.workers.filter(w => w.status !== 'inactive' 
   .sort((a, b) => String(a.lastName).localeCompare(String(b.lastName), 'uk'));
 const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
 const monthLabel = (r) => r.monthlyNumber ? `№ ${r.monthlyNumber}/${MON_SHORT[(+String(r.date).slice(5, 7) || 1) - 1]}` : '';
-const FACILITY_TRACKS_PAYMENT = true;    // Налаштування → Журнал → «Стовпець Оплата» (ще не побудовано)
 
 /* розрахунок послуги: знижка від основної ціни, додаткові — без знижки (schema_v1: records) */
 function calcSvc(s){
@@ -5381,7 +5479,7 @@ function jrTable(){
   if (jr.err){ box.innerHTML = `<div class="al al-e" style="margin:12px 0 0"><span class="al-icon">✕</span><div><b>Не вдалося завантажити журнал</b>${esc(jr.err)}</div></div>`; $('jLeg').innerHTML = ''; return; }
   const rows = [...jr.rows].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.time || '').localeCompare(String(a.time || '')) || (b.sequentialNumber || 0) - (a.sequentialNumber || 0));
   const money = can('jSums'), payCol = money && FACILITY_TRACKS_PAYMENT;
-  const mcls = money ? '' : 'style="display:none"', pcls = payCol ? '' : 'style="display:none"';
+  const mcls = money ? '' : 'style="display:none"', pcls = payCol ? '' : 'style="display:none"', dcls = JOURNAL_DESC ? '' : 'style="display:none"';
   const labelOf = (id) => dir.labels.find(l => l.id === id);
   const body = rows.map((r, idx) => {
     const lab = labelOf(r.labelId), prev = rows[idx - 1];
@@ -5405,21 +5503,21 @@ function jrTable(){
       <td class="r money m-l" ${mcls}><b>${nfmt(r.totalAmount)}</b></td>
       <td class="c cash">${r.paymentMethod === 'cash' ? 'готівка' : r.paymentMethod === 'cashless' ? 'безготівк.' : '—'}</td>
       <td class="c money pay-status m-r" ${pcls}><span class="pay ${r.paid ? 'ok2' : 'no2'} ${own ? '' : 'off'}" data-pay="${r.id}" title="${own ? (r.paid ? 'Зняти оплату' : 'Позначити оплаченою') : ''}">${r.paid ? '✓' : '✕'}</span></td>
-      <td class="desc"><span class="op-fld ${canDescribeRec(r) ? 'tg' : ''}" ${canDescribeRec(r) ? `data-desc="${r.id}" title="Змінити відмітку"` : ''}>${r.described ? '<span class="op-ok">● описано</span>' : '<span class="op-no">○ не описано</span>'}</span></td>
+      <td class="desc" ${dcls}><span class="op-fld ${canDescribeRec(r) ? 'tg' : ''}" ${canDescribeRec(r) ? `data-desc="${r.id}" title="Змінити відмітку"` : ''}>${r.described ? '<span class="op-ok">● описано</span>' : '<span class="op-no">○ не описано</span>'}</span></td>
       <td class="sm"><b>Лаб.:</b> ${esc(lw ? shortName(lw) : '')}<br><b>Лік.:</b> ${esc(dw ? shortName(dw) : '')}</td></tr>`;
   }).join('');
   const visits = new Set(rows.map(r => r.visitId)).size, pats = new Set(rows.map(r => r.patientId || r.patientName)).size;
   const sumM = (m) => r2(rows.filter(r => r.paymentMethod === m).reduce((a, r) => a + (r.totalAmount || 0), 0));
   const none = r2(rows.filter(r => !r.paymentMethod).reduce((a, r) => a + (r.totalAmount || 0), 0));
   const empty = !jr.ready ? '<span class="spin dk"></span>' : '';
-  box.innerHTML = `<div class="j-body"><table style="width:100%;min-width:${1420 - (money ? 0 : 90) - (payCol ? 0 : 60)}px"><colgroup><col style="width:54px"><col style="width:66px"><col style="width:54px"><col style="width:200px"><col style="width:92px"><col style="width:130px"><col><col style="width:90px${money ? '' : ';display:none'}"><col style="width:100px"><col style="width:60px${payCol ? '' : ';display:none'}"><col style="width:130px"><col style="width:165px"></colgroup>
-    <thead><tr><th class="c">Ред.</th><th class="c">№</th><th class="c">Час</th><th>Пацієнт</th><th>№ іст. хв.</th><th>Лікуючий лікар</th><th>Послуга, дод. послуга</th><th class="r money m-l" ${mcls}>Сума</th><th class="c">Спосіб оплати</th><th class="c money pay-status m-r" ${pcls}>Оплата</th><th class="desc">Опис</th><th>Працівники</th></tr></thead>
+  box.innerHTML = `<div class="j-body"><table style="width:100%;min-width:${1420 - (money ? 0 : 90) - (payCol ? 0 : 60) - (JOURNAL_DESC ? 0 : 130)}px"><colgroup><col style="width:54px"><col style="width:66px"><col style="width:54px"><col style="width:200px"><col style="width:92px"><col style="width:130px"><col><col style="width:90px${money ? '' : ';display:none'}"><col style="width:100px"><col style="width:60px${payCol ? '' : ';display:none'}"><col style="width:130px${JOURNAL_DESC ? '' : ';display:none'}"><col style="width:165px"></colgroup>
+    <thead><tr><th class="c">Ред.</th><th class="c">№</th><th class="c">Час</th><th>Пацієнт</th><th>№ іст. хв.</th><th>Лікуючий лікар</th><th>Послуга, дод. послуга</th><th class="r money m-l" ${mcls}>Сума</th><th class="c">Спосіб оплати</th><th class="c money pay-status m-r" ${pcls}>Оплата</th><th class="desc" ${dcls}>Опис</th><th>Працівники</th></tr></thead>
     <tbody>${body || `<tr><td colspan="12" style="padding:18px 10px">${!jr.ready ? '<span class="spin dk"></span>' : `<div class="al al-i" style="display:inline-flex;max-width:340px;margin:0"><span class="al-icon">i</span><div><b>Тут поки нічого немає</b>За цей період візитів немає. Додайте перший кнопкою «Новий візит».</div></div>`}</td></tr>`}</tbody>
     <tfoot><tr><td class="c"></td><td class="c"><div class="j-tot-k">Візитів</div><div class="j-tot-v">${visits}</div></td><td class="c"></td><td><div class="j-tot-k">Пацієнтів</div><div class="j-tot-v">${pats}</div></td><td colspan="2"></td>
       <td><div class="j-tot-k">Послуг</div><div class="j-tot-v">${rows.length}</div></td>
       <td class="r money m-l" ${mcls}><div class="j-tot-v" style="min-height:15px">${nfmt(sumM('cashless'))}</div><div class="j-tot-v" style="min-height:15px">${nfmt(sumM('cash'))}</div>${none ? `<div class="j-tot-v" style="min-height:15px">${nfmt(none)}</div>` : ''}</td>
       <td class="c"><div class="j-cash" style="min-height:15px">- безготівка</div><div class="j-cash" style="min-height:15px">- готівка</div>${none ? '<div class="j-cash" style="min-height:15px">- без форми</div>' : ''}</td>
-      <td class="c money pay-status m-r" ${pcls}></td><td class="desc"></td><td></td></tr></tfoot></table></div>`;
+      <td class="c money pay-status m-r" ${pcls}></td><td class="desc" ${dcls}></td><td></td></tr></tfoot></table></div>`;
   $('jLeg').innerHTML = dir.labels.length ? `<div class="j-leg"><b>Розподіл:</b>${[...dir.labels].sort((a, b) => hueOf(a.color) - hueOf(b.color)).map(l => `<span><i style="background:${esc(l.color)}"></i>${esc(l.name)}</span>`).join('')}<span style="margin-left:auto;font-size:10.5px">кольори — з довідника <b>Розподіл</b></span></div>` : '';
 }
 
