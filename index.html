@@ -395,6 +395,18 @@
   @media (max-width:760px){.cal-sums{grid-template-columns:1fr}}
   /* звіти */
   .rp-h{font-size:var(--t-h2);font-weight:800;color:var(--green);margin:4px 0 4px}.rp-sub{font-size:var(--t-sm);color:var(--muted);margin-bottom:16px}
+  .z-auto{margin-top:26px}
+  .z-a{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r12);background:var(--bg);box-shadow:var(--up);margin-bottom:10px;flex-wrap:wrap}
+  .z-a .z-n{flex:1 1 220px;min-width:0;font-size:var(--t-body);font-weight:800;color:var(--ink);cursor:pointer}
+  .z-a .z-w,.z-a .z-m{font-size:11.5px;color:var(--muted)}
+  .z-a .z-n small{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:2px}
+  .z-src{font-size:9px;font-weight:800;padding:3px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.3px}
+  .z-src.prog{background:var(--soft);color:var(--green)}.z-src.user{background:#dbe7f5;color:#2E6DA4}
+  .z-sw{width:42px;height:24px;border-radius:12px;background:var(--bg);box-shadow:var(--in);position:relative;cursor:pointer;flex:0 0 auto}
+  .z-sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:left .15s}
+  .z-sw.on::after{left:21px;background:var(--green)}
+  .z-del{color:var(--red);font-weight:900;cursor:pointer;padding:4px 8px}
+  .z-st{font-size:10.5px;color:var(--muted)}.z-st.err{color:var(--err)}
   .rp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
   .rp-tile{padding:16px;border-radius:var(--r16);background:var(--bg);box-shadow:var(--up);cursor:pointer}.rp-tile:active{box-shadow:var(--in)}
   .rp-ic{font-size:var(--t-h1);margin-bottom:6px}.rp-tn{font-size:var(--t-body);font-weight:800;color:var(--ink)}.rp-td{font-size:11.5px;color:var(--muted);margin-top:3px}
@@ -897,7 +909,7 @@ import { initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmai
          createUserWithEmailAndPassword, sendPasswordResetEmail, signOut,
          reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc,
-         writeBatch, serverTimestamp, collection, getDocs, query, where, limit, orderBy, runTransaction, onSnapshot, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+         writeBatch, serverTimestamp, collection, getDocs, deleteDoc, query, where, limit, orderBy, runTransaction, onSnapshot, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ═══ Firebase — проєкт ctmri-1 ═══ */
 const firebaseConfig = {
@@ -2211,6 +2223,89 @@ function rpRange(){
   return p.custom ? [p.custom.from, p.custom.to] : [iso2(p.y, p.m, 1), iso2(p.y, p.m, new Date(p.y, p.m + 1, 0).getDate())];
 }
 const rpIsCurMonth = (p) => { const n = new Date(); return p.y === n.getFullYear() && p.m === n.getMonth(); };
+
+/* ═══ АВТОЗВІТИ: налаштування розсилки за розкладом (колекція auto_reports). Сам лист формує й надсилає скрипт у GitHub Actions
+   (папка autoreport/, див. docs/АВТОЗВІТ_інструкція.md) — застосунок лише зберігає розклад. Керує Керівник/Адмін з правом «Автозвіт» ═══ */
+const AR_FREQ = [['daily', 'Щодня', 'за вчора'], ['weekly', 'Щотижня', 'за попередній тиждень (Пн–Нд)'], ['monthly', 'Щомісяця', 'за попередній місяць']];
+const AR_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+const AR_REPORTS = REPORTS.filter(r => !['rCtor', 'rMgmt'].includes(r[0]));   // Конструктор і Управлінський — вручну
+const AR_DEFAULTS = [
+  { id: 'prog_pay', name: 'Щоденний звіт по оплаті', report: 'rPay', freq: 'daily', time: '08:30' },
+  { id: 'prog_pat', name: 'Місячний звіт по пацієнтах', report: 'rPat', freq: 'monthly', day: 1, time: '09:00' }
+];
+const ar = { list: null, err: '' };
+const arWhen = (a) => a.freq === 'weekly' ? `Щотижня (${AR_DAYS[(a.day || 1) - 1]})` : a.freq === 'monthly' ? (a.day === 1 || !a.day ? '1-го числа за попередній місяць' : `${a.day}-го числа за попередній місяць`) : 'Щодня, за вчора';
+const arAllowed = () => (ar.list || []).filter(a => can(a.report) && (a.report !== 'rPay' || FACILITY_TRACKS_PAYMENT));
+async function arLoad(){
+  if (!can('rAuto')) return;
+  try {
+    const sn = await getDocs(collection(db, 'auto_reports')); ar.list = sn.docs.map(d => ({ id: d.id, ...d.data() })); ar.err = '';
+    if (!ar.list.length && !ar.seeded){   // програмні автозвіти створюються один раз, вимкненими
+      ar.seeded = true; const mail = settings?.facilityEmail ? [settings.facilityEmail] : [];
+      for (const d of AR_DEFAULTS){ const { id, ...rest } = d; const x = { ...rest, source: 'prog', recipients: mail, active: false, createdAt: serverTimestamp() }; await setDoc(doc(db, 'auto_reports', id), x); ar.list.push({ id, ...x }); }
+    }
+  } catch (e){ ar.err = e.code || String(e.message || e); ar.list = ar.list || []; }
+}
+const arRowHtml = (a) => `<div class="z-a" data-ar="${a.id}"><span class="z-src ${a.source === 'prog' ? 'prog' : 'user'}">${a.source === 'prog' ? 'програмний' : 'користувацький'}</span>
+  <div class="z-n" data-aredit="${a.id}">${esc(a.name)}<small>${esc(REPORTS.find(r => r[0] === a.report)?.[1] || '')} · ${esc(arWhen(a))} · ${esc(a.time || '')}</small></div>
+  <div class="z-m">${(a.recipients || []).length ? esc(a.recipients.join(', ')) : '<span style="color:var(--err)">немає одержувача</span>'}</div>
+  <div class="z-st ${a.lastStatus && a.lastStatus !== 'ok' ? 'err' : ''}">${a.lastSentAt ? 'надіслано ' + esc(a.lastSentAt.toDate ? a.lastSentAt.toDate().toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' }) : '') : 'ще не надсилався'}${a.lastStatus && a.lastStatus !== 'ok' ? ' · ' + esc(a.lastStatus) : ''}</div>
+  <span class="z-sw ${a.active ? 'on' : ''}" data-arsw="${a.id}" title="${a.active ? 'увімкнено' : 'вимкнено'}"></span>
+  ${a.source === 'prog' ? '' : `<span class="z-del" data-ardel="${a.id}" title="Видалити">✕</span>`}</div>`;
+function arBlockHtml(){
+  if (!can('rAuto')) return '';
+  const l = arAllowed();
+  return `<div class="z-auto" id="arBox"><div class="rp-h" style="font-size:var(--t-h3)">Автоматичні звіти</div><div class="rp-sub" style="margin-bottom:12px">Надсилаються на e-mail за розкладом. Програмні не видаляються — їх можна лише вимкнути.</div>
+    ${ar.list === null ? '<span class="spin dk"></span>' : ar.err ? `<div class="al al-e"><span class="al-icon">✕</span><div><b>Не вдалося завантажити автозвіти</b>${esc(ar.err)}</div></div>` : l.map(arRowHtml).join('')
+      || '<div class="al al-i"><span class="al-icon">i</span><div><b>Автозвітів немає</b>Додайте перший.</div></div>'}
+    <button type="button" class="b" id="arAdd" style="margin-top:6px">+ Додати автозвіт</button>
+    <div class="hint" style="margin-top:10px">Лист надсилає окремий скрипт, що працює за розкладом на сервері GitHub (інструкція — <code>docs/АВТОЗВІТ_інструкція.md</code>). Поки його не підключено, розклад лише зберігається.</div></div>`;
+}
+function arForm(a){
+  const isNew = !a, x = a || { name: '', report: AR_REPORTS.find(r => can(r[0]))?.[0] || 'rPat', freq: 'daily', day: 1, time: '08:00', recipients: settings?.facilityEmail ? [settings.facilityEmail] : [], source: 'user', active: true };
+  const rps = AR_REPORTS.filter(r => can(r[0]) && (r[0] !== 'rPay' || FACILITY_TRACKS_PAYMENT));
+  const times = []; for (let h = 0; h < 24; h++) for (const m of ['00', '30']) times.push(`${p2(h)}:${m}`);
+  const ov = openWin(`<div class="win-h"><h4>${isNew ? 'Новий автозвіт' : 'Автозвіт'}</h4><button class="win-x" data-x>✕</button></div><div class="win-b">
+    <div class="vf"><label>Назва</label><input class="in" id="arName" value="${esc(x.name)}" ${x.source === 'prog' ? 'disabled' : ''} placeholder="Напр. Тижневий звіт по лаборантах"></div>
+    <div class="vf"><label>Звіт</label><select class="in" id="arRep" ${x.source === 'prog' ? 'disabled' : ''}>${rps.map(r => `<option value="${r[0]}" ${r[0] === x.report ? 'selected' : ''}>${esc(r[1])}</option>`).join('')}</select></div>
+    <div class="vf"><label>Періодичність</label><select class="in" id="arFreq">${AR_FREQ.map(f => `<option value="${f[0]}" ${f[0] === x.freq ? 'selected' : ''}>${f[1]} — ${f[2]}</option>`).join('')}</select></div>
+    <div class="vf" id="arDayW"><label>День тижня</label><select class="in" id="arDayWs">${AR_DAYS.map((d, i) => `<option value="${i + 1}" ${(x.day || 1) === i + 1 ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+    <div class="vf" id="arDayM"><label>День місяця (1–28)</label><input class="in" id="arDayMs" type="number" min="1" max="28" value="${x.freq === 'monthly' ? (x.day || 1) : 1}"></div>
+    <div class="vf"><label>Час надсилання (за Києвом)</label><select class="in" id="arTime">${times.map(t => `<option ${t === x.time ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+    <div class="vf"><label>Одержувачі (e-mail, через кому)</label><input class="in" id="arTo" value="${esc((x.recipients || []).join(', '))}" placeholder="clinic@example.com"></div>
+    <div class="hint">Лист надсилається у вигляді таблиці Excel. Персональні дані пацієнтів поштою не пересилаються — у звіті «По пацієнтах» лише підсумки.</div></div>
+    <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" id="arSave">Зберегти</button></div>`, 520);
+  const sync = () => { const f = ov.querySelector('#arFreq').value; ov.querySelector('#arDayW').style.display = f === 'weekly' ? '' : 'none'; ov.querySelector('#arDayM').style.display = f === 'monthly' ? '' : 'none'; };
+  ov.querySelector('#arFreq').onchange = sync; sync();
+  ov.querySelector('#arSave').onclick = async () => {
+    const g = (i) => ov.querySelector('#' + i).value, freq = g('arFreq');
+    const to = g('arTo').split(/[,;\s]+/).map(v => v.trim()).filter(Boolean);
+    if (to.some(v => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))) return toast('e', 'Некоректний e-mail', 'Перевірте адреси одержувачів.');
+    if (!to.length) return toast('e', 'Вкажіть одержувача', 'Потрібна хоча б одна адреса.');
+    const name = g('arName').trim(); if (!name) return toast('e', 'Вкажіть назву', '');
+    const day = freq === 'weekly' ? +g('arDayWs') : freq === 'monthly' ? Math.min(28, Math.max(1, +g('arDayMs') || 1)) : null;
+    const data = { name, report: g('arRep'), freq, day, time: g('arTime'), recipients: to, updatedAt: serverTimestamp() };
+    try {
+      if (isNew){ const ref = doc(collection(db, 'auto_reports')); await setDoc(ref, { ...data, source: 'user', active: true, createdAt: serverTimestamp() }); audit('create', 'auto_reports', ref.id, null, data); }
+      else { await setDoc(doc(db, 'auto_reports', a.id), data, { merge: true }); audit('update', 'auto_reports', a.id, null, data); }
+      closeWin(ov); await arLoad(); arRedraw();
+    } catch (e){ toast('e', 'Не вдалося зберегти автозвіт', e.code || ''); }
+  };
+}
+function arRedraw(){ const b = $('arBox'); if (b) b.outerHTML = arBlockHtml(); }
+async function arClick(e){
+  if (e.target.closest('#arAdd')) return arForm(null);
+  const ed = e.target.closest('[data-aredit]'); if (ed) return arForm(ar.list.find(a => a.id === ed.dataset.aredit));
+  const sw = e.target.closest('[data-arsw]');
+  if (sw){ const a = ar.list.find(x => x.id === sw.dataset.arsw); if (!a) return;
+    if (!a.active && !(a.recipients || []).length) return toast('e', 'Немає одержувача', 'Спершу вкажіть e-mail — натисніть на назву автозвіту.');
+    try { await setDoc(doc(db, 'auto_reports', a.id), { active: !a.active, updatedAt: serverTimestamp() }, { merge: true }); a.active = !a.active; audit('update', 'auto_reports', a.id, { active: !a.active }, { active: a.active }); arRedraw(); }
+    catch (er){ toast('e', 'Не вдалося змінити', er.code || ''); } return; }
+  const dl = e.target.closest('[data-ardel]');
+  if (dl){ const a = ar.list.find(x => x.id === dl.dataset.ardel); if (!a || !confirm(`Видалити автозвіт «${a.name}»?`)) return;
+    try { await deleteDoc(doc(db, 'auto_reports', a.id)); audit('delete', 'auto_reports', a.id, { name: a.name }, null); ar.list = ar.list.filter(x => x.id !== a.id); arRedraw(); }
+    catch (er){ toast('e', 'Не вдалося видалити', er.code || ''); } }
+}
 function renderReports(){
   sheetRerender = null;
   if (!rp.per){ const n = new Date(); rp.per = rpMonthPer(n.getFullYear(), n.getMonth(), false); }
@@ -2222,7 +2317,10 @@ function rpHub(){
   $('sheet').innerHTML = `<div class="rp-h">Звіти</div><div class="rp-sub">Оберіть звіт — відкриється з панеллю періоду та кнопкою «Показати звіт»</div>`
     + (list.length ? `<div class="rp-tiles">${list.map(r => `<div class="rp-tile" data-rep="${r[0]}"><div class="rp-ic">${r[3]}</div><div class="rp-tn">${esc(r[1])}</div><div class="rp-td">${esc(r[2])}</div></div>`).join('')}</div>`
       : '<div class="al al-i" style="margin:12px 0 0"><span class="al-icon">i</span><div><b>Немає жодного дозволеного звіту</b>Права надає адміністратор у розділі «Доступи».</div></div>');
+  $('sheet').insertAdjacentHTML('beforeend', arBlockHtml());
+  if (can('rAuto') && ar.list === null) arLoad().then(() => { if (!rp.cur) arRedraw(); });
   $('sheet').onclick = (e) => {
+    if (e.target.closest('#arBox')) return arClick(e);
     const t = e.target.closest('[data-rep]'); if (!t) return;
     if (!RP_READY[t.dataset.rep]) return toast('i', 'Звіт ще в розробці', 'Зараз працюють «По лаборантах», «По лікарях», «По пільгах», «По пацієнтах», «За розподілом», «По послугах», «По скеруваннях», «По оплаті» і «Конструктор»; решта — за зразком.');
     rp.cur = t.dataset.rep; rp.data = null; rpOpen();
