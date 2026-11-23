@@ -187,6 +187,8 @@
   /* ── Модальні вікна довідників ── */
   .ov{position:fixed;inset:0;z-index:40;background:rgba(31,58,52,.38);display:flex;align-items:center;justify-content:center;padding:18px}
   .win{width:100%;background:var(--bg);border-radius:var(--r20);box-shadow:var(--up);overflow:hidden;display:flex;flex-direction:column;max-height:92vh}
+  .ov.top-anch{align-items:flex-start;padding-top:6vh}
+  .ov.top-anch .win{max-height:calc(94vh - 6vh);transition:height .28s ease,max-width .28s ease}
   .win-h{display:flex;align-items:center;gap:12px;padding:16px 20px 14px;position:relative;flex:0 0 auto}
   .win-h h4{margin:0;font-size:var(--t-h3);font-weight:800;color:var(--green);line-height:1.2}
   .win-x{position:absolute;right:16px;top:13px;width:28px;height:28px;border:none;border-radius:9px;background:var(--bg);box-shadow:var(--bump);color:var(--muted);font-size:13px;cursor:pointer}
@@ -4861,10 +4863,19 @@ function openSettings(tab){
   if (canSeeAccess()) tabs.push(['access', 'Доступи']);
   let cur = tabs.some(t => t[0] === tab) ? tab : 'zaklad';
   const ov = openWin('<div class="win-h"><h4>Налаштування</h4><button class="win-x" data-x>✕</button></div><div class="win-b" data-sb></div><div class="win-f"><button class="b" data-x>Закрити</button></div>', cur === 'access' ? 1240 : 700);
+  ov.classList.add('top-anch');
   const draw = () => {
+    const w = ov.querySelector('.win'), h0 = w.offsetHeight;
     ov.querySelector('.win').style.maxWidth = (cur === 'access' ? 1240 : 700) + 'px';
     ov.querySelector('[data-sb]').innerHTML = `<div class="tabs2" style="margin-top:0">${tabs.map(t => `<span class="tab2 ${t[0] === cur ? 'on' : ''}" data-st="${t[0]}">${t[1]}</span>`).join('')}</div>` +
       (cur === 'access' ? matrixHtml() : cur === 'zaklad' ? zakladHtml() : programHtml());
+    if (h0){   // плавна зміна висоти при переході між вкладками
+      w.style.height = 'auto'; const h1 = w.offsetHeight;
+      if (Math.abs(h1 - h0) > 2){
+        w.style.height = h0 + 'px'; void w.offsetHeight; w.style.height = h1 + 'px';
+        clearTimeout(w._ht); w._ht = setTimeout(() => { w.style.height = ''; }, 320);
+      } else w.style.height = '';
+    }
   };
   ov._render = () => { draw(); if (cur === 'zaklad') zkBind(ov); }; ov._render();
   ov.addEventListener('click', async (e) => {
