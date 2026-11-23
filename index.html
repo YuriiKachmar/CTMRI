@@ -1064,18 +1064,25 @@ async function doReset(email){
 /* Режим 2 «Підтвердження» — для чутливих розділів (Доступи). Повертає Promise<boolean>. */
 function confirmPassword(section){
   return new Promise((resolve) => {
-    const prev = !$('app').hidden ? 'app' : null;
-    const user = auth.currentUser;
-    const done = (ok) => { show(prev || 'auth'); resolve(ok); };
-    renderAuth('confirm', {
-      section, email: user.email, onCancel: () => done(false),
-      onSubmit: async (pw) => {
-        if (!pw) return setErr('Невірний пароль', 'Введіть пароль.');
-        setBusy(true, 'Підтвердити');
-        try { await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, pw)); done(true); }
-        catch (e){ setBusy(false, 'Підтвердити'); setErr('Невірний пароль', 'Спробуйте ще раз.'); }
-      }
-    });
+    const user = auth.currentUser; let fin = false;
+    const ov = openWin(`<div class="win-h"><h4>Підтвердіть пароль</h4><button class="win-x" data-x>✕</button></div>
+      <div class="win-b"><div class="hint" style="margin:0 0 12px">Ви входите в розділ <b>${esc(section)}</b>. Введіть свій пароль ще раз.</div>
+      <input class="in2 fixed" type="email" value="${esc(user.email)}" disabled>
+      <input class="in2" id="cpPass" type="password" placeholder="Пароль" autocomplete="current-password">
+      <div class="al al-e" id="cpErr" style="visibility:hidden;margin:0"><span class="al-icon">✕</span><div><b>Невірний пароль</b>Спробуйте ще раз.</div></div></div>
+      <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" id="cpOk">Підтвердити</button></div>`, 420);
+    ov.style.zIndex = 60;
+    ov._onClose = () => { if (!fin){ fin = true; resolve(false); } };
+    const pass = ov.querySelector('#cpPass'), ok = ov.querySelector('#cpOk'), err = ov.querySelector('#cpErr');
+    pass.addEventListener('input', () => { err.style.visibility = 'hidden'; });
+    pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
+    ok.onclick = async () => {
+      if (!pass.value){ err.style.visibility = 'visible'; return; }
+      ok.disabled = true; pass.disabled = true;
+      try { await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, pass.value)); fin = true; closeWin(ov); resolve(true); }
+      catch (e){ ok.disabled = false; pass.disabled = false; pass.value = ''; err.style.visibility = 'visible'; pass.focus(); }
+    };
+    pass.focus();
   });
 }
 window.CTMRI = { confirmPassword, get profile(){ return profile; }, get settings(){ return settings; } };
@@ -4865,8 +4872,7 @@ function openSettings(tab){
     const t = e.target.closest('.tab2[data-st]'), c = e.target.closest('[data-cb]'), nm = e.target.closest('[data-card]');
     if (t && t.dataset.st !== cur){
       if (t.dataset.st === 'access'){
-        closeWin(ov);
-        if (await confirmPassword('Доступи')) openSettings('access'); else openSettings('zaklad');
+        if (await confirmPassword('Доступи')){ cur = 'access'; ov._render(); }
         return;
       }
       cur = t.dataset.st; ov._render();
