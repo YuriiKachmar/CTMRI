@@ -4687,7 +4687,7 @@ async function zkLoadStats(ov){
     const d1 = a.docs[0]?.data().date, d2 = b.docs[0]?.data().date;
     zkStats = { t: Date.now(), range: d1 ? `${isoToUa(d1)} – ${isoToUa(d2)}` : '—', pat: np.data().count, rec: nr.data().count };
     put(zkStats);
-  } catch (e){ const el = ov.querySelector('#zkStat'); if (el) el.querySelectorAll('.zk-v').forEach(x => { x.textContent = '—'; }); }
+  } catch (e){ console.warn('zk stats:', e.code, e.message); const el = ov.querySelector('#zkStat'); if (el) el.querySelectorAll('.zk-v').forEach(x => { x.textContent = '—'; x.title = e.code || 'помилка'; }); }
 }
 function zkBind(ov){
   const w = ov.querySelector('#zkWeek'); if (w) bindDayInputs(w, () => zkWeek(ov));
@@ -4723,7 +4723,7 @@ function openSettings(tab){
   };
   ov._render = () => { draw(); if (cur === 'zaklad') zkBind(ov); }; ov._render();
   ov.addEventListener('click', async (e) => {
-    const t = e.target.closest('[data-st]'), c = e.target.closest('[data-cb]'), nm = e.target.closest('[data-card]');
+    const t = e.target.closest('.tab2[data-st]'), c = e.target.closest('[data-cb]'), nm = e.target.closest('[data-card]');
     if (t && t.dataset.st !== cur){
       if (t.dataset.st === 'access'){
         closeWin(ov);
