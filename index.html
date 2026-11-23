@@ -36,6 +36,10 @@
   .card.fixed-h{min-height:514px;display:flex;flex-direction:column;justify-content:center}
   .logo{width:64px;height:64px;border-radius:var(--r16);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted);letter-spacing:.5px}
   .logo.lock{font-size:26px}
+  .logo img,.fac-logo img{width:100%;height:100%;object-fit:contain;border-radius:inherit;display:block}
+  .fac-logo.up{cursor:pointer}
+  .logo-btns{display:flex;gap:12px;margin:0 0 8px 0}
+  .logo-btns button{border:none;background:none;color:var(--green);font-weight:700;font-size:11.5px;cursor:pointer;padding:0;font-family:inherit}
   .fac{font-size:15px;font-weight:800;margin-bottom:3px}
   .app{font-size:11px;color:var(--muted);margin-bottom:24px}
   .t2{font-size:15px;font-weight:800;margin-bottom:8px}
@@ -845,7 +849,7 @@
 <div id="app" hidden>
   <div class="wrap">
     <div class="top">
-      <div class="logo">ЛОГО</div>
+      <div class="logo" id="hLogo">ЛОГО</div>
       <div class="topcol">
         <div class="head">
           <div class="fac" id="hFac"></div>
@@ -898,6 +902,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 const ROLES = ['Керівник','Адміністратор','Користувач','Лаборант','Лікар'];
 const APP_NAME = 'Облік послуг КТ/МРТ';
 let settings = null;      // settings/main
+const logoInner = () => settings?.logo ? `<img src="${settings.logo}" alt="">` : 'ЛОГО';
 let FACILITY_TRACKS_PAYMENT = true, JOURNAL_DESC = true;   // Налаштування → Програма → Журнал
 const THEMES = [['neo', 'Neo', '#E8ECEF', '#1E6B4F'], ['ocean', 'Ocean', '#dde5ee', '#457B9D'], ['mint', 'Mint', '#dfeae5', '#007978'], ['lilac', 'Lilac', '#eee2e4', '#6F527E']];
 function applyTheme(name){
@@ -908,7 +913,6 @@ function applyTheme(name){
 function applyPrefs(){
   const st = settings || {};
   FACILITY_TRACKS_PAYMENT = st.journalPay !== false; JOURNAL_DESC = st.journalDesc !== false;
-  if (st.theme) applyTheme(st.theme);
 }
 try { const t = localStorage.getItem('ctmri-theme'); if (t) applyTheme(t); } catch (e){}
 let firstRun = false;     // true лише коли settings/main достеменно відсутній (не при помилці читання)
@@ -967,7 +971,7 @@ function renderAuth(mode, opts = {}){
   const first = firstRun;
   let h = '';
   if (mode === 'login'){
-    h = `<div class="logo">ЛОГО</div>${facName ? `<div class="fac">${esc(facName)}</div>` : ''}<div class="app">${APP_NAME}</div>
+    h = `<div class="logo">${logoInner()}</div>${facName ? `<div class="fac">${esc(facName)}</div>` : ''}<div class="app">${APP_NAME}</div>
       ${first ? '<div class="sub2"><b>Перший запуск.</b><br>Введіть e-mail і пароль — цей обліковий запис стане <b>Керівником</b>.</div>' : ''}
       <input class="in2" id="aEmail" type="email" placeholder="E-mail" autocomplete="username" value="${esc(opts.email||'')}">
       <input class="in2" id="aPass" type="password" placeholder="Пароль" autocomplete="${first?'new-password':'current-password'}">
@@ -1133,7 +1137,7 @@ function enterApp(){
 }
 
 async function renderShell(){
-  $('hFac').textContent = settings?.facilityName || APP_NAME;
+  $('hFac').textContent = settings?.facilityName || APP_NAME; $('hLogo').innerHTML = logoInner();
   $('hWho').textContent = shortName(profile);
   $('hRole').textContent = String(profile.position || profile.role || '').toLowerCase();
   show('app');
@@ -4699,7 +4703,8 @@ function zakladHtml(){
   const boss = profile?.role === 'Керівник', dis = boss ? '' : 'disabled', st = settings || {};
   const sched = st.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
   const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}">${dnHtml(i)}${dayCtl(dayState(d), d.from, d.to, !boss)}</div>`).join('');
-  return `<div class="fac-row"><div class="fac-logo" title="Лого (додамо пізніше)">ЛОГО</div><div class="fac-name"><input data-zk="name" placeholder="Назва закладу" value="${esc(st.facilityName || '')}" ${dis}></div></div>
+  return `<div class="fac-row"><div class="fac-logo ${boss ? 'up' : ''}" ${boss ? 'data-logo title="Натисніть, щоб завантажити лого"' : ''}>${logoInner()}</div><div class="fac-name"><input data-zk="name" placeholder="Назва закладу" value="${esc(st.facilityName || '')}" ${dis}></div></div>
+    ${boss ? `<div class="logo-btns"><button type="button" data-logo>${st.logo ? 'Замінити лого' : 'Завантажити лого'}</button>${st.logo ? '<button type="button" data-logo-x style="color:var(--red)">Прибрати</button>' : ''}<input type="file" id="logoFile" accept="image/*" hidden></div>` : ''}
     <div class="fac-line"><span class="fac-lbl">Адреса</span><input class="fac-val" data-zk="addr" placeholder="м. Львів, вул. …" value="${esc(st.facilityAddress || '')}" ${dis}></div>
     <div class="fac-line"><span class="fac-lbl">Email</span><input class="fac-val" data-zk="mail" type="email" placeholder="clinic@example.com" value="${esc(st.facilityEmail || '')}" ${dis}></div>
     <div class="hint" style="margin:10px 0 4px">Email використовується як адреса за замовчуванням для автоматичних звітів.${boss ? '' : ' Змінювати дані закладу може лише Керівник.'}</div>
@@ -4749,11 +4754,12 @@ async function zkSave(ov){
 /* ───── Налаштування (модальне вікно; поки працює вкладка «Доступи») ───── */
 /* ───── Налаштування → Програма: вигляд, стовпці журналу, резервна копія. Змінює лише Керівник ───── */
 function programHtml(){
-  const boss = profile?.role === 'Керівник', st = settings || {}, th = st.theme || 'neo', lk = boss ? '' : ' lock';
+  const boss = profile?.role === 'Керівник', st = settings || {}, lk = boss ? '' : ' lock';
+  let th = 'neo'; try { th = localStorage.getItem('ctmri-theme') || 'neo'; } catch (e){}
   const seg = (k, on) => `<div class="seg2${lk}"><span data-pf="${k}:1" class="${on ? 'on' : ''}">Увімкнено</span><span data-pf="${k}:0" class="${on ? '' : 'on'}">Вимкнено</span></div>`;
   return `<div class="sect2-t" style="margin-top:6px">Вигляд</div>
     <div class="theme-grid${lk}">${THEMES.map(t => `<button type="button" class="theme-btn ${t[0] === th ? 'sel' : ''}" data-th="${t[0]}" style="background:${t[2]}"><span style="color:${t[3]}">${t[1]}</span></button>`).join('')}</div>
-    <div class="hint" style="margin-top:8px">Вигляд єдиний для всіх користувачів закладу.${boss ? '' : ' Змінювати його може лише Керівник.'}</div>
+    <div class="hint" style="margin-top:8px">Кожен користувач обирає тему для себе — вона запам'ятовується на цьому пристрої.</div>
     <div class="sect2-t">Журнал</div>
     <div class="sect">
       <div class="jrow"><div class="jrow-info">Стовпець «Оплата» (відмітка про оплату)<div class="hint">Також керує плиткою «По оплаті» у звітах та стовпцями оплати у звітах.</div></div>${seg('journalPay', st.journalPay !== false)}</div>
@@ -4769,6 +4775,28 @@ function programHtml(){
       <button type="button" class="bkp-btn" disabled style="margin-top:12px;width:100%;justify-content:center">Відновити з копії (поки недоступно)</button>
       <div class="bkp-hint">Відновлення замінює поточні дані, тому його робимо окремим кроком і лише разом із перевіркою файлу копії.</div>
     </div>`;
+}
+function logoFromFile(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 256 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(im.width * k)); c.height = Math.max(1, Math.round(im.height * k));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      let d = c.toDataURL('image/png'); if (d.length > 150000) d = c.toDataURL('image/jpeg', .85);
+      d.length > 300000 ? rej(new Error('big')) : res(d);
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('img')); };
+    im.src = url;
+  });
+}
+async function saveLogo(ov, value){
+  if (profile?.role !== 'Керівник') return;
+  try {
+    await setDoc(doc(db, 'settings', 'main'), { logo: value, updatedAt: serverTimestamp() }, { merge: true });
+    settings = { ...(settings || {}), logo: value }; audit('update', 'settings', 'main', { logo: '…' }, { logo: value ? '…' : '' });
+    $('hLogo').innerHTML = logoInner(); ov._render();
+  } catch (e){ toast('e', 'Не вдалося зберегти лого', e.code || ''); }
 }
 async function saveProgram(ov, patch){
   if (profile?.role !== 'Керівник') return;
@@ -4835,14 +4863,22 @@ function openSettings(tab){
     }
     if (nm){ const w = dir.workers.find(x => x.id === nm.dataset.card); if (w) w.role === 'Лаборант' || w.role === 'Лікар' ? openWorkerForm(w.id) : openUserForm(w.id); }
     if (e.target.closest('[data-adduser]')) openUserForm(null);
-    const th = e.target.closest('[data-th]'); if (th && profile?.role === 'Керівник') saveProgram(ov, { theme: th.dataset.th });
+    const th = e.target.closest('[data-th]'); if (th){ applyTheme(th.dataset.th); ov._render(); }
     const pf = e.target.closest('[data-pf]'); if (pf && profile?.role === 'Керівник'){ const [k, v] = pf.dataset.pf.split(':'); saveProgram(ov, { [k]: v === '1' }); }
     if (e.target.closest('[data-bkp]')) exportDb(ov);
+    if (e.target.closest('[data-logo]') && profile?.role === 'Керівник') ov.querySelector('#logoFile').click();
+    if (e.target.closest('[data-logo-x]')) saveLogo(ov, '');
     if (e.target.closest('[data-phadd]')){ const l = ov.querySelector('#zkPhones'); l.insertAdjacentHTML('beforeend', zkPhRow({}, '')); l.lastElementChild.querySelector('.ph-num').focus(); }
     const px = e.target.closest('[data-phx]'); if (px){ px.closest('.ph-row').remove(); zkSave(ov); }
     const zs = e.target.closest('#zkWeek [data-st]'); if (zs && profile?.role === 'Керівник'){ toggleDay(zs.closest('.wd'), zs.dataset.st); zkWeek(ov); }
   });
-  ov.addEventListener('change', (e) => { if (e.target.closest('[data-zk],#zkPhones')) zkSave(ov); else if (e.target.closest('#zkWeek')) zkWeek(ov); });
+  ov.addEventListener('change', async (e) => {
+    if (e.target.id === 'logoFile' && e.target.files[0]){
+      try { await saveLogo(ov, await logoFromFile(e.target.files[0])); } catch (er){ toast('e', 'Не вдалося обробити зображення', 'Оберіть файл PNG або JPG.'); }
+      return;
+    }
+    if (e.target.closest('[data-zk],#zkPhones')) zkSave(ov); else if (e.target.closest('#zkWeek')) zkWeek(ov);
+  });
   if (cur === 'access'){ /* відкрито одразу після підтвердження пароля */ }
   return ov;
 }
