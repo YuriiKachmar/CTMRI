@@ -37,6 +37,17 @@
   .logo{width:64px;height:64px;border-radius:var(--r16);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted);letter-spacing:.5px}
   .logo.lock{font-size:26px}
   .logo img,.fac-logo img{width:100%;height:100%;object-fit:contain;border-radius:inherit;display:block}
+  .fac-row.zk{align-items:stretch}
+  .fac-row.zk .fac-logo{width:96px;height:96px;background:var(--bg);box-shadow:var(--bump);border:none;padding:0;font-family:inherit;font-size:11px;position:relative}
+  .fac-row.zk .fac-logo.up{cursor:pointer}
+  .fac-row.zk .fac-logo.up:active{box-shadow:var(--in)}
+  .fac-row.zk .fac-name{display:flex}
+  .fac-name textarea{width:100%;min-height:96px;resize:none;padding:13px 14px;border:none;border-radius:11px;background:var(--bg);box-shadow:var(--in);font-size:var(--t-body);font-weight:700;color:var(--ink);font-family:inherit;line-height:1.35}
+  .fac-name textarea:focus{outline:none;box-shadow:var(--in-on)}
+  .logo-pop{position:absolute;left:0;top:calc(100% + 6px);z-index:30;min-width:220px;white-space:nowrap;font-weight:400;font-size:12px;background:var(--bg);border-radius:12px;box-shadow:var(--up);padding:6px;text-align:left}
+  .logo-pop button{display:block;width:100%;border:none;background:none;text-align:left;padding:10px 12px;border-radius:8px;font:700 12px inherit;font-family:inherit;color:var(--green);cursor:pointer}
+  .logo-pop button:hover{background:var(--tile)}
+  .logo-pop button.x{color:var(--red)}
   .fac-logo.up{cursor:pointer}
   .logo-btns{display:flex;gap:12px;margin:0 0 8px 0}
   .logo-btns button{border:none;background:none;color:var(--green);font-weight:700;font-size:11.5px;cursor:pointer;padding:0;font-family:inherit}
@@ -4703,8 +4714,7 @@ function zakladHtml(){
   const boss = profile?.role === 'Керівник', dis = boss ? '' : 'disabled', st = settings || {};
   const sched = st.schedule || DEFAULT_WEEK.map(d => ({ from: d[0], to: d[1], off: !!d[2] }));
   const week = sched.map((d, i) => `<div class="wd ${d.off ? 'closed' : d.full ? 'full' : ''}">${dnHtml(i)}${dayCtl(dayState(d), d.from, d.to, !boss)}</div>`).join('');
-  return `<div class="fac-row"><div class="fac-logo ${boss ? 'up' : ''}" ${boss ? 'data-logo title="Натисніть, щоб завантажити лого"' : ''}>${logoInner()}</div><div class="fac-name"><input data-zk="name" placeholder="Назва закладу" value="${esc(st.facilityName || '')}" ${dis}></div></div>
-    ${boss ? `<div class="logo-btns"><button type="button" data-logo>${st.logo ? 'Замінити лого' : 'Завантажити лого'}</button>${st.logo ? '<button type="button" data-logo-x style="color:var(--red)">Прибрати</button>' : ''}<input type="file" id="logoFile" accept="image/*" hidden></div>` : ''}
+  return `<div class="fac-row zk"><div role="button" class="fac-logo ${boss ? 'up' : ''}" ${boss ? 'data-logo title="Лого закладу: завантажити або видалити"' : ''}>${logoInner()}</div><div class="fac-name"><textarea data-zk="name" rows="3" placeholder="Назва закладу" ${dis}>${esc(st.facilityName || '')}</textarea></div></div><input type="file" id="logoFile" accept="image/*" hidden>
     <div class="fac-line"><span class="fac-lbl">Адреса</span><input class="fac-val" data-zk="addr" placeholder="м. Львів, вул. …" value="${esc(st.facilityAddress || '')}" ${dis}></div>
     <div class="fac-line"><span class="fac-lbl">Email</span><input class="fac-val" data-zk="mail" type="email" placeholder="clinic@example.com" value="${esc(st.facilityEmail || '')}" ${dis}></div>
     <div class="hint" style="margin:10px 0 4px">Email використовується як адреса за замовчуванням для автоматичних звітів.${boss ? '' : ' Змінювати дані закладу може лише Керівник.'}</div>
@@ -4738,7 +4748,7 @@ const zkWeek = (ov) => weekChanged(ov.querySelector('#zkWeek').parentElement, ()
 async function zkSave(ov){
   if (profile?.role !== 'Керівник') return;
   const g = (k) => (ov.querySelector(`[data-zk="${k}"]`)?.value || '').trim();
-  const name = g('name'), mail = g('mail'), addr = g('addr');
+  const name = g('name').replace(/\s*[\r\n]+\s*/g, ' '), mail = g('mail'), addr = g('addr');
   if (!name){ toast('e', 'Вкажіть назву закладу', ''); ov._render(); return; }
   if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){ toast('e', 'Некоректний e-mail', 'Перевірте адресу.'); return; }
   const phones = [...ov.querySelectorAll('#zkPhones .ph-row')].map(r => ({ number: r.querySelector('.ph-num').value.trim(), label: r.querySelector('.ph-name').value.trim() })).filter(p => p.number);
@@ -4866,12 +4876,18 @@ function openSettings(tab){
     const th = e.target.closest('[data-th]'); if (th){ applyTheme(th.dataset.th); ov._render(); }
     const pf = e.target.closest('[data-pf]'); if (pf && profile?.role === 'Керівник'){ const [k, v] = pf.dataset.pf.split(':'); saveProgram(ov, { [k]: v === '1' }); }
     if (e.target.closest('[data-bkp]')) exportDb(ov);
-    if (e.target.closest('[data-logo]') && profile?.role === 'Керівник') ov.querySelector('#logoFile').click();
-    if (e.target.closest('[data-logo-x]')) saveLogo(ov, '');
+    const lp = ov.querySelector('.logo-pop');
+    if (e.target.closest('[data-logo-up]')){ lp?.remove(); ov.querySelector('#logoFile').click(); }
+    else if (e.target.closest('[data-logo-x]')){ lp?.remove(); saveLogo(ov, ''); }
+    else if (e.target.closest('[data-logo]') && profile?.role === 'Керівник'){
+      if (lp) lp.remove(); else if (!settings?.logo) ov.querySelector('#logoFile').click();
+      else e.target.closest('[data-logo]').insertAdjacentHTML('beforeend', '<div class="logo-pop"><button type="button" data-logo-up>⬆ Завантажити нове лого</button><button type="button" class="x" data-logo-x>✕ Видалити лого</button></div>');
+    } else if (lp) lp.remove();
     if (e.target.closest('[data-phadd]')){ const l = ov.querySelector('#zkPhones'); l.insertAdjacentHTML('beforeend', zkPhRow({}, '')); l.lastElementChild.querySelector('.ph-num').focus(); }
     const px = e.target.closest('[data-phx]'); if (px){ px.closest('.ph-row').remove(); zkSave(ov); }
     const zs = e.target.closest('#zkWeek [data-st]'); if (zs && profile?.role === 'Керівник'){ toggleDay(zs.closest('.wd'), zs.dataset.st); zkWeek(ov); }
   });
+  ov.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('textarea[data-zk="name"]')){ e.preventDefault(); e.target.blur(); } });
   ov.addEventListener('change', async (e) => {
     if (e.target.id === 'logoFile' && e.target.files[0]){
       try { await saveLogo(ov, await logoFromFile(e.target.files[0])); } catch (er){ toast('e', 'Не вдалося обробити зображення', 'Оберіть файл PNG або JPG.'); }
