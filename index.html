@@ -982,6 +982,13 @@ function setBusy(busy, labelIdle){
   const f = $('aForgot'); if (f) f.style.visibility = busy ? 'hidden' : 'visible';
 }
 
+const confirmCardHtml = (section, email) => `<div class="logo lock">🔐</div><div class="t2">Підтвердіть пароль</div>
+      <div class="sub2">Ви входите в розділ <b>${esc(section)}</b>.<br>Введіть свій пароль ще раз.</div>
+      <input class="in2 fixed" id="aEmail" type="email" value="${esc(email)}" disabled>
+      <input class="in2" id="aPass" type="password" placeholder="Пароль" autocomplete="current-password">
+      ${errBlock('Невірний пароль','Спробуйте ще раз.', false)}
+      <button class="btn2" id="aBtn">Підтвердити</button>
+      <button class="btn2 ghost" id="aCancel">Скасувати</button>`;
 function renderAuth(mode, opts = {}){
   const facName = settings?.facilityName || '';
   const first = firstRun;
@@ -1005,13 +1012,7 @@ function renderAuth(mode, opts = {}){
     h = `<div class="al al-ok"><span class="al-icon">✓</span><div><b>Перевірте пошту</b>Лист надіслано на <strong>${esc(opts.email)}</strong>. Перейдіть за посиланням у листі, щоб встановити новий пароль.</div></div>
       <button class="btn2 ghost" id="aCancel">Повернутись до входу</button>`;
   } else if (mode === 'confirm'){
-    h = `<div class="logo lock">🔐</div><div class="t2">Підтвердіть пароль</div>
-      <div class="sub2">Ви входите в розділ <b>${esc(opts.section)}</b>.<br>Введіть свій пароль ще раз.</div>
-      <input class="in2 fixed" id="aEmail" type="email" value="${esc(opts.email)}" disabled>
-      <input class="in2" id="aPass" type="password" placeholder="Пароль" autocomplete="current-password">
-      ${errBlock('Невірний пароль','Спробуйте ще раз.', false)}
-      <button class="btn2" id="aBtn">Підтвердити</button>
-      <button class="btn2 ghost" id="aCancel">Скасувати</button>`;
+    h = confirmCardHtml(opts.section, opts.email);
   }
   $('auth').innerHTML = `<div class="card fixed-h">${h}</div>`;
   show('auth');
@@ -1065,22 +1066,20 @@ async function doReset(email){
 function confirmPassword(section){
   return new Promise((resolve) => {
     const user = auth.currentUser; let fin = false;
-    const ov = openWin(`<div class="win-h"><h4>Підтвердіть пароль</h4><button class="win-x" data-x>✕</button></div>
-      <div class="win-b"><div class="hint" style="margin:0 0 12px">Ви входите в розділ <b>${esc(section)}</b>. Введіть свій пароль ще раз.</div>
-      <input class="in2 fixed" type="email" value="${esc(user.email)}" disabled>
-      <input class="in2" id="cpPass" type="password" placeholder="Пароль" autocomplete="current-password">
-      <div class="al al-e" id="cpErr" style="visibility:hidden;margin:0"><span class="al-icon">✕</span><div><b>Невірний пароль</b>Спробуйте ще раз.</div></div></div>
-      <div class="win-f"><button class="b" data-x>Скасувати</button><button class="b pri" id="cpOk">Підтвердити</button></div>`, 420);
-    ov.style.zIndex = 60;
+    const ov = document.createElement('div'); ov.className = 'ov'; ov.style.zIndex = 60;
+    ov.innerHTML = `<div class="card" style="max-height:94vh;overflow:auto">${confirmCardHtml(section, user.email)}</div>`;
+    $('modals').appendChild(ov); winStack.push(ov);
+    ov.addEventListener('mousedown', (e) => { if (e.target === ov) closeWin(ov); });
     ov._onClose = () => { if (!fin){ fin = true; resolve(false); } };
-    const pass = ov.querySelector('#cpPass'), ok = ov.querySelector('#cpOk'), err = ov.querySelector('#cpErr');
-    pass.addEventListener('input', () => { err.style.visibility = 'hidden'; });
-    pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
-    ok.onclick = async () => {
-      if (!pass.value){ err.style.visibility = 'visible'; return; }
-      ok.disabled = true; pass.disabled = true;
+    const pass = ov.querySelector('#aPass');
+    pass.addEventListener('input', clearErr);
+    pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') ov.querySelector('#aBtn').click(); });
+    ov.querySelector('#aCancel').onclick = () => closeWin(ov);
+    ov.querySelector('#aBtn').onclick = async () => {
+      if (!pass.value) return setErr('Невірний пароль', 'Введіть пароль.');
+      setBusy(true, 'Підтвердити');
       try { await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, pass.value)); fin = true; closeWin(ov); resolve(true); }
-      catch (e){ ok.disabled = false; pass.disabled = false; pass.value = ''; err.style.visibility = 'visible'; pass.focus(); }
+      catch (e){ setBusy(false, 'Підтвердити'); setErr('Невірний пароль', 'Спробуйте ще раз.'); pass.value = ''; pass.focus(); }
     };
     pass.focus();
   });
